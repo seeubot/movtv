@@ -9,52 +9,72 @@
     <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Custom styles for Android TV remote navigation */
+        /* Custom styles for a clean black and white theme */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0d1117;
-            color: #c9d1d9;
+            background-color: #000000;
+            color: #ffffff;
             overscroll-behavior-y: contain;
             touch-action: pan-y;
+            overflow-x: hidden;
+        }
+        
+        .bg-card-dark {
+            background-color: #121212;
         }
 
-        /* Highlight the currently focused element for remote control */
+        /* Focus highlight for TV remote navigation */
         .focusable-item:focus {
-            outline: 4px solid #3b82f6;
-            outline-offset: 4px;
-            box-shadow: 0 0 10px #3b82f6;
-            transform: scale(1.05);
+            outline: none;
+            box-shadow: 0 0 0 4px #ffffff;
+            border-color: #ffffff;
+            transform: scale(1.02);
             transition: all 0.2s ease-in-out;
             z-index: 10;
         }
+        .focusable-item.is-focused {
+            box-shadow: 0 0 0 4px #ffffff;
+            border-color: #ffffff;
+            transform: scale(1.02);
+            transition: all 0.2s ease-in-out;
+        }
 
-        /* Styling for the search input focus */
+        /* Styling for the search input */
+        #search-input {
+            background-color: #1a1a1a;
+            color: #ffffff;
+            border: 2px solid #333333;
+        }
         #search-input:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+            border-color: #ffffff;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
         }
 
-        /* Backdrop for the video player modal */
+        /* Video player modal backdrop */
         #video-player-modal {
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.98);
         }
 
-        /* Custom player controls styling */
+        /* Player controls */
         #player-controls {
-            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
             transition: opacity 0.3s ease-in-out;
         }
-
-        #player-controls button:focus, #player-controls input:focus {
-            outline: none;
-            box-shadow: 0 0 10px #ffffff;
-            background-color: rgba(255, 255, 255, 0.2);
+        
+        .control-button {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+        .control-button:hover, .control-button:focus {
+            background-color: rgba(255, 255, 255, 0.3);
         }
         
-        #player-controls:hover {
-            opacity: 1;
+        /* Video player overlay for title and thumbnail */
+        #player-info-overlay {
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
         }
 
         /* Hide scrollbars for a clean TV UI */
@@ -62,15 +82,8 @@
             width: 0;
             height: 0;
         }
-
         .scrollable {
             scrollbar-width: none;
-        }
-
-        /* Video player overlay for title and thumbnail */
-        #player-info-overlay {
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(8px);
         }
 
         /* Custom progress bar styles */
@@ -82,8 +95,46 @@
         }
         #progress-bar {
             height: 100%;
-            background-color: #3b82f6;
+            background-color: #ffffff;
             transition: width 0.1s linear;
+        }
+        
+        /* New list-view for episodes */
+        .episode-card-list {
+            display: flex;
+            align-items: center;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            background-color: #121212;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .episode-card-list:hover {
+            background-color: #1a1a1a;
+        }
+        .episode-card-list:focus {
+             outline: none;
+             box-shadow: 0 0 0 4px #ffffff;
+        }
+        .episode-card-list img {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+            margin-right: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .episode-card-list {
+                flex-direction: column;
+                text-align: center;
+            }
+            .episode-card-list img {
+                margin-right: 0;
+                margin-bottom: 1rem;
+                width: 100%;
+                height: auto;
+            }
         }
     </style>
 </head>
@@ -100,17 +151,17 @@
                     type="text" 
                     id="search-input" 
                     placeholder="Search for movies or series..." 
-                    class="focusable-item w-full pl-12 pr-4 py-4 rounded-full bg-gray-800 text-white border-2 border-gray-700 transition-colors duration-200 text-xl"
+                    class="focusable-item w-full pl-12 pr-4 py-4 rounded-full text-xl transition-colors duration-200"
                     tabindex="1"
                 >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 absolute left-4 top-1/2 -translate-y-1/2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </div>
         </header>
 
         <!-- Loading & Error States -->
-        <div id="loading" class="text-center text-4xl text-gray-500 hidden">Loading...</div>
+        <div id="loading" class="text-center text-4xl text-white hidden">Loading...</div>
         <div id="error-message" class="text-center text-red-500 text-4xl hidden">Failed to load data.</div>
 
         <!-- Movies Section -->
@@ -132,8 +183,12 @@
 
     <!-- Video Player Modal -->
     <div id="video-player-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="relative w-full h-full">
-            <!-- Video element with object-fit styles -->
+        <div class="relative w-full h-full max-h-[100vh] max-w-[100vw] flex items-center justify-center">
+            <!-- Back button - now at the top left as requested -->
+            <button id="back-button" class="focusable-item control-button p-4 rounded-full shadow-lg text-lg absolute top-4 left-4 z-[101]" tabindex="100">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            
             <video id="video-player" class="w-full h-full" preload="auto" playsinline style="object-fit: contain;"></video>
             
             <!-- Player Info Overlay (for pause/stop) -->
@@ -144,48 +199,40 @@
             </div>
             
             <!-- Custom Player Controls Bar -->
-            <div id="player-controls" class="absolute bottom-0 left-0 w-full p-8 transition-opacity duration-300 opacity-0 hover:opacity-100">
-                <!-- Back button -->
-                <button id="back-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg text-lg absolute top-4 left-4" tabindex="100">
-                    <i class="fas fa-arrow-left"></i>
-                </button>
-                
+            <div id="player-controls" class="absolute bottom-0 left-0 w-full p-8 transition-opacity duration-300 opacity-0 hover:opacity-100 z-50">
                 <!-- Progress bar and time display -->
                 <div class="flex items-center space-x-4 mb-4">
-                    <span id="current-time" class="text-lg text-white font-semibold">0:00</span>
+                    <span id="current-time" class="text-lg font-semibold">0:00</span>
                     <div id="progress-bar-container" class="flex-1 rounded-full overflow-hidden focusable-item" tabindex="101">
                         <div id="progress-bar"></div>
                     </div>
-                    <span id="duration" class="text-lg text-white font-semibold">0:00</span>
+                    <span id="duration" class="text-lg font-semibold">0:00</span>
                 </div>
 
                 <!-- Main controls and settings -->
                 <div class="flex justify-center items-center space-x-8">
                     <div class="flex items-center space-x-4">
-                        <button id="rewind-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg" tabindex="102">
+                        <button id="rewind-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="102">
                             <i class="fas fa-backward"></i>
                         </button>
-                        <button id="play-pause-button" class="focusable-item p-4 rounded-full bg-blue-600 text-white shadow-lg" tabindex="103">
-                            <i id="play-icon" class="fas fa-play"></i>
-                            <i id="pause-icon" class="fas fa-pause hidden"></i>
+                        <button id="play-pause-button" class="focusable-item control-button p-5 rounded-full shadow-lg" tabindex="103">
+                            <i id="play-icon" class="fas fa-play text-2xl"></i>
+                            <i id="pause-icon" class="fas fa-pause text-2xl hidden"></i>
                         </button>
-                        <button id="forward-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg" tabindex="104">
+                        <button id="forward-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="104">
                             <i class="fas fa-forward"></i>
                         </button>
                     </div>
 
                     <div class="flex items-center space-x-4">
                         <!-- Volume controls -->
-                        <button id="mute-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg" tabindex="105">
+                        <button id="mute-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="105">
                             <i id="volume-icon" class="fas fa-volume-up"></i>
                         </button>
-                        <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" class="focusable-item w-24 accent-blue-500 cursor-pointer" tabindex="106">
+                        <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" class="focusable-item w-24 accent-white cursor-pointer" tabindex="106">
 
                         <!-- Other settings -->
-                        <button id="settings-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg" tabindex="107">
-                            <i class="fas fa-cog"></i>
-                        </button>
-                        <button id="fullscreen-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg" tabindex="108">
+                        <button id="fullscreen-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="108">
                             <i class="fas fa-expand"></i>
                         </button>
                     </div>
@@ -195,16 +242,16 @@
     </div>
     
     <!-- Episode Selection Modal -->
-    <div id="series-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-90 hidden">
-        <div class="relative bg-gray-800 rounded-lg p-8 w-full max-w-6xl max-h-full overflow-y-auto scrollable flex flex-col md:flex-row">
+    <div id="series-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-95 hidden">
+        <div class="relative bg-card-dark rounded-lg p-8 w-full max-w-6xl max-h-full overflow-y-auto scrollable flex flex-col md:flex-row">
             <!-- Close button -->
-            <button id="series-modal-close" class="focusable-item absolute top-4 right-4 text-gray-400 hover:text-white text-3xl" tabindex="200">&times;</button>
+            <button id="series-modal-close" class="focusable-item absolute top-4 right-4 text-white hover:text-gray-400 text-3xl" tabindex="200">&times;</button>
             
             <!-- Series Info (left side) -->
             <div class="w-full md:w-1/3 flex-shrink-0 mb-6 md:mb-0 md:mr-8 text-center md:text-left">
                 <img id="series-modal-thumbnail" src="" alt="Series Thumbnail" class="rounded-lg shadow-xl mb-4 mx-auto md:mx-0">
                 <h2 id="series-modal-title" class="text-4xl font-bold text-white mb-2"></h2>
-                <p id="series-modal-description" class="text-lg text-gray-400">Description placeholder...</p>
+                <p id="series-modal-description" class="text-lg text-gray-400">No description available.</p>
             </div>
             
             <!-- Episodes list (right side) -->
@@ -261,10 +308,9 @@
         let seriesData = [];
         let filteredMovies = [];
         let filteredSeries = [];
-        let currentFocusIndex = 0;
-        let currentFocusables = [];
         let currentVideoItem = null;
         let controlsTimeout;
+        let focusedElement = null;
         
         const KEY_CODES = {
             ENTER: 13,
@@ -341,6 +387,8 @@
 
             // Update focusable elements after rendering
             updateFocusables();
+            focusedElement = searchInput;
+            searchInput.focus();
         }
 
         /**
@@ -351,12 +399,12 @@
          */
         function createCard(item, type) {
             const card = document.createElement('div');
-            card.className = 'focusable-item group cursor-pointer rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50';
+            card.className = 'focusable-item bg-card-dark group cursor-pointer rounded-lg overflow-hidden shadow-lg transition-all duration-300 border border-transparent';
             card.setAttribute('data-id', item._id);
             card.setAttribute('data-type', type);
             card.setAttribute('tabindex', '0');
 
-            const fallbackImage = `https://placehold.co/400x600/1f2937/d1d5db?text=${encodeURIComponent(item.name)}`;
+            const fallbackImage = `https://placehold.co/400x600/000000/ffffff?text=${encodeURIComponent(item.name)}`;
 
             card.innerHTML = `
                 <img src="${item.thumbnail}" alt="${item.name}" 
@@ -368,6 +416,14 @@
             `;
             
             card.addEventListener('click', () => handleCardClick(item));
+            card.addEventListener('focus', () => {
+                focusedElement = card;
+                card.classList.add('is-focused');
+            });
+            card.addEventListener('blur', () => {
+                card.classList.remove('is-focused');
+            });
+
             return card;
         }
 
@@ -391,6 +447,7 @@
                     openSeriesModal(seriesDetails);
                 } catch (error) {
                     console.error('Error fetching series details:', error);
+                    // Use a custom modal or message box instead of alert
                     alert('Could not load series details.');
                 }
             }
@@ -447,7 +504,11 @@
             currentVideoItem = null;
             
             // Re-focus on the last focused element or search input
-            searchInput.focus();
+            if (focusedElement) {
+                focusedElement.focus();
+            } else {
+                searchInput.focus();
+            }
         }
         
         /**
@@ -457,7 +518,7 @@
         function openSeriesModal(series) {
             seriesModalTitle.textContent = series.name;
             seriesModalThumbnail.src = series.thumbnail;
-            seriesModalDescription.textContent = series.description || 'No description available.';
+            seriesModalDescription.textContent = 'A detailed description would go here.';
             seriesEpisodesContainer.innerHTML = '';
             
             series.seasons.sort((a, b) => a.seasonNumber - b.seasonNumber).forEach(season => {
@@ -466,16 +527,18 @@
                 seasonDiv.innerHTML = `<h3 class="text-2xl font-bold mb-4 text-white">Season ${season.seasonNumber}</h3>`;
                 
                 const episodesList = document.createElement('div');
-                episodesList.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
+                episodesList.className = 'space-y-4';
                 
                 season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber).forEach(episode => {
                     const episodeCard = document.createElement('div');
-                    episodeCard.className = 'focusable-item p-4 rounded-lg bg-gray-700 hover:bg-gray-600 focus:bg-blue-600 focus:outline-none transition-colors duration-200 cursor-pointer';
+                    episodeCard.className = 'focusable-item episode-card-list bg-card-dark border border-transparent';
                     episodeCard.setAttribute('tabindex', '0');
                     episodeCard.innerHTML = `
-                        <img src="${episode.thumbnail || series.thumbnail}" alt="${episode.title}" class="w-full h-32 object-cover rounded-lg mb-2">
-                        <p class="text-lg font-semibold text-white truncate">E${episode.episodeNumber}: ${episode.title}</p>
-                        <p class="text-sm text-gray-400">Stream now</p>
+                        <img src="${episode.thumbnail || series.thumbnail}" alt="${episode.title}" class="flex-shrink-0">
+                        <div class="flex-grow">
+                            <p class="text-lg font-semibold text-white truncate">E${episode.episodeNumber}: ${episode.title}</p>
+                            <p class="text-sm text-gray-400">Stream now</p>
+                        </div>
                     `;
                     episodeCard.addEventListener('click', () => {
                         currentVideoItem = {
@@ -503,7 +566,11 @@
         function closeSeriesModal() {
             seriesModal.classList.add('hidden');
             appContainer.classList.remove('hidden');
-            searchInput.focus();
+            if (focusedElement) {
+                focusedElement.focus();
+            } else {
+                searchInput.focus();
+            }
         }
 
         // --- Video Player Functions ---
@@ -673,56 +740,61 @@
          */
         function handleMainPageKeys(e) {
             updateFocusables();
-            const focusedElement = document.activeElement;
-            const focusedIndex = currentFocusables.indexOf(focusedElement);
-            
+            const focusedEl = document.activeElement;
+            const focusables = Array.from(document.querySelectorAll('.focusable-item'));
+            const focusedIndex = focusables.indexOf(focusedEl);
+
+            let newIndex = focusedIndex;
+            let targetEl = null;
+
             switch (e.keyCode) {
                 case KEY_CODES.RIGHT:
-                    if (focusedIndex < currentFocusables.length - 1) {
-                        e.preventDefault();
-                        currentFocusables[focusedIndex + 1].focus();
+                    e.preventDefault();
+                    if (focusedIndex < focusables.length - 1) {
+                        targetEl = focusables[newIndex + 1];
                     }
                     break;
                 case KEY_CODES.LEFT:
+                    e.preventDefault();
                     if (focusedIndex > 0) {
-                        e.preventDefault();
-                        currentFocusables[focusedIndex - 1].focus();
+                        targetEl = focusables[newIndex - 1];
                     }
                     break;
                 case KEY_CODES.DOWN:
                     e.preventDefault();
-                    // Find the next element in the row below
-                    let nextRowElement = findVerticalFocus(focusedElement, 1);
-                    if (nextRowElement) nextRowElement.focus();
+                    // Custom vertical navigation logic
+                    const nextRowEl = findVerticalFocus(focusedEl, 1, focusables);
+                    if (nextRowEl) targetEl = nextRowEl;
                     break;
                 case KEY_CODES.UP:
                     e.preventDefault();
-                    // Find the previous element in the row above
-                    let prevRowElement = findVerticalFocus(focusedElement, -1);
-                    if (prevRowElement) prevRowElement.focus();
+                    // Custom vertical navigation logic
+                    const prevRowEl = findVerticalFocus(focusedEl, -1, focusables);
+                    if (prevRowEl) targetEl = prevRowEl;
                     break;
                 case KEY_CODES.ENTER:
                 case KEY_CODES.SPACE:
                     e.preventDefault();
-                    // Trigger click on the focused item
-                    if (focusedElement && focusedElement.classList.contains('focusable-item')) {
-                        focusedElement.click();
+                    if (focusedEl && focusedEl.classList.contains('focusable-item')) {
+                        focusedEl.click();
                     }
                     break;
+            }
+
+            if (targetEl) {
+                targetEl.focus();
             }
         }
         
         /**
-         * Finds the next/previous element for vertical navigation.
+         * Finds the next/previous element for vertical navigation, handling dynamic grids.
          * @param {HTMLElement} focusedEl - The currently focused element.
          * @param {number} direction - 1 for down, -1 for up.
+         * @param {Array<HTMLElement>} allItems - All focusable items.
          * @returns {HTMLElement|null} The next focusable element.
          */
-        function findVerticalFocus(focusedEl, direction) {
-            const allItems = Array.from(document.querySelectorAll('.focusable-item'));
-            const focusedIndex = allItems.indexOf(focusedEl);
-            if (focusedIndex === -1) return null;
-
+        function findVerticalFocus(focusedEl, direction, allItems) {
+            if (!focusedEl) return null;
             const focusedRect = focusedEl.getBoundingClientRect();
             let bestMatch = null;
             let minDistance = Infinity;
@@ -730,7 +802,6 @@
             for (const item of allItems) {
                 const itemRect = item.getBoundingClientRect();
 
-                // Check if item is in the correct vertical direction
                 if (direction > 0 && itemRect.top > focusedRect.bottom) {
                     const verticalDistance = itemRect.top - focusedRect.bottom;
                     const horizontalDistance = Math.abs((itemRect.left + itemRect.right) / 2 - (focusedRect.left + focusedRect.right) / 2);
@@ -754,6 +825,7 @@
             return bestMatch;
         }
 
+
         /**
          * Handles key presses for the video player modal.
          * @param {KeyboardEvent} e - The keydown event.
@@ -775,11 +847,13 @@
                     break;
                 case KEY_CODES.UP:
                     e.preventDefault();
-                    if (videoPlayer.volume < 1) videoPlayer.volume += 0.1;
+                    if (videoPlayer.volume < 1) videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1);
+                    volumeSlider.value = videoPlayer.volume;
                     break;
                 case KEY_CODES.DOWN:
                     e.preventDefault();
-                    if (videoPlayer.volume > 0) videoPlayer.volume -= 0.1;
+                    if (videoPlayer.volume > 0) videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1);
+                    volumeSlider.value = videoPlayer.volume;
                     break;
                 case KEY_CODES.BACK:
                 case KEY_CODES.ESCAPE:
@@ -797,37 +871,38 @@
          */
         function handleModalKeys(e) {
             updateFocusables();
-            const focusedElement = document.activeElement;
-            const focusedIndex = currentFocusables.indexOf(focusedElement);
-            
+            const focusedEl = document.activeElement;
+            const focusables = Array.from(seriesModal.querySelectorAll('.focusable-item'));
+            const focusedIndex = focusables.indexOf(focusedEl);
+
+            let targetEl = null;
+
             switch (e.keyCode) {
                 case KEY_CODES.RIGHT:
-                    if (focusedIndex < currentFocusables.length - 1) {
-                        e.preventDefault();
-                        currentFocusables[focusedIndex + 1].focus();
-                    }
+                    e.preventDefault();
+                    // In list view, right and left can navigate within a single episode card if needed, but for now we'll keep it simple
+                    // This can be expanded to navigate between elements inside a card (e.g., play button)
                     break;
                 case KEY_CODES.LEFT:
-                    if (focusedIndex > 0) {
-                        e.preventDefault();
-                        currentFocusables[focusedIndex - 1].focus();
-                    }
+                    e.preventDefault();
                     break;
                 case KEY_CODES.DOWN:
                     e.preventDefault();
-                    const nextModalItem = findVerticalFocus(focusedElement, 1);
-                    if (nextModalItem) nextModalItem.focus();
+                    if (focusedIndex < focusables.length - 1) {
+                        targetEl = focusables[focusedIndex + 1];
+                    }
                     break;
                 case KEY_CODES.UP:
                     e.preventDefault();
-                    const prevModalItem = findVerticalFocus(focusedElement, -1);
-                    if (prevModalItem) prevModalItem.focus();
+                    if (focusedIndex > 0) {
+                        targetEl = focusables[focusedIndex - 1];
+                    }
                     break;
                 case KEY_CODES.ENTER:
                 case KEY_CODES.SPACE:
                     e.preventDefault();
-                    if (focusedElement && focusedElement.classList.contains('focusable-item')) {
-                        focusedElement.click();
+                    if (focusedEl && focusedEl.classList.contains('focusable-item')) {
+                        focusedEl.click();
                     }
                     break;
                 case KEY_CODES.BACK:
@@ -836,21 +911,27 @@
                     closeSeriesModal();
                     break;
             }
+
+            if(targetEl) {
+                targetEl.focus();
+            }
         }
 
         /**
          * Updates the list of focusable items in the DOM.
          */
         function updateFocusables() {
-            if (!videoPlayerModal.classList.contains('hidden')) {
-                currentFocusables = Array.from(videoPlayerModal.querySelectorAll('.focusable-item'));
-            } else if (!seriesModal.classList.contains('hidden')) {
-                currentFocusables = Array.from(seriesModal.querySelectorAll('.focusable-item'));
-            } else {
-                currentFocusables = Array.from(document.querySelectorAll('.focusable-item'));
-            }
+            const allFocusables = document.querySelectorAll('.focusable-item');
+            allFocusables.forEach(item => {
+                item.addEventListener('focus', () => {
+                    item.classList.add('is-focused');
+                });
+                item.addEventListener('blur', () => {
+                    item.classList.remove('is-focused');
+                });
+            });
         }
-
+        
         // Initial setup on page load
         window.onload = function() {
             fetchData().then(() => {

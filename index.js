@@ -1,4 +1,4 @@
-require('dotenv').config();
+Require('dotenv').config();
 
 const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
@@ -11,12 +11,23 @@ const fs = require('fs');
 // CONFIGURATION
 // ================================================================
 
-const BOT_TOKEN = process.env.BOT_TOKEN || '7545348868:AAGjvrcDALv0O8fH5NmDzBkXFWrgIRdKYek';
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://movie:movie@movie.tylkv.mongodb.net/?retryWrites=true&w=majority&appName=movie';
+// Use your actual BOT_TOKEN from the environment variables
+const BOT_TOKEN = process.env.BOT_TOKEN; 
+// Use your actual MONGODB_URI from the environment variables
+const MONGODB_URI = process.env.MONGODB_URI;
 const PORT = process.env.PORT || 3000;
+// Set USE_WEBHOOK to 'true' in your Koyeb environment variables for production
 const USE_WEBHOOK = process.env.USE_WEBHOOK === 'true';
 
-// Initialize bot with polling by default
+if (!BOT_TOKEN) {
+  console.error('❌ BOT_TOKEN not found in environment variables. Please set it.');
+  process.exit(1);
+}
+if (!MONGODB_URI) {
+  console.error('❌ MONGODB_URI not found in environment variables. Please set it.');
+  process.exit(1);
+}
+
 const bot = new TelegramBot(BOT_TOKEN, { 
   polling: !USE_WEBHOOK,
   request: {
@@ -45,6 +56,7 @@ mongoose.connect(MONGODB_URI, {
 
 // Schemas
 const movieSchema = new mongoose.Schema({
+  // Use 'name' to be consistent with the bot's conversation flow
   name: { type: String, required: true },
   thumbnail: { type: String, required: true },
   streamingUrl: { type: String, required: true },
@@ -68,7 +80,8 @@ const seriesSchema = new mongoose.Schema({
   addedAt: { type: Date, default: Date.now }
 });
 
-// Add indexes for better performance
+// Add text indexes for search functionality.
+// Note: This is not a unique index, so it won't cause the duplicate key error.
 movieSchema.index({ name: 'text' });
 seriesSchema.index({ name: 'text' });
 
@@ -200,7 +213,8 @@ bot.on('message', async (msg) => {
         });
       }
     } else if (text === '🌐 Frontend URL') {
-      const frontendUrl = 'https://future-ester-seeutech-645c6129.koyeb.app';
+      // Use your Koyeb URL here
+      const frontendUrl = process.env.KOYEB_URL || 'http://localhost:3000';
       
       await bot.sendMessage(chatId, 
         `🌐 *Web Frontend:*\n${frontendUrl}\n\n` +
@@ -583,7 +597,7 @@ app.get('/', (req, res) => {
     }
     
     // Use the fixed Koyeb URL for API base
-    const apiBaseUrl = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
+    const apiBaseUrl = process.env.KOYEB_URL ? `${process.env.KOYEB_URL}/api` : 'http://localhost:3000/api';
     
     // Replace the API_BASE_URL in the frontend
     const updatedHtml = data.replace(
@@ -659,3 +673,4 @@ process.on('SIGINT', async () => {
   }
   process.exit(0);
 });
+

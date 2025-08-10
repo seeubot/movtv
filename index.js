@@ -16,10 +16,13 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 // Use your actual MONGODB_URI from the environment variables
 const MONGODB_URI = process.env.MONGODB_URI;
 const PORT = process.env.PORT || 8000;
+// Use a different port for local polling to avoid conflicts, if you choose that method
+const POLLING_PORT = process.env.POLLING_PORT || 8001; 
 // Set USE_WEBHOOK to 'true' in your Koyeb environment variables for production
 const USE_WEBHOOK = process.env.USE_WEBHOOK === 'true';
 // The public URL for your deployed application
 const KOYEB_URL = process.env.FRONTEND_URL;
+const WEBHOOK_PATH = `/bot${BOT_TOKEN}`;
 
 if (!BOT_TOKEN) {
   console.error('❌ BOT_TOKEN not found in environment variables. Please set it.');
@@ -34,16 +37,17 @@ if (USE_WEBHOOK && !KOYEB_URL) {
   process.exit(1);
 }
 
-// Initialize bot. Use polling for local development, webhook for production.
+// Initialize bot. The webhook mode is configured to work with the Express app.
 let bot;
 if (USE_WEBHOOK) {
-  bot = new TelegramBot(BOT_TOKEN, { webHook: { port: PORT } });
-  console.log('🤖 Bot started in Webhook mode.');
+  // Pass the bot token but don't start its internal server.
+  bot = new TelegramBot(BOT_TOKEN, { onlyFirstMatch: true });
+  console.log('🤖 Bot initialized for Webhook mode. Waiting for Express to start...');
 } else {
+  // Use polling for local development, which starts its own server on a different port.
   bot = new TelegramBot(BOT_TOKEN, { polling: true });
   console.log('🤖 Bot started in Polling mode.');
 }
-
 
 // ================================================================
 // MONGODB CONNECTION & SCHEMAS
@@ -109,9 +113,15 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// This endpoint is crucial for webhooks
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
+// The bot's webhook endpoint, handled by the Express server.
 if (USE_WEBHOOK) {
-  app.post(`/bot${BOT_TOKEN}`, (req, res) => {
+  app.post(WEBHOOK_PATH, (req, res) => {
     bot.processUpdate(req.body);
     res.sendStatus(200);
   });
@@ -119,12 +129,6 @@ if (USE_WEBHOOK) {
 
 // Serve static files from public directory (including your frontend)
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
 
 // ================================================================
 // BOT STATE MANAGEMENT & CONVERSATION FLOWS
@@ -602,7 +606,7 @@ app.get('/', (req, res) => {
       return res.status(500).send('Error loading frontend');
     }
     
-    const apiBaseUrl = KOYEB_URL ? `${KOYEB_URL}/api` : 'http://localhost:3000/api';
+    const apiBaseUrl = KOYEB_URL ? `${KOYEB_URL}/api` : `http://localhost:${PORT}/api`;
     
     const updatedHtml = data.replace(
       /const API_BASE_URL = [^;]+;/,
@@ -646,9 +650,10 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log('🤖 Bot mode:', USE_WEBHOOK ? 'Webhook' : 'Polling');
   
   if (USE_WEBHOOK && KOYEB_URL) {
-    const webhookUrl = `${KOYEB_URL}/bot${BOT_TOKEN}`;
+    const webhookUrl = `${KOYEB_URL}${WEBHOOK_PATH}`;
     console.log(`Setting Telegram webhook to: ${webhookUrl}`);
     try {
+      // Use the express app's URL for the webhook
       await bot.setWebHook(webhookUrl);
       console.log('✅ Webhook set successfully!');
     } catch (e) {

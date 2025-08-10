@@ -321,9 +321,9 @@ bot.on('callback_query', async (callbackQuery) => {
             parse_mode: 'Markdown',
             reply_markup: {
               inline_keyboard: [
-                [{ text: '✍️ Edit Name', callback_data: 'edit_movie_name' }],
-                [{ text: '📸 Edit Thumbnail URL', callback_data: 'edit_movie_thumbnail' }],
-                [{ text: '🔗 Edit Streaming URL', callback_data: 'edit_movie_streaming_url' }],
+                [{ text: '✍️ Edit Name', callback_data: `edit_field_movie_name` }],
+                [{ text: '📸 Edit Thumbnail URL', callback_data: `edit_field_movie_thumbnail` }],
+                [{ text: '🔗 Edit Streaming URL', callback_data: `edit_field_movie_streaming_url` }],
                 [{ text: '❌ Cancel', callback_data: 'cancel' }]
               ]
             }
@@ -345,9 +345,9 @@ bot.on('callback_query', async (callbackQuery) => {
             parse_mode: 'Markdown',
             reply_markup: {
               inline_keyboard: [
-                [{ text: '✍️ Edit Name', callback_data: 'edit_series_name' }],
-                [{ text: '📸 Edit Thumbnail URL', callback_data: 'edit_series_thumbnail' }],
-                [{ text: '➕ Add/Edit Episodes', callback_data: 'edit_series_episodes' }],
+                [{ text: '✍️ Edit Name', callback_data: `edit_field_series_name` }],
+                [{ text: '📸 Edit Thumbnail URL', callback_data: `edit_field_series_thumbnail` }],
+                [{ text: '➕ Add/Edit Episodes', callback_data: `edit_series_episodes` }],
                 [{ text: '❌ Cancel', callback_data: 'cancel' }]
               ]
             }
@@ -356,75 +356,82 @@ bot.on('callback_query', async (callbackQuery) => {
       } else {
         await bot.sendMessage(chatId, '❌ Series not found.', getMainMenuKeyboard());
       }
-    } else if (data.startsWith('edit_movie_')) {
+    } else if (data.startsWith('edit_field_movie_')) {
         const userData = tempData.get(chatId);
         if (!userData || userData.type !== 'movie' || !userData.movieId) {
           await bot.sendMessage(chatId, '❌ No movie selected for editing. Please try again.', getMainMenuKeyboard());
           return;
         }
 
-        const movieId = userData.movieId;
+        const fieldToEdit = data.replace('edit_field_movie_', '');
 
-        switch (data) {
-          case 'edit_movie_name':
+        switch (fieldToEdit) {
+          case 'name':
             userStates.set(chatId, 'editing_movie_name');
             await bot.sendMessage(chatId, '✍️ Enter the new movie name:');
             break;
-          case 'edit_movie_thumbnail':
+          case 'thumbnail':
             userStates.set(chatId, 'editing_movie_thumbnail');
             await bot.sendMessage(chatId, '📸 Enter the new movie thumbnail URL:');
             break;
-          case 'edit_movie_streaming_url':
+          case 'streaming_url':
             userStates.set(chatId, 'editing_movie_streaming_url');
             await bot.sendMessage(chatId, '🔗 Enter the new streaming URL:');
             break;
           default:
+            await bot.sendMessage(chatId, '❌ Invalid edit option.', getMainMenuKeyboard());
             break;
         }
-    } else if (data.startsWith('edit_series_')) {
+    } else if (data.startsWith('edit_field_series_')) {
         const userData = tempData.get(chatId);
         if (!userData || userData.type !== 'series' || !userData.seriesId) {
           await bot.sendMessage(chatId, '❌ No series selected for editing. Please try again.', getMainMenuKeyboard());
           return;
         }
+        
+        const fieldToEdit = data.replace('edit_field_series_', '');
 
-        const seriesId = userData.seriesId;
-
-        switch (data) {
-          case 'edit_series_name':
+        switch (fieldToEdit) {
+          case 'name':
             userStates.set(chatId, 'editing_series_name');
             await bot.sendMessage(chatId, '✍️ Enter the new series name:');
             break;
-          case 'edit_series_thumbnail':
+          case 'thumbnail':
             userStates.set(chatId, 'editing_series_thumbnail');
             await bot.sendMessage(chatId, '📸 Enter the new series thumbnail URL:');
             break;
-          case 'edit_series_episodes':
-            const series = await Series.findById(seriesId);
-            if (!series || series.seasons.length === 0) {
-              await bot.sendMessage(chatId, '❌ No seasons found. Add a season first.', getMainMenuKeyboard());
-              return;
-            }
-            const seasonKeyboard = series.seasons.map(s => [
-              { text: `Season ${s.seasonNumber}`, callback_data: `edit_season_${seriesId}_${s.seasonNumber}` }
-            ]);
-            await bot.sendMessage(chatId, '📺 Select a season to manage episodes:', {
-              reply_markup: { inline_keyboard: seasonKeyboard }
-            });
-            break;
           default:
+            await bot.sendMessage(chatId, '❌ Invalid edit option.', getMainMenuKeyboard());
             break;
         }
-    } else if (data.startsWith('add_another_episode')) {
+    } else if (data === 'edit_series_episodes') {
+      const userData = tempData.get(chatId);
+      if (!userData || userData.type !== 'series' || !userData.seriesId) {
+          await bot.sendMessage(chatId, '❌ No series selected for editing. Please try again.', getMainMenuKeyboard());
+          return;
+      }
+      
+      const series = await Series.findById(userData.seriesId);
+      if (!series || series.seasons.length === 0) {
+        await bot.sendMessage(chatId, '❌ No seasons found. Add a season first.', getMainMenuKeyboard());
+        return;
+      }
+      const seasonKeyboard = series.seasons.map(s => [
+        { text: `Season ${s.seasonNumber}`, callback_data: `add_to_series_${series._id}` }
+      ]);
+      await bot.sendMessage(chatId, '📺 Select a season to manage episodes:', {
+        reply_markup: { inline_keyboard: seasonKeyboard }
+      });
+    } else if (data === 'add_another_episode') {
       const userData = tempData.get(chatId);
       if (userData && userData.currentSeason) {
         userStates.set(chatId, 'adding_episode_number');
         await bot.sendMessage(chatId, `📺 Season ${userData.currentSeason.seasonNumber} - Enter next episode number:`);
       }
-    } else if (data.startsWith('add_new_season')) {
+    } else if (data === 'add_new_season') {
       userStates.set(chatId, 'adding_season_number');
       await bot.sendMessage(chatId, '🔢 Enter new season number:');
-    } else if (data.startsWith('finish_series')) {
+    } else if (data === 'finish_series') {
       const userData = tempData.get(chatId);
       if (userData && userData.seriesId) {
         try {

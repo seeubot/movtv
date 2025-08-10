@@ -4,6 +4,8 @@ const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 // ================================================================
 // CONFIGURATION
@@ -81,7 +83,7 @@ const app = express();
 
 // CORS configuration for frontend compatibility
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:8080', 'http://127.0.0.1:8080', '*'],
+  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:8080', 'http://127.0.0.1:8080', '*'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -89,6 +91,9 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files from public directory (including your frontend)
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -195,10 +200,21 @@ bot.on('message', async (msg) => {
         });
       }
     } else if (text === '🌐 Frontend URL') {
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      // Get the production URL from environment or construct from Koyeb
+      let frontendUrl = process.env.FRONTEND_URL;
+      
+      if (!frontendUrl) {
+        const koyebAppName = process.env.KOYEB_APP_NAME;
+        if (koyebAppName) {
+          frontendUrl = `https://${koyebAppName}.koyeb.app`;
+        } else {
+          frontendUrl = `http://localhost:${PORT}`;
+        }
+      }
+      
       await bot.sendMessage(chatId, 
         `🌐 *Web Frontend:*\n${frontendUrl}\n\n` +
-        `📱 *API Server:* http://localhost:${PORT}\n\n` +
+        `📱 *API Server:* ${frontendUrl}/api\n\n` +
         '🎬 Open the frontend URL to watch your movies and series!',
         { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
       );
@@ -564,8 +580,35 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// Simple route for root - just return API info
+// Serve your custom frontend at root with dynamic API URL injection
 app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  
+  // Read the HTML file
+  const fs = require('fs');
+  fs.readFile(indexPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading index.html:', err);
+      return res.status(500).send('Error loading frontend');
+    }
+    
+    // Get the current host for API base URL
+    const protocol = req.get('x-forwarded-proto') || 'http';
+    const host = req.get('host');
+    const apiBaseUrl = `${protocol}://${host}/api`;
+    
+    // Replace the API_BASE_URL in the frontend
+    const updatedHtml = data.replace(
+      /const API_BASE_URL = [^;]+;/,
+      `const API_BASE_URL = '${apiBaseUrl}';`
+    );
+    
+    res.send(updatedHtml);
+  });
+});
+
+// API info endpoint
+app.get('/api', (req, res) => {
   res.json({
     name: 'Media Manager API',
     version: '1.0.0',
@@ -577,7 +620,7 @@ app.get('/', (req, res) => {
       stats: '/api/stats',
       health: '/health'
     },
-    message: 'Use your custom frontend to access the media library!'
+    message: 'Frontend is available at the root URL /'
   });
 });
 

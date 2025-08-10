@@ -1,4 +1,4 @@
-require('dotenv').config();
+Require('dotenv').config();
 
 const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
@@ -15,9 +15,11 @@ const fs = require('fs');
 const BOT_TOKEN = process.env.BOT_TOKEN; 
 // Use your actual MONGODB_URI from the environment variables
 const MONGODB_URI = process.env.MONGODB_URI;
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 // Set USE_WEBHOOK to 'true' in your Koyeb environment variables for production
 const USE_WEBHOOK = process.env.USE_WEBHOOK === 'true';
+// The public URL for your deployed application
+const KOYEB_URL = process.env.FRONTEND_URL;
 
 if (!BOT_TOKEN) {
   console.error('❌ BOT_TOKEN not found in environment variables. Please set it.');
@@ -27,16 +29,21 @@ if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI not found in environment variables. Please set it.');
   process.exit(1);
 }
+if (USE_WEBHOOK && !KOYEB_URL) {
+  console.error('❌ FRONTEND_URL (KOYEB_URL) is required for webhook mode. Please set it.');
+  process.exit(1);
+}
 
-const bot = new TelegramBot(BOT_TOKEN, { 
-  polling: !USE_WEBHOOK,
-  request: {
-    agentOptions: {
-      keepAlive: true,
-      family: 4
-    }
-  }
-});
+// Initialize bot. Use polling for local development, webhook for production.
+let bot;
+if (USE_WEBHOOK) {
+  bot = new TelegramBot(BOT_TOKEN, { webHook: { port: PORT } });
+  console.log('🤖 Bot started in Webhook mode.');
+} else {
+  bot = new TelegramBot(BOT_TOKEN, { polling: true });
+  console.log('🤖 Bot started in Polling mode.');
+}
+
 
 // ================================================================
 // MONGODB CONNECTION & SCHEMAS
@@ -56,7 +63,6 @@ mongoose.connect(MONGODB_URI, {
 
 // Schemas
 const movieSchema = new mongoose.Schema({
-  // Use 'name' to be consistent with the bot's conversation flow
   name: { type: String, required: true },
   thumbnail: { type: String, required: true },
   streamingUrl: { type: String, required: true },
@@ -81,7 +87,6 @@ const seriesSchema = new mongoose.Schema({
 });
 
 // Add text indexes for search functionality.
-// Note: This is not a unique index, so it won't cause the duplicate key error.
 movieSchema.index({ name: 'text' });
 seriesSchema.index({ name: 'text' });
 
@@ -94,7 +99,6 @@ const Series = mongoose.model('Series', seriesSchema);
 
 const app = express();
 
-// CORS configuration for frontend compatibility
 app.use(cors({
   origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:8080', 'http://127.0.0.1:8080', '*'],
   credentials: true,
@@ -104,6 +108,14 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// This endpoint is crucial for webhooks
+if (USE_WEBHOOK) {
+  app.post(`/bot${BOT_TOKEN}`, (req, res) => {
+    bot.processUpdate(req.body);
+    res.sendStatus(200);
+  });
+}
 
 // Serve static files from public directory (including your frontend)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -213,8 +225,7 @@ bot.on('message', async (msg) => {
         });
       }
     } else if (text === '🌐 Frontend URL') {
-      // Use your Koyeb URL here
-      const frontendUrl = process.env.KOYEB_URL || 'http://localhost:3000';
+      const frontendUrl = KOYEB_URL || 'http://localhost:3000';
       
       await bot.sendMessage(chatId, 
         `🌐 *Web Frontend:*\n${frontendUrl}\n\n` +
@@ -458,11 +469,9 @@ bot.on('callback_query', async (callbackQuery) => {
   } else if (data === 'finish_series') {
     try {
       if (userData.seriesId) {
-        // Update existing series
         await Series.findByIdAndUpdate(userData.seriesId, { seasons: userData.seasons });
         await bot.sendMessage(chatId, `✅ Episodes added to "${userData.name}" successfully!`, getMainMenuKeyboard());
       } else {
-        // Create new series
         const series = new Series({ 
           name: userData.name,
           thumbnail: userData.thumbnail,
@@ -510,7 +519,6 @@ app.get('/api/movies', async (req, res) => {
     
     const total = await Movie.countDocuments(query);
     
-    // Return format that matches your frontend expectations
     if (movies.length === 0) {
       return res.json([]);
     }
@@ -535,7 +543,6 @@ app.get('/api/series', async (req, res) => {
     
     const total = await Series.countDocuments(query);
     
-    // Return format that matches your frontend expectations
     if (series.length === 0) {
       return res.json([]);
     }
@@ -589,17 +596,14 @@ app.get('/api/stats', async (req, res) => {
 app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   
-  // Read the HTML file
   fs.readFile(indexPath, 'utf8', (err, data) => {
     if (err) {
       console.error('Error reading index.html:', err);
       return res.status(500).send('Error loading frontend');
     }
     
-    // Use the fixed Koyeb URL for API base
-    const apiBaseUrl = process.env.KOYEB_URL ? `${process.env.KOYEB_URL}/api` : 'http://localhost:3000/api';
+    const apiBaseUrl = KOYEB_URL ? `${KOYEB_URL}/api` : 'http://localhost:3000/api';
     
-    // Replace the API_BASE_URL in the frontend
     const updatedHtml = data.replace(
       /const API_BASE_URL = [^;]+;/,
       `const API_BASE_URL = '${apiBaseUrl}';`
@@ -636,10 +640,22 @@ app.use((error, req, res, next) => {
 // SERVER START
 // ================================================================
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log('🚀 Media Manager API Server running on port', PORT);
-  console.log('🌐 API Base URL: http://localhost:' + PORT);
+  console.log('🌐 API Base URL:', KOYEB_URL ? `${KOYEB_URL}/api` : `http://localhost:${PORT}/api`);
   console.log('🤖 Bot mode:', USE_WEBHOOK ? 'Webhook' : 'Polling');
+  
+  if (USE_WEBHOOK && KOYEB_URL) {
+    const webhookUrl = `${KOYEB_URL}/bot${BOT_TOKEN}`;
+    console.log(`Setting Telegram webhook to: ${webhookUrl}`);
+    try {
+      await bot.setWebHook(webhookUrl);
+      console.log('✅ Webhook set successfully!');
+    } catch (e) {
+      console.error('❌ Failed to set webhook:', e.message);
+    }
+  }
+
   console.log('📋 Available endpoints:');
   console.log('   • GET  /api/movies     - Get all movies');
   console.log('   • GET  /api/series     - Get all series');

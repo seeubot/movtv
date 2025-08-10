@@ -1,1009 +1,608 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <!-- Viewport meta tag is essential for responsive behavior -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Manager TV</title>
-    <!-- Tailwind CSS CDN for modern styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Custom styles for a clean black and white theme */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #000000;
-            color: #ffffff;
-            /* Disable overscroll and touch to prevent unexpected browser behavior on TVs */
-            overscroll-behavior: none;
-            touch-action: none;
-            overflow: hidden; /* Prevents unwanted scrollbars */
-        }
-        
-        .bg-card-dark {
-            background-color: #121212;
+import React, { useState, useEffect, useCallback } from 'react';
+import { Play, Pause, FastForward, FastRewind, Volume2, VolumeX, Volume1, Expand, ArrowLeft, Search, X } from 'lucide-react';
+import { createRoot } from 'react-dom/client';
+
+// This is the main App component that renders the entire UI
+const App = () => {
+  const [movies, setMovies] = useState([]);
+  const [series, setSeries] = useState([]);
+  const [filteredMovies, setFilteredMovies] = useState([]);
+  const [filteredSeries, setFilteredSeries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [view, setView] = useState('home'); // 'home', 'video', 'series'
+  const [currentVideo, setCurrentVideo] = useState(null);
+  const [selectedSeries, setSelectedSeries] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isControlsVisible, setIsControlsVisible] = useState(true);
+  const [isPaused, setIsPaused] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const videoRef = React.useRef(null);
+  const containerRef = React.useRef(null);
+  const focusHistory = React.useRef([]);
+  const controlsTimeout = React.useRef(null);
+
+  // NOTE: The backend injects the correct API_BASE_URL into this file.
+  const API_BASE_URL = window.location.origin + '/api';
+  
+  // Custom hook to handle showing/hiding video controls
+  const showControls = useCallback(() => {
+    if (view !== 'video') return;
+    setIsControlsVisible(true);
+    clearTimeout(controlsTimeout.current);
+    controlsTimeout.current = setTimeout(() => {
+      if (!isPaused) {
+        setIsControlsVisible(false);
+      }
+    }, 3000);
+  }, [isPaused, view]);
+
+  // Fetches data from the API on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [moviesResponse, seriesResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/movies`),
+          fetch(`${API_BASE_URL}/series`),
+        ]);
+
+        if (!moviesResponse.ok || !seriesResponse.ok) {
+          throw new Error('Failed to fetch data from API');
         }
 
-        /* Focus highlight for TV remote navigation */
-        .focusable-item:focus {
-            outline: none;
-            box-shadow: 0 0 0 4px #ffffff;
-            border-color: #ffffff;
-            transform: scale(1.02);
-            transition: all 0.2s ease-in-out;
-            z-index: 10;
-        }
-        .focusable-item.is-focused {
-            box-shadow: 0 0 0 4px #ffffff;
-            border-color: #ffffff;
-            transform: scale(1.02);
-        }
+        const moviesData = await moviesResponse.json();
+        const seriesData = await seriesResponse.json();
 
-        /* Styling for the search input */
-        #search-input {
-            background-color: #1a1a1a;
-            color: #ffffff;
-            border: 2px solid #333333;
-        }
-        #search-input:focus {
-            border-color: #ffffff;
-            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.5);
-        }
+        setMovies(moviesData);
+        setSeries(seriesData);
+        setFilteredMovies(moviesData);
+        setFilteredSeries(seriesData);
+      } catch (err) {
+        console.error('Fetch error:', err);
+        setError('Failed to load data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [API_BASE_URL]);
 
-        /* Video player modal backdrop */
-        #video-player-modal {
-            background-color: rgba(0, 0, 0, 0.98);
-        }
+  // Handles search functionality
+  useEffect(() => {
+    const filterContent = async () => {
+      setLoading(true);
+      try {
+        const [moviesResponse, seriesResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/movies?search=${searchQuery}`),
+          fetch(`${API_BASE_URL}/series?search=${searchQuery}`),
+        ]);
+        const moviesData = await moviesResponse.json();
+        const seriesData = await seriesResponse.json();
+        setFilteredMovies(moviesData);
+        setFilteredSeries(seriesData);
+      } catch (err) {
+        console.error('Search error:', err);
+        setError('Failed to search. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        /* Player controls */
-        #player-controls {
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
-            transition: opacity 0.3s ease-in-out;
-        }
-        
-        .control-button {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-        }
-        .control-button:hover, .control-button:focus {
-            background-color: rgba(255, 255, 255, 0.3);
-        }
-        
-        /* Video player overlay for title and thumbnail */
-        #player-info-overlay {
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(8px);
-        }
+    const delayDebounceFn = setTimeout(() => {
+      filterContent();
+    }, 500);
 
-        /* Hide scrollbars for a clean TV UI */
-        ::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-        }
-        .scrollable {
-            scrollbar-width: none;
-        }
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, API_BASE_URL]);
 
-        /* Custom progress bar styles */
-        #progress-bar-container {
-            height: 8px;
-            background-color: rgba(255, 255, 255, 0.3);
-            cursor: pointer;
-            position: relative;
-        }
-        #progress-bar {
-            height: 100%;
-            background-color: #ffffff;
-            transition: width 0.1s linear;
-        }
-        
-        /* New list-view for episodes */
-        .episode-card-list {
-            display: flex;
-            align-items: center;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            background-color: #121212;
-            transition: background-color 0.2s;
-            cursor: pointer;
-        }
-        .episode-card-list:hover {
-            background-color: #1a1a1a;
-        }
-        .episode-card-list:focus {
-             outline: none;
-             box-shadow: 0 0 0 4px #ffffff;
-        }
-        .episode-card-list img {
-            width: 120px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 0.25rem;
-            margin-right: 1.5rem;
-        }
+  // Video player event handlers
+  const handleVideoTimeUpdate = () => {
+    const video = videoRef.current;
+    if (video) {
+      setProgress((video.currentTime / video.duration) * 100);
+      setCurrentTime(video.currentTime);
+    }
+  };
 
-        /* CRITICAL: Responsive design rules for different orientations */
-        /* Default mobile/vertical view */
-        @media (max-aspect-ratio: 1/1) {
-            .episode-card-list {
-                flex-direction: column;
-                text-align: center;
-            }
-            .episode-card-list img {
-                margin-right: 0;
-                margin-bottom: 1rem;
-                width: 100%;
-                height: auto;
-            }
+  const handleVideoLoadedMetadata = () => {
+    const video = videoRef.current;
+    if (video) {
+      setDuration(video.duration);
+      video.volume = volume; // Set initial volume
+    }
+  };
+
+  const handleVideoEnded = () => {
+    closeVideoPlayer();
+  };
+  
+  const handlePlayerMouseTouch = () => {
+    showControls();
+  };
+
+  // Keyboard navigation logic
+  const handleKeyDown = useCallback((e) => {
+    // Prevent default scroll behavior for arrow keys
+    if ([37, 38, 39, 40].includes(e.keyCode)) {
+      e.preventDefault();
+    }
+
+    if (view === 'video') {
+      handleVideoKeys(e);
+    } else if (view === 'series') {
+      handleSeriesModalKeys(e);
+    } else {
+      handleMainPageKeys(e);
+    }
+  }, [view, isPaused, showControls]);
+  
+  const handleMainPageKeys = (e) => {
+    const focusables = Array.from(containerRef.current.querySelectorAll('.focusable-item'));
+    const focusedEl = document.activeElement;
+    const focusedIndex = focusables.indexOf(focusedEl);
+    let targetEl = null;
+  
+    switch (e.keyCode) {
+      case 39: // Right Arrow
+        if (focusedIndex < focusables.length - 1) targetEl = focusables[focusedIndex + 1];
+        break;
+      case 37: // Left Arrow
+        if (focusedIndex > 0) targetEl = focusables[focusedIndex - 1];
+        break;
+      case 40: // Down Arrow
+        targetEl = findVerticalFocus(focusedEl, 1, focusables);
+        break;
+      case 38: // Up Arrow
+        targetEl = findVerticalFocus(focusedEl, -1, focusables);
+        break;
+      case 13: // Enter
+      case 32: // Space
+        if (focusedEl && focusedEl.classList.contains('focusable-item')) {
+          focusedEl.click();
         }
-        
-        /* TV and horizontal view */
-        @media (min-aspect-ratio: 1/1) {
-             #app-container {
-                padding: 4rem; /* More padding for a better TV experience */
-            }
-            #video-player-modal .w-full {
-                width: 100vw;
-            }
-            #video-player-modal .h-full {
-                height: 100vh;
-            }
+        break;
+    }
+  
+    if (targetEl) {
+      targetEl.focus();
+    }
+  };
+  
+  const findVerticalFocus = (focusedEl, direction, allItems) => {
+    if (!focusedEl) return null;
+    const focusedRect = focusedEl.getBoundingClientRect();
+    let bestMatch = null;
+    let minDistance = Infinity;
+  
+    for (const item of allItems) {
+      const itemRect = item.getBoundingClientRect();
+      if (direction > 0 && itemRect.top > focusedRect.bottom) {
+        const verticalDistance = itemRect.top - focusedRect.bottom;
+        const horizontalDistance = Math.abs((itemRect.left + itemRect.right) / 2 - (focusedRect.left + focusedRect.right) / 2);
+        const distance = verticalDistance + horizontalDistance * 0.5;
+        if (distance < minDistance) {
+          minDistance = distance;
+          bestMatch = item;
         }
-        
-        /* Ensure video player takes up the full screen correctly without distortion */
-        #video-player {
-            width: 100vw;
-            height: 100vh;
-            max-width: none;
-            max-height: none;
-            object-fit: contain; /* Ensures video scales correctly without stretching */
-            background-color: black;
+      } else if (direction < 0 && itemRect.bottom < focusedRect.top) {
+        const verticalDistance = focusedRect.top - itemRect.bottom;
+        const horizontalDistance = Math.abs((itemRect.left + itemRect.right) / 2 - (focusedRect.left + focusedRect.right) / 2);
+        const distance = verticalDistance + horizontalDistance * 0.5;
+        if (distance < minDistance) {
+          minDistance = distance;
+          bestMatch = item;
         }
-        
-        /* Flexbox for the series modal content to prevent misalignment */
-        #series-modal > div {
-            display: flex;
+      }
+    }
+    return bestMatch;
+  };
+  
+  const handleVideoKeys = (e) => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    switch (e.keyCode) {
+      case 13: // Enter
+      case 32: // Space
+        video.paused ? video.play() : video.pause();
+        break;
+      case 39: // Right Arrow
+        video.currentTime += 10;
+        break;
+      case 37: // Left Arrow
+        video.currentTime -= 10;
+        break;
+      case 38: // Up Arrow
+        video.volume = Math.min(1, video.volume + 0.1);
+        setVolume(video.volume);
+        setIsMuted(false);
+        break;
+      case 40: // Down Arrow
+        video.volume = Math.max(0, video.volume - 0.1);
+        setVolume(video.volume);
+        if (video.volume === 0) setIsMuted(true);
+        break;
+      case 27: // Escape
+        closeVideoPlayer();
+        break;
+    }
+    showControls();
+  };
+  
+  const handleSeriesModalKeys = (e) => {
+    const focusables = Array.from(document.querySelectorAll('#series-modal .focusable-item'));
+    const focusedEl = document.activeElement;
+    const focusedIndex = focusables.indexOf(focusedEl);
+    let targetEl = null;
+  
+    switch (e.keyCode) {
+      case 40: // Down Arrow
+        if (focusedIndex < focusables.length - 1) targetEl = focusables[focusedIndex + 1];
+        break;
+      case 38: // Up Arrow
+        if (focusedIndex > 0) targetEl = focusables[focusedIndex - 1];
+        break;
+      case 13: // Enter
+      case 32: // Space
+        if (focusedEl && focusedEl.classList.contains('focusable-item')) {
+          focusedEl.click();
         }
-        
-        /* Ensure responsive behavior on the series modal */
-        @media (min-width: 768px) {
-            #series-modal > div {
-                flex-direction: row;
-            }
-        }
-        @media (max-width: 767px) {
-            #series-modal > div {
-                flex-direction: column;
-            }
-        }
-    </style>
-</head>
-<body class="p-8">
+        break;
+      case 27: // Escape
+        closeSeriesModal();
+        break;
+    }
+  
+    if (targetEl) {
+      targetEl.focus();
+    }
+  };
 
-    <!-- Main Content Area -->
-    <div id="app-container" class="space-y-12">
-        
-        <!-- Header with Title and Search -->
-        <header class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-            <h1 class="text-5xl font-bold text-white">Media Library</h1>
-            <div class="relative w-full max-w-lg">
-                <input 
-                    type="text" 
-                    id="search-input" 
-                    placeholder="Search for movies or series..." 
-                    class="focusable-item w-full pl-12 pr-4 py-4 rounded-full text-xl transition-colors duration-200"
-                    tabindex="1"
-                >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 absolute left-4 top-1/2 -translate-y-1/2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-            </div>
-        </header>
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
-        <!-- Loading & Error States -->
-        <div id="loading" class="text-center text-4xl text-white hidden">Loading...</div>
-        <div id="error-message" class="text-center text-red-500 text-4xl hidden">Failed to load data.</div>
-
-        <!-- Movies Section -->
-        <section id="movies-section" class="hidden">
-            <h2 class="text-3xl font-semibold mb-6">Movies</h2>
-            <!-- Using responsive grid classes for auto-flexing -->
-            <div id="movies-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
-                <!-- Movie cards will be injected here -->
-            </div>
-        </section>
-
-        <!-- Series Section -->
-        <section id="series-section" class="hidden">
-            <h2 class="text-3xl font-semibold mb-6">Series</h2>
-            <!-- Using responsive grid classes for auto-flexing -->
-            <div id="series-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
-                <!-- Series cards will be injected here -->
-            </div>
-        </section>
-    </div>
-
-    <!-- Video Player Modal -->
-    <div id="video-player-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-        <div class="relative w-full h-full max-h-[100vh] max-w-[100vw] flex items-center justify-center">
-            <!-- Back button - now at the top left as requested -->
-            <button id="back-button" class="focusable-item control-button p-4 rounded-full shadow-lg text-lg absolute top-4 left-4 z-[101]" tabindex="100">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            
-            <video id="video-player" preload="auto" playsinline></video>
-            
-            <!-- Player Info Overlay (for pause/stop) -->
-            <div id="player-info-overlay" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 transition-opacity duration-300 opacity-0 hidden">
-                <img id="overlay-thumbnail" src="" alt="Thumbnail" class="w-48 h-auto rounded-lg shadow-xl mb-4">
-                <h3 id="overlay-title" class="text-5xl font-bold text-white mb-2"></h3>
-                <p id="overlay-subtitle" class="text-2xl text-gray-300"></p>
-            </div>
-            
-            <!-- Custom Player Controls Bar -->
-            <div id="player-controls" class="absolute bottom-0 left-0 w-full p-8 transition-opacity duration-300 opacity-0 hover:opacity-100 z-50">
-                <!-- Progress bar and time display -->
-                <div class="flex items-center space-x-4 mb-4">
-                    <span id="current-time" class="text-lg font-semibold">0:00</span>
-                    <div id="progress-bar-container" class="flex-1 rounded-full overflow-hidden focusable-item" tabindex="101">
-                        <div id="progress-bar"></div>
-                    </div>
-                    <span id="duration" class="text-lg font-semibold">0:00</span>
-                </div>
-
-                <!-- Main controls and settings -->
-                <div class="flex justify-center items-center space-x-8">
-                    <div class="flex items-center space-x-4">
-                        <button id="rewind-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="102">
-                            <i class="fas fa-backward"></i>
-                        </button>
-                        <button id="play-pause-button" class="focusable-item control-button p-5 rounded-full shadow-lg" tabindex="103">
-                            <i id="play-icon" class="fas fa-play text-2xl"></i>
-                            <i id="pause-icon" class="fas fa-pause text-2xl hidden"></i>
-                        </button>
-                        <button id="forward-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="104">
-                            <i class="fas fa-forward"></i>
-                        </button>
-                    </div>
-
-                    <div class="flex items-center space-x-4">
-                        <!-- Volume controls -->
-                        <button id="mute-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="105">
-                            <i id="volume-icon" class="fas fa-volume-up"></i>
-                        </button>
-                        <input id="volume-slider" type="range" min="0" max="1" step="0.01" value="1" class="focusable-item w-24 accent-white cursor-pointer" tabindex="106">
-
-                        <!-- Other settings -->
-                        <button id="fullscreen-button" class="focusable-item control-button p-4 rounded-full shadow-lg" tabindex="108">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  // Play video function
+  const playVideo = (url, item) => {
+    focusHistory.current.push(document.activeElement);
+    setCurrentVideo(item);
+    setView('video');
     
-    <!-- Episode Selection Modal -->
-    <div id="series-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-95 hidden">
-        <!-- CRITICAL: Flex layout with responsive classes -->
-        <div class="relative bg-card-dark rounded-lg p-8 w-full max-w-6xl max-h-full overflow-y-auto scrollable flex flex-col md:flex-row">
-            <!-- Close button -->
-            <button id="series-modal-close" class="focusable-item absolute top-4 right-4 text-white hover:text-gray-400 text-3xl" tabindex="200">&times;</button>
-            
-            <!-- Series Info (left side) -->
-            <div class="w-full md:w-1/3 flex-shrink-0 mb-6 md:mb-0 md:mr-8 text-center md:text-left">
-                <img id="series-modal-thumbnail" src="" alt="Series Thumbnail" class="rounded-lg shadow-xl mb-4 mx-auto md:mx-0">
-                <h2 id="series-modal-title" class="text-4xl font-bold text-white mb-2"></h2>
-                <p id="series-modal-description" class="text-lg text-gray-400">No description available.</p>
-            </div>
-            
-            <!-- Episodes list (right side) -->
-            <div class="w-full md:w-2/3 max-h-full overflow-y-auto scrollable">
-                <div id="series-episodes-container" class="space-y-6">
-                    <!-- Episodes and seasons will be injected here -->
+    // Defer setting the source until the video element is available
+    if (videoRef.current) {
+      videoRef.current.src = url;
+      videoRef.current.play();
+      setIsPaused(false);
+    }
+  };
+
+  // Close video player function
+  const closeVideoPlayer = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.src = '';
+    }
+    setView('home');
+    setCurrentVideo(null);
+    if (focusHistory.current.length > 0) {
+      focusHistory.current.pop().focus();
+    }
+  };
+
+  // Open series modal function
+  const openSeriesModal = async (seriesItem) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/series/${seriesItem._id}`);
+      if (!response.ok) throw new Error('Failed to fetch series details.');
+      const seriesDetails = await response.json();
+      setSelectedSeries(seriesDetails);
+      focusHistory.current.push(document.activeElement);
+      setView('series');
+    } catch (err) {
+      setError('Could not load series details.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Close series modal function
+  const closeSeriesModal = () => {
+    setView('home');
+    setSelectedSeries(null);
+    if (focusHistory.current.length > 0) {
+      focusHistory.current.pop().focus();
+    }
+  };
+
+  // Helper function to format time
+  const formatTime = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    const formatted = [
+      h,
+      m > 9 ? m : (h ? '0' + m : m || '0'),
+      s > 9 ? s : '0' + s,
+    ].filter(Boolean).join(':');
+    return formatted;
+  };
+  
+  const handleProgressClick = (e) => {
+    const progressBar = e.currentTarget;
+    const clickPosition = e.nativeEvent.offsetX / progressBar.offsetWidth;
+    if (videoRef.current) {
+      videoRef.current.currentTime = clickPosition * videoRef.current.duration;
+    }
+  };
+
+  const handleTogglePlayPause = () => {
+    const video = videoRef.current;
+    if (video) {
+      if (video.paused) {
+        video.play();
+        setIsPaused(false);
+      } else {
+        video.pause();
+        setIsPaused(true);
+      }
+    }
+    showControls();
+  };
+  
+  const handleToggleMute = () => {
+    const video = videoRef.current;
+    if (video) {
+      if (isMuted) {
+        video.muted = false;
+        setIsMuted(false);
+        video.volume = volume;
+      } else {
+        video.muted = true;
+        setIsMuted(true);
+      }
+    }
+  };
+
+  // Main App content based on the current view state
+  const renderContent = () => {
+    switch (view) {
+      case 'video':
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-black flex items-center justify-center p-4 touch-none"
+            onMouseMove={handlePlayerMouseTouch}
+            onTouchStart={handlePlayerMouseTouch}
+          >
+            <button
+              onClick={closeVideoPlayer}
+              className="focusable-item bg-white bg-opacity-20 p-4 rounded-full text-white text-lg absolute top-4 left-4 z-[101]"
+              tabIndex="100"
+            >
+              <ArrowLeft />
+            </button>
+            <video
+              ref={videoRef}
+              className="w-full h-full object-contain bg-black"
+              onTimeUpdate={handleVideoTimeUpdate}
+              onLoadedMetadata={handleVideoLoadedMetadata}
+              onEnded={handleVideoEnded}
+              autoPlay
+              playsInline
+            />
+            {isPaused && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 transition-opacity duration-300 z-50 bg-black bg-opacity-50">
+                {currentVideo?.thumbnail && (
+                  <img src={currentVideo.thumbnail} alt="Thumbnail" className="w-48 h-auto rounded-lg shadow-xl mb-4"/>
+                )}
+                <h3 className="text-5xl font-bold text-white mb-2">{currentVideo?.title}</h3>
+                <p className="text-2xl text-gray-300">{currentVideo?.subtitle}</p>
+              </div>
+            )}
+            {isControlsVisible && (
+              <div className="absolute bottom-0 left-0 w-full p-8 transition-opacity duration-300 bg-gradient-to-t from-black via-black/80 to-transparent z-50">
+                <div className="flex items-center space-x-4 mb-4">
+                  <span className="text-lg font-semibold">{formatTime(currentTime)}</span>
+                  <div
+                    className="flex-1 rounded-full overflow-hidden h-2 bg-white/30 focusable-item"
+                    onClick={handleProgressClick}
+                    tabIndex="101"
+                  >
+                    <div
+                      className="h-full bg-white transition-all duration-100 ease-linear"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <span className="text-lg font-semibold">{formatTime(duration)}</span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // NOTE: The backend injects the correct API_BASE_URL into this file
-        const API_BASE_URL = window.location.origin + '/api';
-
-        // Get DOM elements
-        const appContainer = document.getElementById('app-container');
-        const loadingDiv = document.getElementById('loading');
-        const errorMessageDiv = document.getElementById('error-message');
-        const moviesSection = document.getElementById('movies-section');
-        const moviesContainer = document.getElementById('movies-container');
-        const seriesSection = document.getElementById('series-section');
-        const seriesContainer = document.getElementById('series-container');
-        const searchInput = document.getElementById('search-input');
-        const videoPlayerModal = document.getElementById('video-player-modal');
-        const videoPlayer = document.getElementById('video-player');
-        const playPauseButton = document.getElementById('play-pause-button');
-        const playIcon = document.getElementById('play-icon');
-        const pauseIcon = document.getElementById('pause-icon');
-        const rewindButton = document.getElementById('rewind-button');
-        const forwardButton = document.getElementById('forward-button');
-        const backButton = document.getElementById('back-button');
-        const seriesModal = document.getElementById('series-modal');
-        const seriesModalClose = document.getElementById('series-modal-close');
-        const seriesModalTitle = document.getElementById('series-modal-title');
-        const seriesModalThumbnail = document.getElementById('series-modal-thumbnail');
-        const seriesModalDescription = document.getElementById('series-modal-description');
-        const seriesEpisodesContainer = document.getElementById('series-episodes-container');
-        const playerInfoOverlay = document.getElementById('player-info-overlay');
-        const overlayThumbnail = document.getElementById('overlay-thumbnail');
-        const overlayTitle = document.getElementById('overlay-title');
-        const overlaySubtitle = document.getElementById('overlay-subtitle');
-        const progressBarContainer = document.getElementById('progress-bar-container');
-        const progressBar = document.getElementById('progress-bar');
-        const currentTimeEl = document.getElementById('current-time');
-        const durationEl = document.getElementById('duration');
-        const muteButton = document.getElementById('mute-button');
-        const volumeIcon = document.getElementById('volume-icon');
-        const volumeSlider = document.getElementById('volume-slider');
-        const fullscreenButton = document.getElementById('fullscreen-button');
-        
-        // State management
-        let moviesData = [];
-        let seriesData = [];
-        let filteredMovies = [];
-        let filteredSeries = [];
-        let currentVideoItem = null;
-        let controlsTimeout;
-        let focusedElement = null;
-        
-        const KEY_CODES = {
-            ENTER: 13,
-            SPACE: 32,
-            LEFT: 37,
-            UP: 38,
-            RIGHT: 39,
-            DOWN: 40,
-            BACK: 8,
-            ESCAPE: 27
-        };
-        
-        let focusHistory = [];
-
-        // --- Core Functions ---
-
-        /**
-         * Fetches movies and series data from the API.
-         */
-        async function fetchData() {
-            loadingDiv.classList.remove('hidden');
-            errorMessageDiv.classList.add('hidden');
-            try {
-                const [moviesResponse, seriesResponse] = await Promise.all([
-                    fetch(`${API_BASE_URL}/movies`),
-                    fetch(`${API_BASE_URL}/series`)
-                ]);
-                
-                if (!moviesResponse.ok || !seriesResponse.ok) {
-                    throw new Error('Failed to fetch data from API');
-                }
-                
-                moviesData = await moviesResponse.json();
-                seriesData = await seriesResponse.json();
-                
-                // Initialize filtered data with all data
-                filteredMovies = moviesData;
-                filteredSeries = seriesData;
-                
-                renderContent();
-
-            } catch (error) {
-                console.error('Fetch error:', error);
-                errorMessageDiv.classList.remove('hidden');
-            } finally {
-                loadingDiv.classList.add('hidden');
-            }
-        }
-
-        /**
-         * Renders the movie and series cards to the UI.
-         */
-        function renderContent() {
-            moviesContainer.innerHTML = '';
-            seriesContainer.innerHTML = '';
-            
-            if (filteredMovies.length > 0) {
-                moviesSection.classList.remove('hidden');
-                filteredMovies.forEach(item => {
-                    const card = createCard(item, 'movie');
-                    moviesContainer.appendChild(card);
-                });
-            } else {
-                moviesSection.classList.add('hidden');
-            }
-
-            if (filteredSeries.length > 0) {
-                seriesSection.classList.remove('hidden');
-                filteredSeries.forEach(item => {
-                    const card = createCard(item, 'series');
-                    seriesContainer.appendChild(card);
-                });
-            } else {
-                seriesSection.classList.add('hidden');
-            }
-
-            // Update focusable elements after rendering
-            updateFocusables();
-            
-            // Set initial focus
-            if (focusHistory.length === 0) {
-                searchInput.focus();
-            } else {
-                focusHistory[focusHistory.length - 1].focus();
-            }
-        }
-
-        /**
-         * Creates a clickable card for a movie or series.
-         * @param {object} item - The movie or series object.
-         * @param {string} type - 'movie' or 'series'.
-         * @returns {HTMLElement} The created card element.
-         */
-        function createCard(item, type) {
-            const card = document.createElement('div');
-            card.className = 'focusable-item bg-card-dark group cursor-pointer rounded-lg overflow-hidden shadow-lg transition-all duration-300 border border-transparent';
-            card.setAttribute('data-id', item._id);
-            card.setAttribute('data-type', type);
-            card.setAttribute('tabindex', '0');
-
-            const fallbackImage = `https://placehold.co/400x600/000000/ffffff?text=${encodeURIComponent(item.name)}`;
-
-            card.innerHTML = `
-                <img src="${item.thumbnail}" alt="${item.name}" 
-                     class="w-full h-80 object-cover group-hover:scale-105 transition-transform duration-300"
-                     onerror="this.onerror=null;this.src='${fallbackImage}';">
-                <div class="p-4">
-                    <h3 class="text-xl font-semibold truncate text-white">${item.name}</h3>
+                <div className="flex justify-center items-center space-x-8">
+                  <button onClick={() => { videoRef.current.currentTime -= 10; showControls(); }} className="focusable-item bg-white/20 p-4 rounded-full text-white shadow-lg" tabIndex="102">
+                    <FastRewind size={24} />
+                  </button>
+                  <button onClick={handleTogglePlayPause} className="focusable-item bg-white/20 p-5 rounded-full text-white shadow-lg" tabIndex="103">
+                    {isPaused ? <Play size={32} /> : <Pause size={32} />}
+                  </button>
+                  <button onClick={() => { videoRef.current.currentTime += 10; showControls(); }} className="focusable-item bg-white/20 p-4 rounded-full text-white shadow-lg" tabIndex="104">
+                    <FastForward size={24} />
+                  </button>
+                  <div className="flex items-center space-x-4">
+                    <button onClick={handleToggleMute} className="focusable-item bg-white/20 p-4 rounded-full shadow-lg" tabIndex="105">
+                      {isMuted ? <VolumeX /> : (volume > 0.5 ? <Volume2 /> : <Volume1 />)}
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={isMuted ? 0 : volume}
+                      onChange={(e) => {
+                        const newVolume = parseFloat(e.target.value);
+                        setVolume(newVolume);
+                        if (videoRef.current) {
+                          videoRef.current.volume = newVolume;
+                          setIsMuted(newVolume === 0);
+                        }
+                      }}
+                      className="focusable-item w-24 accent-white cursor-pointer"
+                      tabIndex="106"
+                    />
+                  </div>
+                  <button onClick={() => videoRef.current.requestFullscreen()} className="focusable-item bg-white/20 p-4 rounded-full text-white shadow-lg" tabIndex="108">
+                    <Expand size={24} />
+                  </button>
                 </div>
-            `;
-            
-            card.addEventListener('click', () => handleCardClick(item));
-            card.addEventListener('focus', () => {
-                card.classList.add('is-focused');
-                focusedElement = card;
-            });
-            card.addEventListener('blur', () => {
-                card.classList.remove('is-focused');
-            });
+              </div>
+            )}
+          </div>
+        );
+      
+      case 'series':
+        if (!selectedSeries) return null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-95 overflow-y-auto">
+            <div className="relative bg-zinc-900 rounded-lg p-8 w-full max-w-6xl max-h-[95vh] overflow-y-auto scrollable flex flex-col md:flex-row">
+              <button
+                onClick={closeSeriesModal}
+                className="focusable-item absolute top-4 right-4 text-white hover:text-gray-400 text-3xl"
+                tabIndex="200"
+              >
+                <X size={32} />
+              </button>
+              <div className="w-full md:w-1/3 flex-shrink-0 mb-6 md:mb-0 md:mr-8 text-center md:text-left">
+                <img
+                  src={selectedSeries.thumbnail}
+                  alt="Series Thumbnail"
+                  className="rounded-lg shadow-xl mb-4 mx-auto md:mx-0"
+                />
+                <h2 className="text-4xl font-bold text-white mb-2">{selectedSeries.name}</h2>
+                <p className="text-lg text-gray-400">No description available.</p>
+              </div>
+              <div className="w-full md:w-2/3 max-h-full overflow-y-auto scrollable">
+                <div className="space-y-6">
+                  {selectedSeries.seasons.sort((a, b) => a.seasonNumber - b.seasonNumber).map((season) => (
+                    <div key={season.seasonNumber} className="border-b border-gray-700 pb-4 last:border-0">
+                      <h3 className="text-2xl font-bold mb-4 text-white">Season {season.seasonNumber}</h3>
+                      <div className="space-y-4">
+                        {season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber).map((episode) => (
+                          <div
+                            key={episode.episodeNumber}
+                            className="focusable-item flex items-center p-4 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors cursor-pointer"
+                            onClick={() => playVideo(episode.streamingUrl, { title: selectedSeries.name, thumbnail: episode.thumbnail, subtitle: `S${season.seasonNumber}E${episode.episodeNumber}: ${episode.title}`})}
+                            tabIndex="0"
+                          >
+                            <img
+                              src={episode.thumbnail || selectedSeries.thumbnail}
+                              alt={episode.title}
+                              className="w-32 h-20 object-cover rounded-md flex-shrink-0 mr-4"
+                            />
+                            <div>
+                              <p className="text-lg font-semibold text-white">E{episode.episodeNumber}: {episode.title}</p>
+                              <p className="text-sm text-gray-400">Stream now</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
 
-            return card;
-        }
+      case 'home':
+      default:
+        return (
+          <div ref={containerRef} className="p-8">
+            <header className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+              <h1 className="text-5xl font-bold text-white">Media Library</h1>
+              <div className="relative w-full max-w-lg">
+                <input
+                  type="text"
+                  id="search-input"
+                  placeholder="Search for movies or series..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="focusable-item w-full pl-12 pr-4 py-4 rounded-full text-xl bg-zinc-900 text-white border-2 border-zinc-700 focus:outline-none focus:border-white transition-colors"
+                  tabIndex="1"
+                />
+                <Search className="h-6 w-6 absolute left-4 top-1/2 -translate-y-1/2 text-white" />
+              </div>
+            </header>
 
-        /**
-         * Handles clicks on movie and series cards.
-         * @param {object} item - The movie or series object.
-         */
-        async function handleCardClick(item) {
-            if (item.streamingUrl) {
-                // It's a movie
-                currentVideoItem = { title: item.name, thumbnail: item.thumbnail, subtitle: 'Movie' };
-                playVideo(item.streamingUrl);
-            } else {
-                // It's a series
-                try {
-                    const response = await fetch(`${API_BASE_URL}/series/${item._id}`);
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch series details.');
-                    }
-                    const seriesDetails = await response.json();
-                    openSeriesModal(seriesDetails);
-                } catch (error) {
-                    console.error('Error fetching series details:', error);
-                    // Use a custom modal or message box instead of alert
-                    alert('Could not load series details.');
-                }
-            }
-        }
-
-        /**
-         * Plays a video in the modal.
-         * @param {string} url - The streaming URL.
-         */
-        function playVideo(url) {
-            videoPlayer.src = url;
-            videoPlayer.play();
-            
-            // Set focus on the play/pause button for remote control
-            playPauseButton.focus();
-            
-            // Hide the series modal if it's open
-            closeSeriesModal();
-            appContainer.classList.add('hidden');
-            videoPlayerModal.classList.remove('hidden');
-            showControls(); // Show controls initially
-        }
-
-        /**
-         * Shows the title and thumbnail overlay.
-         */
-        function showPlayerInfo(item) {
-            if (!item) return;
-            overlayThumbnail.src = item.thumbnail;
-            overlayTitle.textContent = item.title;
-            overlaySubtitle.textContent = item.subtitle;
-            playerInfoOverlay.classList.remove('hidden', 'opacity-0');
-            playerInfoOverlay.classList.add('opacity-100');
-        }
-
-        /**
-         * Hides the title and thumbnail overlay.
-         */
-        function hidePlayerInfo() {
-            playerInfoOverlay.classList.remove('opacity-100');
-            playerInfoOverlay.classList.add('opacity-0');
-            // Hide after transition
-            setTimeout(() => playerInfoOverlay.classList.add('hidden'), 300);
-        }
-
-        /**
-         * Closes the video player and returns to the main view.
-         */
-        function closeVideoPlayer() {
-            videoPlayer.pause();
-            videoPlayer.src = '';
-            videoPlayerModal.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            currentVideoItem = null;
-            
-            // Re-focus on the last focused element from history
-            if (focusHistory.length > 0) {
-                focusHistory[focusHistory.length - 1].focus();
-                focusHistory.pop();
-            } else {
-                searchInput.focus();
-            }
-        }
-        
-        /**
-         * Opens the series modal to display seasons and episodes.
-         * @param {object} series - The series object.
-         */
-        function openSeriesModal(series) {
-            seriesModalTitle.textContent = series.name;
-            seriesModalThumbnail.src = series.thumbnail;
-            seriesModalDescription.textContent = 'A detailed description would go here.';
-            seriesEpisodesContainer.innerHTML = '';
-            
-            series.seasons.sort((a, b) => a.seasonNumber - b.seasonNumber).forEach(season => {
-                const seasonDiv = document.createElement('div');
-                seasonDiv.className = 'border-b border-gray-700 pb-4';
-                seasonDiv.innerHTML = `<h3 class="text-2xl font-bold mb-4 text-white">Season ${season.seasonNumber}</h3>`;
-                
-                const episodesList = document.createElement('div');
-                episodesList.className = 'space-y-4';
-                
-                season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber).forEach(episode => {
-                    const episodeCard = document.createElement('div');
-                    episodeCard.className = 'focusable-item episode-card-list bg-card-dark border border-transparent';
-                    episodeCard.setAttribute('tabindex', '0');
-                    episodeCard.innerHTML = `
-                        <img src="${episode.thumbnail || series.thumbnail}" alt="${episode.title}" class="flex-shrink-0">
-                        <div class="flex-grow">
-                            <p class="text-lg font-semibold text-white truncate">E${episode.episodeNumber}: ${episode.title}</p>
-                            <p class="text-sm text-gray-400">Stream now</p>
+            {loading && <div className="text-center text-4xl text-white">Loading...</div>}
+            {error && <div className="text-center text-red-500 text-4xl">{error}</div>}
+            {!loading && !error && (
+              <main className="space-y-12">
+                {filteredMovies.length > 0 && (
+                  <section>
+                    <h2 className="text-3xl font-semibold mb-6">Movies</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
+                      {filteredMovies.map(movie => (
+                        <div
+                          key={movie._id}
+                          className="focusable-item group cursor-pointer rounded-lg overflow-hidden shadow-lg transition-all duration-300 bg-zinc-800 border border-transparent hover:scale-105 focus:outline-none focus:scale-105 focus:shadow-white"
+                          onClick={() => playVideo(movie.streamingUrl, { title: movie.name, thumbnail: movie.thumbnail, subtitle: 'Movie' })}
+                          tabIndex="0"
+                        >
+                          <img
+                            src={movie.thumbnail}
+                            alt={movie.name}
+                            className="w-full h-80 object-cover"
+                            onError={(e) => (e.target.src = `https://placehold.co/400x600/000000/ffffff?text=${encodeURIComponent(movie.name)}`)}
+                          />
+                          <div className="p-4">
+                            <h3 className="text-xl font-semibold truncate text-white">{movie.name}</h3>
+                          </div>
                         </div>
-                    `;
-                    episodeCard.addEventListener('click', () => {
-                        currentVideoItem = {
-                            title: series.name,
-                            thumbnail: episode.thumbnail || series.thumbnail,
-                            subtitle: `S${season.seasonNumber}E${episode.episodeNumber}: ${episode.title}`
-                        };
-                        playVideo(episode.streamingUrl);
-                    });
-                    episodesList.appendChild(episodeCard);
-                });
-                
-                seasonDiv.appendChild(episodesList);
-                seriesEpisodesContainer.appendChild(seasonDiv);
-            });
-            
-            appContainer.classList.add('hidden');
-            seriesModal.classList.remove('hidden');
-            
-            // Store the focused element before opening the modal
-            focusHistory.push(document.activeElement);
-            seriesModalClose.focus();
-        }
+                      ))}
+                    </div>
+                  </section>
+                )}
+                {filteredSeries.length > 0 && (
+                  <section>
+                    <h2 className="text-3xl font-semibold mb-6">Series</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-8">
+                      {filteredSeries.map(seriesItem => (
+                        <div
+                          key={seriesItem._id}
+                          className="focusable-item group cursor-pointer rounded-lg overflow-hidden shadow-lg transition-all duration-300 bg-zinc-800 border border-transparent hover:scale-105 focus:outline-none focus:scale-105 focus:shadow-white"
+                          onClick={() => openSeriesModal(seriesItem)}
+                          tabIndex="0"
+                        >
+                          <img
+                            src={seriesItem.thumbnail}
+                            alt={seriesItem.name}
+                            className="w-full h-80 object-cover"
+                            onError={(e) => (e.target.src = `https://placehold.co/400x600/000000/ffffff?text=${encodeURIComponent(seriesItem.name)}`)}
+                          />
+                          <div className="p-4">
+                            <h3 className="text-xl font-semibold truncate text-white">{seriesItem.name}</h3>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </main>
+            )}
+          </div>
+        );
+    }
+  };
 
-        /**
-         * Closes the series modal and returns to the main view.
-         */
-        function closeSeriesModal() {
-            seriesModal.classList.add('hidden');
-            appContainer.classList.remove('hidden');
-            
-            // Re-focus on the last element from history
-            if (focusHistory.length > 0) {
-                focusHistory.pop().focus();
-            } else {
-                searchInput.focus();
-            }
-        }
+  return <div className="bg-black text-white min-h-screen">{renderContent()}</div>;
+};
 
-        // --- Video Player Functions ---
-        
-        function formatTime(seconds) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = Math.floor(seconds % 60);
-            const formatted = [
-                h,
-                m > 9 ? m : (h ? '0' + m : m || '0'),
-                s > 9 ? s : '0' + s
-            ].filter(Boolean).join(':');
-            return formatted;
-        }
-
-        function togglePlayPause() {
-            if (videoPlayer.paused) {
-                videoPlayer.play();
-            } else {
-                videoPlayer.pause();
-            }
-        }
-
-        function toggleMute() {
-            videoPlayer.muted = !videoPlayer.muted;
-            if (videoPlayer.muted) {
-                volumeIcon.classList.replace('fa-volume-up', 'fa-volume-mute');
-                volumeSlider.value = 0;
-            } else {
-                volumeIcon.classList.replace('fa-volume-mute', 'fa-volume-up');
-                volumeSlider.value = videoPlayer.volume;
-            }
-        }
-
-        function toggleFullscreen() {
-            if (document.fullscreenElement) {
-                document.exitFullscreen();
-            } else {
-                videoPlayerModal.requestFullscreen();
-            }
-        }
-        
-        function showControls() {
-            const playerControls = document.getElementById('player-controls');
-            playerControls.classList.add('opacity-100');
-            playerControls.classList.remove('opacity-0');
-            clearTimeout(controlsTimeout);
-            controlsTimeout = setTimeout(() => {
-                if (!videoPlayer.paused) {
-                    playerControls.classList.remove('opacity-100');
-                    playerControls.classList.add('opacity-0');
-                }
-            }, 3000); // Hide after 3 seconds of inactivity
-        }
-
-        // --- Event Listeners and Remote Control Logic ---
-
-        // Search input
-        searchInput.addEventListener('input', async (e) => {
-            const query = e.target.value.toLowerCase();
-            
-            loadingDiv.classList.remove('hidden');
-            try {
-                const [moviesResponse, seriesResponse] = await Promise.all([
-                    fetch(`${API_BASE_URL}/movies?search=${query}`),
-                    fetch(`${API_BASE_URL}/series?search=${query}`)
-                ]);
-                
-                if (!moviesResponse.ok || !seriesResponse.ok) {
-                    throw new Error('Failed to fetch search results.');
-                }
-                
-                filteredMovies = await moviesResponse.json();
-                filteredSeries = await seriesResponse.json();
-                
-                renderContent();
-            } catch (error) {
-                console.error('Search error:', error);
-                errorMessageDiv.classList.remove('hidden');
-            } finally {
-                loadingDiv.classList.add('hidden');
-            }
-        });
-
-        // Video Player Controls
-        playPauseButton.addEventListener('click', togglePlayPause);
-        rewindButton.addEventListener('click', () => videoPlayer.currentTime -= 10);
-        forwardButton.addEventListener('click', () => videoPlayer.currentTime += 10);
-        backButton.addEventListener('click', closeVideoPlayer);
-        muteButton.addEventListener('click', toggleMute);
-        fullscreenButton.addEventListener('click', toggleFullscreen);
-
-        // Volume slider
-        volumeSlider.addEventListener('input', (e) => {
-            videoPlayer.volume = e.target.value;
-            videoPlayer.muted = false;
-            volumeIcon.classList.replace('fa-volume-mute', 'fa-volume-up');
-            if (videoPlayer.volume === 0) {
-                volumeIcon.classList.replace('fa-volume-up', 'fa-volume-off');
-            } else {
-                volumeIcon.classList.replace('fa-volume-off', 'fa-volume-up');
-            }
-        });
-
-        // Progress bar seeking
-        progressBarContainer.addEventListener('click', (e) => {
-            const clickPosition = (e.pageX - progressBarContainer.offsetLeft) / progressBarContainer.offsetWidth;
-            const newTime = clickPosition * videoPlayer.duration;
-            videoPlayer.currentTime = newTime;
-        });
-
-        // Player event listeners
-        videoPlayer.addEventListener('play', () => {
-            playIcon.classList.add('hidden');
-            pauseIcon.classList.remove('hidden');
-            hidePlayerInfo();
-            showControls();
-        });
-
-        videoPlayer.addEventListener('pause', () => {
-            playIcon.classList.remove('hidden');
-            pauseIcon.classList.add('hidden');
-            showPlayerInfo(currentVideoItem);
-            showControls();
-        });
-
-        videoPlayer.addEventListener('ended', closeVideoPlayer);
-        
-        videoPlayer.addEventListener('loadedmetadata', () => {
-            durationEl.textContent = formatTime(videoPlayer.duration);
-        });
-
-        videoPlayer.addEventListener('timeupdate', () => {
-            const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
-            progressBar.style.width = `${progress}%`;
-            currentTimeEl.textContent = formatTime(videoPlayer.currentTime);
-        });
-
-        // Mouse and touch events for player controls
-        videoPlayerModal.addEventListener('mousemove', showControls);
-        videoPlayerModal.addEventListener('touchmove', showControls);
-
-        seriesModalClose.addEventListener('click', closeSeriesModal);
-        
-        // Remote control navigation
-        document.addEventListener('keydown', (e) => {
-            // If a video is playing, handle player controls
-            if (!videoPlayerModal.classList.contains('hidden')) {
-                handlePlayerKeys(e);
-                return;
-            }
-            
-            // If a series modal is open, handle modal keys
-            if (!seriesModal.classList.contains('hidden')) {
-                handleModalKeys(e);
-                return;
-            }
-
-            // Otherwise, handle main page navigation
-            handleMainPageKeys(e);
-        });
-        
-        document.addEventListener('focusin', (e) => {
-            focusedElement = e.target;
-        });
-
-        /**
-         * Handles key presses for the main page (home screen).
-         * @param {KeyboardEvent} e - The keydown event.
-         */
-        function handleMainPageKeys(e) {
-            updateFocusables();
-            const focusedEl = document.activeElement;
-            const focusables = Array.from(document.querySelectorAll('.focusable-item'));
-            const focusedIndex = focusables.indexOf(focusedEl);
-
-            let newIndex = focusedIndex;
-            let targetEl = null;
-
-            switch (e.keyCode) {
-                case KEY_CODES.RIGHT:
-                    e.preventDefault();
-                    if (focusedIndex < focusables.length - 1) {
-                        targetEl = focusables[newIndex + 1];
-                    }
-                    break;
-                case KEY_CODES.LEFT:
-                    e.preventDefault();
-                    if (focusedIndex > 0) {
-                        targetEl = focusables[newIndex - 1];
-                    }
-                    break;
-                case KEY_CODES.DOWN:
-                    e.preventDefault();
-                    // Custom vertical navigation logic
-                    const nextRowEl = findVerticalFocus(focusedEl, 1, focusables);
-                    if (nextRowEl) targetEl = nextRowEl;
-                    break;
-                case KEY_CODES.UP:
-                    e.preventDefault();
-                    // Custom vertical navigation logic
-                    const prevRowEl = findVerticalFocus(focusedEl, -1, focusables);
-                    if (prevRowEl) targetEl = prevRowEl;
-                    break;
-                case KEY_CODES.ENTER:
-                case KEY_CODES.SPACE:
-                    e.preventDefault();
-                    if (focusedEl && focusedEl.classList.contains('focusable-item')) {
-                        focusedEl.click();
-                    }
-                    break;
-            }
-
-            if (targetEl) {
-                targetEl.focus();
-            }
-        }
-        
-        /**
-         * Finds the next/previous element for vertical navigation, handling dynamic grids.
-         * @param {HTMLElement} focusedEl - The currently focused element.
-         * @param {number} direction - 1 for down, -1 for up.
-         * @param {Array<HTMLElement>} allItems - All focusable items.
-         * @returns {HTMLElement|null} The next focusable element.
-         */
-        function findVerticalFocus(focusedEl, direction, allItems) {
-            if (!focusedEl) return null;
-            const focusedRect = focusedEl.getBoundingClientRect();
-            let bestMatch = null;
-            let minDistance = Infinity;
-
-            for (const item of allItems) {
-                const itemRect = item.getBoundingClientRect();
-
-                // Check if the item is in the right direction
-                if (direction > 0 && itemRect.top > focusedRect.bottom) {
-                    const verticalDistance = itemRect.top - focusedRect.bottom;
-                    const horizontalDistance = Math.abs((itemRect.left + itemRect.right) / 2 - (focusedRect.left + focusedRect.right) / 2);
-                    const distance = verticalDistance + horizontalDistance * 0.5; // Prioritize vertical distance
-                    
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        bestMatch = item;
-                    }
-                } else if (direction < 0 && itemRect.bottom < focusedRect.top) {
-                    const verticalDistance = focusedRect.top - itemRect.bottom;
-                    const horizontalDistance = Math.abs((itemRect.left + itemRect.right) / 2 - (focusedRect.left + focusedRect.right) / 2);
-                    const distance = verticalDistance + horizontalDistance * 0.5;
-                    
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        bestMatch = item;
-                    }
-                }
-            }
-            return bestMatch;
-        }
-
-
-        /**
-         * Handles key presses for the video player modal.
-         * @param {KeyboardEvent} e - The keydown event.
-         */
-        function handlePlayerKeys(e) {
-            switch (e.keyCode) {
-                case KEY_CODES.ENTER:
-                case KEY_CODES.SPACE:
-                    e.preventDefault();
-                    togglePlayPause();
-                    break;
-                case KEY_CODES.RIGHT:
-                    e.preventDefault();
-                    videoPlayer.currentTime += 10;
-                    break;
-                case KEY_CODES.LEFT:
-                    e.preventDefault();
-                    videoPlayer.currentTime -= 10;
-                    break;
-                case KEY_CODES.UP:
-                    e.preventDefault();
-                    if (videoPlayer.volume < 1) videoPlayer.volume = Math.min(1, videoPlayer.volume + 0.1);
-                    volumeSlider.value = videoPlayer.volume;
-                    break;
-                case KEY_CODES.DOWN:
-                    e.preventDefault();
-                    if (videoPlayer.volume > 0) videoPlayer.volume = Math.max(0, videoPlayer.volume - 0.1);
-                    volumeSlider.value = videoPlayer.volume;
-                    break;
-                case KEY_CODES.BACK:
-                case KEY_CODES.ESCAPE:
-                    e.preventDefault();
-                    closeVideoPlayer();
-                    break;
-            }
-            // Show controls on any key press
-            showControls();
-        }
-        
-        /**
-         * Handles key presses for the series modal.
-         * @param {KeyboardEvent} e - The keydown event.
-         */
-        function handleModalKeys(e) {
-            updateFocusables();
-            const focusedEl = document.activeElement;
-            const focusables = Array.from(seriesModal.querySelectorAll('.focusable-item'));
-            const focusedIndex = focusables.indexOf(focusedEl);
-
-            let targetEl = null;
-
-            switch (e.keyCode) {
-                case KEY_CODES.RIGHT:
-                    e.preventDefault();
-                    // In list view, right and left can navigate within a single episode card if needed, but for now we'll keep it simple
-                    // This can be expanded to navigate between elements inside a card (e.g., play button)
-                    break;
-                case KEY_CODES.LEFT:
-                    e.preventDefault();
-                    break;
-                case KEY_CODES.DOWN:
-                    e.preventDefault();
-                    if (focusedIndex < focusables.length - 1) {
-                        targetEl = focusables[focusedIndex + 1];
-                    }
-                    break;
-                case KEY_CODES.UP:
-                    e.preventDefault();
-                    if (focusedIndex > 0) {
-                        targetEl = focusables[focusedIndex - 1];
-                    }
-                    break;
-                case KEY_CODES.ENTER:
-                case KEY_CODES.SPACE:
-                    e.preventDefault();
-                    if (focusedEl && focusedEl.classList.contains('focusable-item')) {
-                        focusedEl.click();
-                    }
-                    break;
-                case KEY_CODES.BACK:
-                case KEY_CODES.ESCAPE:
-                    e.preventDefault();
-                    closeSeriesModal();
-                    break;
-            }
-
-            if(targetEl) {
-                targetEl.focus();
-            }
-        }
-
-        /**
-         * Updates the list of focusable items in the DOM.
-         */
-        function updateFocusables() {
-            const allFocusables = document.querySelectorAll('.focusable-item');
-            allFocusables.forEach(item => {
-                item.addEventListener('focus', () => {
-                    item.classList.add('is-focused');
-                });
-                item.addEventListener('blur', () => {
-                    item.classList.remove('is-focused');
-                });
-            });
-        }
-        
-        // Initial setup on page load
-        window.onload = function() {
-            fetchData().then(() => {
-                // Initial focus on search bar after data loads
-                searchInput.focus();
-            });
-        };
-    </script>
-</body>
-</html>
+export default App;
 

@@ -602,6 +602,7 @@
                 <button class="nav-btn focusable active" data-tab="all" tabindex="1">All</button>
                 <button class="nav-btn focusable" data-tab="movies" tabindex="2">Movies</button>
                 <button class="nav-btn focusable" data-tab="series" tabindex="3">Series</button>
+                <button class="nav-btn focusable" id="debugBtn" tabindex="6" style="font-size: 0.8rem;">🔧 Debug</button>
             </div>
         </div>
 
@@ -659,8 +660,23 @@
     </div>
 
     <script>
-        // API Configuration
-        const API_BASE_URL = 'http://localhost:8000/api';
+        // API Configuration - Dynamic URL detection
+        const API_BASE_URL = (() => {
+            // Check if we're in development or production
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const protocol = window.location.protocol;
+            
+            // If we're on localhost, use the backend port
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return `${protocol}//${hostname}:8000/api`;
+            } else {
+                // Production - use same host
+                return `${protocol}//${hostname}${port ? ':' + port : ''}/api`;
+            }
+        })();
+
+        console.log('API Base URL:', API_BASE_URL);
 
         // Global variables
         let allMedia = [];
@@ -671,24 +687,112 @@
         let focusIndex = 0;
         let focusableElements = [];
 
-        // Initialize app
+        // Initialize app with debug info
         document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 MediaHub Frontend Starting...');
+            console.log('Current URL:', window.location.href);
+            console.log('API Base URL:', API_BASE_URL);
+            
             await loadMedia();
             setupEventListeners();
             setupRemoteControl();
             updateFocusableElements();
+            
+            // Add debug button functionality
+            document.getElementById('debugBtn').addEventListener('click', showDebugInfo);
         });
 
-        // Load media from API
+        // Debug information function
+        async function showDebugInfo() {
+            try {
+                const healthResponse = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
+                const healthData = await healthResponse.json();
+                
+                const debugInfo = `
+🔧 DEBUG INFORMATION
+
+📍 Frontend URL: ${window.location.href}
+🌐 API Base URL: ${API_BASE_URL}
+🏥 Health Endpoint: ${API_BASE_URL.replace('/api', '')}/health
+📊 Server Status: ${healthData.status}
+🤖 Bot Mode: ${healthData.bot}
+💾 MongoDB: ${healthData.mongodb}
+⏰ Server Time: ${healthData.timestamp}
+
+📱 Frontend Stats:
+- Total Media Items: ${allMedia.length}
+- Movies: ${allMedia.filter(m => m.type === 'movie').length}
+- Series: ${allMedia.filter(m => m.type === 'series').length}
+- Current Tab: ${currentTab}
+- Filtered Items: ${filteredMedia.length}
+
+🖥️ Browser Info:
+- User Agent: ${navigator.userAgent}
+- Screen: ${screen.width}x${screen.height}
+- Viewport: ${window.innerWidth}x${window.innerHeight}
+                `.trim();
+                
+                alert(debugInfo);
+            } catch (error) {
+                const errorInfo = `
+❌ DEBUG - CONNECTION ERROR
+
+📍 Frontend URL: ${window.location.href}
+🌐 API Base URL: ${API_BASE_URL}
+🚫 Error: ${error.message}
+
+🔧 Troubleshooting:
+1. Check if backend server is running
+2. Verify the port number (should be 8000)
+3. Check for CORS issues
+4. Ensure BOT_TOKEN and MONGODB_URI are set
+
+💡 Try accessing directly: ${API_BASE_URL.replace('/api', '')}/health
+                `.trim();
+                
+                alert(errorInfo);
+                console.error('Debug error:', error);
+            }
+        }
+
+        // Load media from API with better error handling
         async function loadMedia() {
             try {
+                console.log('Loading media from:', API_BASE_URL);
+                
+                // Test API connection first
+                const healthResponse = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
+                if (!healthResponse.ok) {
+                    throw new Error('Backend server is not responding');
+                }
+                
                 const [moviesResponse, seriesResponse] = await Promise.all([
-                    fetch(`${API_BASE_URL}/movies`),
-                    fetch(`${API_BASE_URL}/series`)
+                    fetch(`${API_BASE_URL}/movies`).catch(err => {
+                        console.warn('Movies endpoint failed:', err);
+                        return { ok: false, json: () => [] };
+                    }),
+                    fetch(`${API_BASE_URL}/series`).catch(err => {
+                        console.warn('Series endpoint failed:', err);
+                        return { ok: false, json: () => [] };
+                    })
                 ]);
 
-                const movies = await moviesResponse.json();
-                const series = await seriesResponse.json();
+                let movies = [];
+                let series = [];
+
+                if (moviesResponse.ok) {
+                    movies = await moviesResponse.json();
+                    console.log('Loaded movies:', movies.length);
+                } else {
+                    console.warn('Failed to load movies');
+                }
+
+                if (seriesResponse.ok) {
+                    series = await seriesResponse.json();
+                    console.log('Loaded series:', series.length);
+                } else {
+                    console.warn('Failed to load series');
+                }
 
                 allMedia = [
                     ...movies.map(movie => ({ ...movie, type: 'movie' })),
@@ -697,11 +801,29 @@
 
                 filteredMedia = [...allMedia];
                 renderMedia();
+                
+                if (allMedia.length === 0) {
+                    document.getElementById('contentGrid').innerHTML = `
+                        <div class="loading">
+                            <p style="color: #f0f0f0;">✨ Your media library is empty!</p>
+                            <p style="color: #999; margin-top: 10px;">Use your Telegram bot to add movies and series.</p>
+                        </div>
+                    `;
+                }
             } catch (error) {
                 console.error('Error loading media:', error);
                 document.getElementById('contentGrid').innerHTML = `
                     <div class="loading">
-                        <p style="color: #ff6b6b;">Error loading media. Please check your connection.</p>
+                        <p style="color: #ff6b6b; margin-bottom: 15px;">❌ Unable to connect to server</p>
+                        <p style="color: #999; font-size: 0.9rem; margin-bottom: 15px;">
+                            API URL: ${API_BASE_URL}
+                        </p>
+                        <p style="color: #ccc; font-size: 0.85rem;">
+                            Make sure your backend server is running on the correct port.
+                        </p>
+                        <button class="nav-btn" onclick="location.reload()" style="margin-top: 20px;">
+                            🔄 Retry Connection
+                        </button>
                     </div>
                 `;
             }
@@ -1012,26 +1134,47 @@
             }
         }
 
-        // Series modal functions
+        // Series modal functions with better error handling
         async function openSeriesModal(series) {
             try {
+                console.log('Loading series details for:', series._id);
                 const response = await fetch(`${API_BASE_URL}/series/${series._id}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 currentSeries = await response.json();
+                console.log('Series loaded:', currentSeries);
                 
                 document.getElementById('seriesTitle').textContent = currentSeries.name;
-                renderSeasonTabs();
-                renderEpisodes();
+                
+                if (currentSeries.seasons && currentSeries.seasons.length > 0) {
+                    currentSeason = currentSeries.seasons[0].seasonNumber;
+                    renderSeasonTabs();
+                    renderEpisodes();
+                } else {
+                    document.getElementById('seasonTabs').innerHTML = '';
+                    document.getElementById('episodesGrid').innerHTML = `
+                        <p style="text-align: center; color: #999;">No seasons available for this series.</p>
+                    `;
+                }
                 
                 document.getElementById('seriesModal').style.display = 'flex';
                 
                 // Focus on first season tab
                 setTimeout(() => {
                     const firstTab = document.querySelector('.season-tab');
-                    if (firstTab) firstTab.focus();
+                    if (firstTab) {
+                        firstTab.focus();
+                    } else {
+                        document.getElementById('closeSeriesModal').focus();
+                    }
                 }, 100);
                 
             } catch (error) {
                 console.error('Error loading series details:', error);
+                alert(`Error loading series details: ${error.message}`);
             }
         }
 

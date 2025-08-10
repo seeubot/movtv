@@ -15,7 +15,7 @@ const fs = require('fs');
 const BOT_TOKEN = process.env.BOT_TOKEN; 
 // Use your actual MONGODB_URI from the environment variables
 const MONGODB_URI = process.env.MONGODB_URI;
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 1024;
 // Use a different port for local polling to avoid conflicts, if you choose that method
 const POLLING_PORT = process.env.POLLING_PORT || 8001; 
 // Set USE_WEBHOOK to 'true' in your Koyeb environment variables for production

@@ -200,22 +200,13 @@ bot.on('message', async (msg) => {
         });
       }
     } else if (text === '🌐 Frontend URL') {
-      // Get the production URL from environment or construct from Koyeb
-      let frontendUrl = process.env.FRONTEND_URL;
-      
-      if (!frontendUrl) {
-        const koyebAppName = process.env.KOYEB_APP_NAME;
-        if (koyebAppName) {
-          frontendUrl = `https://${koyebAppName}.koyeb.app`;
-        } else {
-          frontendUrl = `http://localhost:${PORT}`;
-        }
-      }
+      const frontendUrl = 'https://future-ester-seeutech-645c6129.koyeb.app';
       
       await bot.sendMessage(chatId, 
         `🌐 *Web Frontend:*\n${frontendUrl}\n\n` +
         `📱 *API Server:* ${frontendUrl}/api\n\n` +
-        '🎬 Open the frontend URL to watch your movies and series!',
+        '🎬 Open the frontend URL to watch your movies and series!\n\n' +
+        '✨ Your media library awaits!',
         { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
       );
     } else if (text === '📊 Library Stats') {
@@ -585,17 +576,14 @@ app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   
   // Read the HTML file
-  const fs = require('fs');
   fs.readFile(indexPath, 'utf8', (err, data) => {
     if (err) {
       console.error('Error reading index.html:', err);
       return res.status(500).send('Error loading frontend');
     }
     
-    // Get the current host for API base URL
-    const protocol = req.get('x-forwarded-proto') || 'http';
-    const host = req.get('host');
-    const apiBaseUrl = `${protocol}://${host}/api`;
+    // Use the fixed Koyeb URL for API base
+    const apiBaseUrl = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
     
     // Replace the API_BASE_URL in the frontend
     const updatedHtml = data.replace(

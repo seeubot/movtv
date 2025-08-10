@@ -308,6 +308,153 @@ bot.on('callback_query', async (callbackQuery) => {
       } else {
         await bot.sendMessage(chatId, '❌ Series not found.', getMainMenuKeyboard());
       }
+    } else if (data.startsWith('edit_movie_')) {
+      const movieId = data.replace('edit_movie_', '');
+      const movie = await Movie.findById(movieId);
+      if (movie) {
+        tempData.set(chatId, { type: 'movie', movieId, ...movie._doc });
+        userStates.set(chatId, 'editing_movie');
+        await bot.sendMessage(chatId, 
+          `🎬 *Editing Movie: ${movie.name}*\n\n` +
+          `What would you like to edit?`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '✍️ Edit Name', callback_data: 'edit_movie_name' }],
+                [{ text: '📸 Edit Thumbnail URL', callback_data: 'edit_movie_thumbnail' }],
+                [{ text: '🔗 Edit Streaming URL', callback_data: 'edit_movie_streaming_url' }],
+                [{ text: '❌ Cancel', callback_data: 'cancel' }]
+              ]
+            }
+          }
+        );
+      } else {
+        await bot.sendMessage(chatId, '❌ Movie not found.', getMainMenuKeyboard());
+      }
+    } else if (data.startsWith('edit_series_')) {
+      const seriesId = data.replace('edit_series_', '');
+      const series = await Series.findById(seriesId);
+      if (series) {
+        tempData.set(chatId, { type: 'series', seriesId, ...series._doc });
+        userStates.set(chatId, 'editing_series');
+        await bot.sendMessage(chatId,
+          `📺 *Editing Series: ${series.name}*\n\n` +
+          `What would you like to edit?`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '✍️ Edit Name', callback_data: 'edit_series_name' }],
+                [{ text: '📸 Edit Thumbnail URL', callback_data: 'edit_series_thumbnail' }],
+                [{ text: '➕ Add/Edit Episodes', callback_data: 'edit_series_episodes' }],
+                [{ text: '❌ Cancel', callback_data: 'cancel' }]
+              ]
+            }
+          }
+        );
+      } else {
+        await bot.sendMessage(chatId, '❌ Series not found.', getMainMenuKeyboard());
+      }
+    } else if (data.startsWith('edit_movie_')) {
+        const userData = tempData.get(chatId);
+        if (!userData || userData.type !== 'movie' || !userData.movieId) {
+          await bot.sendMessage(chatId, '❌ No movie selected for editing. Please try again.', getMainMenuKeyboard());
+          return;
+        }
+
+        const movieId = userData.movieId;
+
+        switch (data) {
+          case 'edit_movie_name':
+            userStates.set(chatId, 'editing_movie_name');
+            await bot.sendMessage(chatId, '✍️ Enter the new movie name:');
+            break;
+          case 'edit_movie_thumbnail':
+            userStates.set(chatId, 'editing_movie_thumbnail');
+            await bot.sendMessage(chatId, '📸 Enter the new movie thumbnail URL:');
+            break;
+          case 'edit_movie_streaming_url':
+            userStates.set(chatId, 'editing_movie_streaming_url');
+            await bot.sendMessage(chatId, '🔗 Enter the new streaming URL:');
+            break;
+          default:
+            break;
+        }
+    } else if (data.startsWith('edit_series_')) {
+        const userData = tempData.get(chatId);
+        if (!userData || userData.type !== 'series' || !userData.seriesId) {
+          await bot.sendMessage(chatId, '❌ No series selected for editing. Please try again.', getMainMenuKeyboard());
+          return;
+        }
+
+        const seriesId = userData.seriesId;
+
+        switch (data) {
+          case 'edit_series_name':
+            userStates.set(chatId, 'editing_series_name');
+            await bot.sendMessage(chatId, '✍️ Enter the new series name:');
+            break;
+          case 'edit_series_thumbnail':
+            userStates.set(chatId, 'editing_series_thumbnail');
+            await bot.sendMessage(chatId, '📸 Enter the new series thumbnail URL:');
+            break;
+          case 'edit_series_episodes':
+            const series = await Series.findById(seriesId);
+            if (!series || series.seasons.length === 0) {
+              await bot.sendMessage(chatId, '❌ No seasons found. Add a season first.', getMainMenuKeyboard());
+              return;
+            }
+            const seasonKeyboard = series.seasons.map(s => [
+              { text: `Season ${s.seasonNumber}`, callback_data: `edit_season_${seriesId}_${s.seasonNumber}` }
+            ]);
+            await bot.sendMessage(chatId, '📺 Select a season to manage episodes:', {
+              reply_markup: { inline_keyboard: seasonKeyboard }
+            });
+            break;
+          default:
+            break;
+        }
+    } else if (data.startsWith('add_another_episode')) {
+      const userData = tempData.get(chatId);
+      if (userData && userData.currentSeason) {
+        userStates.set(chatId, 'adding_episode_number');
+        await bot.sendMessage(chatId, `📺 Season ${userData.currentSeason.seasonNumber} - Enter next episode number:`);
+      }
+    } else if (data.startsWith('add_new_season')) {
+      userStates.set(chatId, 'adding_season_number');
+      await bot.sendMessage(chatId, '🔢 Enter new season number:');
+    } else if (data.startsWith('finish_series')) {
+      const userData = tempData.get(chatId);
+      if (userData && userData.seriesId) {
+        try {
+          await Series.findByIdAndUpdate(userData.seriesId, { seasons: userData.seasons });
+          await bot.sendMessage(chatId, `✅ Episodes added to "${userData.name}" successfully!`, getMainMenuKeyboard());
+        } catch (error) {
+          console.error('Error saving series:', error);
+          await bot.sendMessage(chatId, '❌ Error saving series. Please try again.', getMainMenuKeyboard());
+        }
+      } else if (userData) {
+        try {
+          const series = new Series({ 
+            name: userData.name,
+            thumbnail: userData.thumbnail,
+            seasons: userData.seasons,
+            addedBy: callbackQuery.from.id
+          });
+          await series.save();
+          await bot.sendMessage(chatId, `✅ Series "${userData.name}" created with ${userData.seasons.length} season(s)!`, getMainMenuKeyboard());
+        } catch (error) {
+          console.error('Error saving series:', error);
+          await bot.sendMessage(chatId, '❌ Error saving series. Please try again.', getMainMenuKeyboard());
+        }
+      }
+      userStates.delete(chatId);
+      tempData.delete(chatId);
+    } else if (data === 'cancel') {
+        userStates.delete(chatId);
+        tempData.delete(chatId);
+        await bot.sendMessage(chatId, 'Operation canceled.', getMainMenuKeyboard());
     }
 
     await bot.answerCallbackQuery(callbackQuery.id);
@@ -433,11 +580,66 @@ async function handleConversationFlow(chatId, text, userId) {
             }
           }
         );
-        userStates.set(chatId, 'series_action_menu');
         break;
 
-      case 'series_action_menu':
-        // This case is handled by callback queries
+      case 'editing_movie_name':
+        try {
+          await Movie.findByIdAndUpdate(data.movieId, { name: text.trim() });
+          await bot.sendMessage(chatId, `✅ Movie name updated to "${text.trim()}"!`, getMainMenuKeyboard());
+        } catch (error) {
+          console.error('Error updating movie name:', error);
+          await bot.sendMessage(chatId, '❌ Error updating movie name. Please try again.', getMainMenuKeyboard());
+        }
+        userStates.delete(chatId);
+        tempData.delete(chatId);
+        break;
+      
+      case 'editing_movie_thumbnail':
+        try {
+          await Movie.findByIdAndUpdate(data.movieId, { thumbnail: text.trim() });
+          await bot.sendMessage(chatId, `✅ Movie thumbnail updated successfully!`, getMainMenuKeyboard());
+        } catch (error) {
+          console.error('Error updating movie thumbnail:', error);
+          await bot.sendMessage(chatId, '❌ Error updating movie thumbnail. Please try again.', getMainMenuKeyboard());
+        }
+        userStates.delete(chatId);
+        tempData.delete(chatId);
+        break;
+
+      case 'editing_movie_streaming_url':
+        try {
+          await Movie.findByIdAndUpdate(data.movieId, { streamingUrl: text.trim() });
+          await bot.sendMessage(chatId, `✅ Movie streaming URL updated successfully!`, getMainMenuKeyboard());
+        } catch (error) {
+          console.error('Error updating movie streaming URL:', error);
+          await bot.sendMessage(chatId, '❌ Error updating movie streaming URL. Please try again.', getMainMenuKeyboard());
+        }
+        userStates.delete(chatId);
+        tempData.delete(chatId);
+        break;
+      
+      case 'editing_series_name':
+        try {
+          await Series.findByIdAndUpdate(data.seriesId, { name: text.trim() });
+          await bot.sendMessage(chatId, `✅ Series name updated to "${text.trim()}"!`, getMainMenuKeyboard());
+        } catch (error) {
+          console.error('Error updating series name:', error);
+          await bot.sendMessage(chatId, '❌ Error updating series name. Please try again.', getMainMenuKeyboard());
+        }
+        userStates.delete(chatId);
+        tempData.delete(chatId);
+        break;
+      
+      case 'editing_series_thumbnail':
+        try {
+          await Series.findByIdAndUpdate(data.seriesId, { thumbnail: text.trim() });
+          await bot.sendMessage(chatId, `✅ Series thumbnail updated successfully!`, getMainMenuKeyboard());
+        } catch (error) {
+          console.error('Error updating series thumbnail:', error);
+          await bot.sendMessage(chatId, '❌ Error updating series thumbnail. Please try again.', getMainMenuKeyboard());
+        }
+        userStates.delete(chatId);
+        tempData.delete(chatId);
         break;
 
       default:
@@ -457,44 +659,6 @@ async function handleConversationFlow(chatId, text, userId) {
     tempData.delete(chatId);
   }
 }
-
-// Handle additional callback queries for series management
-bot.on('callback_query', async (callbackQuery) => {
-  const data = callbackQuery.data;
-  const chatId = callbackQuery.message.chat.id;
-  const userData = tempData.get(chatId);
-
-  if (data === 'add_another_episode') {
-    userStates.set(chatId, 'adding_episode_number');
-    await bot.sendMessage(chatId, `📺 Season ${userData.currentSeason.seasonNumber} - Enter next episode number:`);
-  } else if (data === 'add_new_season') {
-    userStates.set(chatId, 'adding_season_number');
-    await bot.sendMessage(chatId, '🔢 Enter new season number:');
-  } else if (data === 'finish_series') {
-    try {
-      if (userData.seriesId) {
-        await Series.findByIdAndUpdate(userData.seriesId, { seasons: userData.seasons });
-        await bot.sendMessage(chatId, `✅ Episodes added to "${userData.name}" successfully!`, getMainMenuKeyboard());
-      } else {
-        const series = new Series({ 
-          name: userData.name,
-          thumbnail: userData.thumbnail,
-          seasons: userData.seasons,
-          addedBy: callbackQuery.from.id
-        });
-        await series.save();
-        await bot.sendMessage(chatId, `✅ Series "${userData.name}" created with ${userData.seasons.length} season(s)!`, getMainMenuKeyboard());
-      }
-    } catch (error) {
-      console.error('Error saving series:', error);
-      await bot.sendMessage(chatId, '❌ Error saving series. Please try again.', getMainMenuKeyboard());
-    }
-    userStates.delete(chatId);
-    tempData.delete(chatId);
-  }
-
-  await bot.answerCallbackQuery(callbackQuery.id);
-});
 
 // ================================================================
 // API ENDPOINTS FOR FRONTEND

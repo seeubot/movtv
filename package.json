@@ -2,10 +2,12 @@
   "name": "movtv",
   "version": "1.0.0",
   "description": "Movie and TV series management bot with Express server",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "docker:build": "docker build -t movtv .",
+    "docker:run": "docker run -p 8000:8000 --env-file .env movtv"
   },
   "dependencies": {
     "node-telegram-bot-api": "^0.61.0",
@@ -15,10 +17,9 @@
     "dotenv": "^16.6.1"
   },
   "engines": {
-    "node": "18.x",
-    "npm": "9.x"
+    "node": "18.x"
   },
-  "keywords": ["telegram", "bot", "movies", "series", "express"],
+  "keywords": ["telegram", "bot", "movies", "series", "express", "docker"],
   "author": "Your Name",
   "license": "MIT"
 }

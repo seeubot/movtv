@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Manager TV</title>
+    <title>NET-STREAM</title>
     <!-- Tailwind CSS CDN for modern styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -15,6 +15,7 @@
             background-color: #0d1117;
             color: #c9d1d9;
             overscroll-behavior-y: contain; /* Prevents scroll bounce on TV */
+            touch-action: pan-y; /* Allows vertical scrolling but prevents horizontal */
         }
 
         /* Highlight the currently focused element for remote control */
@@ -43,10 +44,14 @@
             background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
         }
 
-        #player-controls button:focus, #back-button:focus {
+        #player-controls button:focus, #back-button:focus, #fit-button:focus {
             outline: none;
             box-shadow: 0 0 10px #ffffff;
             background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        #player-controls:hover {
+            opacity: 1;
         }
 
         /* Hide scrollbars for a clean TV UI */
@@ -58,7 +63,12 @@
         .scrollable {
             scrollbar-width: none; /* Firefox */
         }
-        
+
+        /* Video player overlay for title and thumbnail */
+        #player-info-overlay {
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(8px);
+        }
     </style>
 </head>
 <body class="p-8">
@@ -108,16 +118,24 @@
     <!-- Video Player Modal -->
     <div id="video-player-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
         <div class="relative w-full h-full">
-            <video id="video-player" class="w-full h-full" preload="auto" playsinline></video>
+            <!-- Video element with object-fit styles -->
+            <video id="video-player" class="w-full h-full" preload="auto" playsinline style="object-fit: contain;"></video>
+            
+            <!-- Player Info Overlay -->
+            <div id="player-info-overlay" class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 transition-opacity duration-300 opacity-0 hidden">
+                <img id="overlay-thumbnail" src="" alt="Thumbnail" class="w-48 h-auto rounded-lg shadow-xl mb-4">
+                <h3 id="overlay-title" class="text-5xl font-bold text-white mb-2"></h3>
+                <p id="overlay-subtitle" class="text-2xl text-gray-300"></p>
+            </div>
             
             <!-- Custom Player Controls and Back Button -->
-            <div id="player-controls" class="absolute bottom-0 left-0 w-full p-8 flex justify-between items-center transition-opacity duration-300 opacity-0 hover:opacity-100">
+            <div id="player-controls" class="absolute bottom-0 left-0 w-full p-8 flex items-center justify-between transition-opacity duration-300 opacity-0 hover:opacity-100">
                 <button id="back-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg text-lg" tabindex="100">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                 </button>
-                <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-6">
                     <button id="rewind-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg" tabindex="101">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l-7-7m0 0l7-7m-7 7h18" />
@@ -139,14 +157,16 @@
                         </svg>
                     </button>
                 </div>
-                <div class="w-24"></div> <!-- Placeholder for right alignment -->
+                <button id="fit-button" class="focusable-item p-4 rounded-full bg-gray-800 bg-opacity-70 text-white shadow-lg text-lg" tabindex="104">
+                    <span id="fit-label" class="font-semibold">FIT</span>
+                </button>
             </div>
         </div>
     </div>
     
     <!-- Episode Selection Modal -->
     <div id="series-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900 bg-opacity-90 hidden">
-        <div class="relative bg-gray-800 rounded-lg p-8 max-w-4xl max-h-full overflow-y-auto scrollable">
+        <div class="relative bg-gray-800 rounded-lg p-8 w-full max-w-4xl max-h-full overflow-y-auto scrollable">
             <button id="series-modal-close" class="focusable-item absolute top-4 right-4 text-gray-400 hover:text-white text-3xl" tabindex="200">&times;</button>
             <h2 id="series-modal-title" class="text-4xl font-bold mb-8 text-white"></h2>
             <div id="series-episodes-container" class="space-y-6">
@@ -154,7 +174,6 @@
             </div>
         </div>
     </div>
-
 
     <script>
         // Set the API base URL from the server-side
@@ -181,6 +200,12 @@
         const seriesModalClose = document.getElementById('series-modal-close');
         const seriesModalTitle = document.getElementById('series-modal-title');
         const seriesEpisodesContainer = document.getElementById('series-episodes-container');
+        const playerInfoOverlay = document.getElementById('player-info-overlay');
+        const overlayThumbnail = document.getElementById('overlay-thumbnail');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlaySubtitle = document.getElementById('overlay-subtitle');
+        const fitButton = document.getElementById('fit-button');
+        const fitLabel = document.getElementById('fit-label');
         
         // State management
         let moviesData = [];
@@ -189,6 +214,9 @@
         let filteredSeries = [];
         let currentFocusIndex = 0;
         let currentFocusables = [];
+        let currentVideoItem = null;
+        const objectFitModes = ['contain', 'cover', 'fill'];
+        let currentObjectFitIndex = 0;
         
         const KEY_CODES = {
             ENTER: 13,
@@ -300,6 +328,7 @@
         function handleCardClick(item) {
             if (item.streamingUrl) {
                 // It's a movie
+                currentVideoItem = { title: item.name, thumbnail: item.thumbnail, subtitle: 'Movie' };
                 playVideo(item.streamingUrl);
             } else {
                 // It's a series
@@ -324,6 +353,38 @@
         }
 
         /**
+         * Shows the title and thumbnail overlay.
+         */
+        function showPlayerInfo(item) {
+            if (!item) return;
+            overlayThumbnail.src = item.thumbnail;
+            overlayTitle.textContent = item.title;
+            overlaySubtitle.textContent = item.subtitle;
+            playerInfoOverlay.classList.remove('hidden', 'opacity-0');
+            playerInfoOverlay.classList.add('opacity-100');
+        }
+
+        /**
+         * Hides the title and thumbnail overlay.
+         */
+        function hidePlayerInfo() {
+            playerInfoOverlay.classList.remove('opacity-100');
+            playerInfoOverlay.classList.add('opacity-0');
+            // Hide after transition
+            setTimeout(() => playerInfoOverlay.classList.add('hidden'), 300);
+        }
+
+        /**
+         * Cycles through the video object-fit modes.
+         */
+        function cycleObjectFit() {
+            currentObjectFitIndex = (currentObjectFitIndex + 1) % objectFitModes.length;
+            const newFit = objectFitModes[currentObjectFitIndex];
+            videoPlayer.style.objectFit = newFit;
+            fitLabel.textContent = newFit.toUpperCase();
+        }
+
+        /**
          * Closes the video player and returns to the main view.
          */
         function closeVideoPlayer() {
@@ -331,6 +392,7 @@
             videoPlayer.src = '';
             videoPlayerModal.classList.add('hidden');
             appContainer.classList.remove('hidden');
+            currentVideoItem = null;
             
             // Re-focus on the last focused element or search input
             searchInput.focus();
@@ -367,7 +429,14 @@
                             </div>
                         </div>
                     `;
-                    episodeButton.addEventListener('click', () => playVideo(episode.streamingUrl));
+                    episodeButton.addEventListener('click', () => {
+                        currentVideoItem = {
+                            title: series.name,
+                            thumbnail: episode.thumbnail || series.thumbnail,
+                            subtitle: `S${season.seasonNumber}E${episode.episodeNumber}: ${episode.title}`
+                        };
+                        playVideo(episode.streamingUrl);
+                    });
                     episodesList.appendChild(episodeButton);
                 });
                 
@@ -405,21 +474,32 @@
         playPauseButton.addEventListener('click', () => {
             if (videoPlayer.paused) {
                 videoPlayer.play();
-                playIcon.classList.add('hidden');
-                pauseIcon.classList.remove('hidden');
             } else {
                 videoPlayer.pause();
-                playIcon.classList.remove('hidden');
-                pauseIcon.classList.add('hidden');
             }
         });
+        
+        videoPlayer.addEventListener('play', () => {
+            playIcon.classList.add('hidden');
+            pauseIcon.classList.remove('hidden');
+            hidePlayerInfo();
+        });
+
+        videoPlayer.addEventListener('pause', () => {
+            playIcon.classList.remove('hidden');
+            pauseIcon.classList.add('hidden');
+            showPlayerInfo(currentVideoItem);
+        });
+
+        videoPlayer.addEventListener('ended', closeVideoPlayer);
 
         rewindButton.addEventListener('click', () => videoPlayer.currentTime -= 10);
         forwardButton.addEventListener('click', () => videoPlayer.currentTime += 10);
         backButton.addEventListener('click', closeVideoPlayer);
         seriesModalClose.addEventListener('click', closeSeriesModal);
+        fitButton.addEventListener('click', cycleObjectFit);
         
-        // Keydown event listener for remote control navigation
+        // Remote control navigation
         document.addEventListener('keydown', (e) => {
             // If a video is playing, handle player controls
             if (!videoPlayerModal.classList.contains('hidden')) {
@@ -449,26 +529,31 @@
             switch (e.keyCode) {
                 case KEY_CODES.RIGHT:
                     if (focusedIndex < currentFocusables.length - 1) {
+                        e.preventDefault();
                         currentFocusables[focusedIndex + 1].focus();
                     }
                     break;
                 case KEY_CODES.LEFT:
                     if (focusedIndex > 0) {
+                        e.preventDefault();
                         currentFocusables[focusedIndex - 1].focus();
                     }
                     break;
                 case KEY_CODES.DOWN:
+                    e.preventDefault();
                     // Find the next element in the row below
-                    let nextRowElement = findNextRowElement(focusedElement, 1);
+                    let nextRowElement = findVerticalFocus(focusedElement, 1);
                     if (nextRowElement) nextRowElement.focus();
                     break;
                 case KEY_CODES.UP:
+                    e.preventDefault();
                     // Find the previous element in the row above
-                    let prevRowElement = findNextRowElement(focusedElement, -1);
+                    let prevRowElement = findVerticalFocus(focusedElement, -1);
                     if (prevRowElement) prevRowElement.focus();
                     break;
                 case KEY_CODES.ENTER:
                 case KEY_CODES.SPACE:
+                    e.preventDefault();
                     // Trigger click on the focused item
                     if (focusedElement && focusedElement.classList.contains('focusable-item')) {
                         focusedElement.click();
@@ -483,28 +568,33 @@
          * @param {number} direction - 1 for down, -1 for up.
          * @returns {HTMLElement|null} The next focusable element.
          */
-        function findNextRowElement(focusedEl, direction) {
-            const container = focusedEl.closest('.grid');
-            if (!container) return null;
-            const items = Array.from(container.querySelectorAll('.focusable-item'));
-            const focusedIndex = items.indexOf(focusedEl);
+        function findVerticalFocus(focusedEl, direction) {
+            const allItems = Array.from(document.querySelectorAll('.focusable-item'));
+            const focusedIndex = allItems.indexOf(focusedEl);
             if (focusedIndex === -1) return null;
 
-            const rect = focusedEl.getBoundingClientRect();
+            const focusedRect = focusedEl.getBoundingClientRect();
             let bestMatch = null;
             let minDistance = Infinity;
 
-            for (const item of items) {
+            for (const item of allItems) {
                 const itemRect = item.getBoundingClientRect();
-                // Check if the item is in the target direction
-                if (direction > 0 && itemRect.top > rect.bottom) {
-                    const distance = Math.abs(itemRect.left - rect.left);
+
+                // Check if item is in the correct vertical direction
+                if (direction > 0 && itemRect.top > focusedRect.bottom) {
+                    const verticalDistance = itemRect.top - focusedRect.bottom;
+                    const horizontalDistance = Math.abs((itemRect.left + itemRect.right) / 2 - (focusedRect.left + focusedRect.right) / 2);
+                    const distance = verticalDistance + horizontalDistance * 0.5; // Prioritize vertical distance
+                    
                     if (distance < minDistance) {
                         minDistance = distance;
                         bestMatch = item;
                     }
-                } else if (direction < 0 && itemRect.bottom < rect.top) {
-                    const distance = Math.abs(itemRect.left - rect.left);
+                } else if (direction < 0 && itemRect.bottom < focusedRect.top) {
+                    const verticalDistance = focusedRect.top - itemRect.bottom;
+                    const horizontalDistance = Math.abs((itemRect.left + itemRect.right) / 2 - (focusedRect.left + focusedRect.right) / 2);
+                    const distance = verticalDistance + horizontalDistance * 0.5;
+                    
                     if (distance < minDistance) {
                         minDistance = distance;
                         bestMatch = item;
@@ -541,10 +631,7 @@
                 case KEY_CODES.UP:
                 case KEY_CODES.DOWN:
                     // Allow navigating between player controls
-                    // Currently only a few buttons, so simple logic is fine
-                    if (document.activeElement === backButton || document.activeElement === playPauseButton || document.activeElement === rewindButton || document.activeElement === forwardButton) {
-                        e.preventDefault(); // Prevents moving to app container in the background
-                    }
+                    // Focus logic here if more controls are added
                     break;
             }
         }
@@ -561,24 +648,29 @@
             switch (e.keyCode) {
                 case KEY_CODES.RIGHT:
                     if (focusedIndex < currentFocusables.length - 1) {
+                        e.preventDefault();
                         currentFocusables[focusedIndex + 1].focus();
                     }
                     break;
                 case KEY_CODES.LEFT:
                     if (focusedIndex > 0) {
+                        e.preventDefault();
                         currentFocusables[focusedIndex - 1].focus();
                     }
                     break;
                 case KEY_CODES.DOWN:
-                    const nextModalItem = findNextRowElement(focusedElement, 1);
+                    e.preventDefault();
+                    const nextModalItem = findVerticalFocus(focusedElement, 1);
                     if (nextModalItem) nextModalItem.focus();
                     break;
                 case KEY_CODES.UP:
-                    const prevModalItem = findNextRowElement(focusedElement, -1);
+                    e.preventDefault();
+                    const prevModalItem = findVerticalFocus(focusedElement, -1);
                     if (prevModalItem) prevModalItem.focus();
                     break;
                 case KEY_CODES.ENTER:
                 case KEY_CODES.SPACE:
+                    e.preventDefault();
                     if (focusedElement && focusedElement.classList.contains('focusable-item')) {
                         focusedElement.click();
                     }
@@ -601,10 +693,6 @@
                 currentFocusables = Array.from(seriesModal.querySelectorAll('.focusable-item'));
             } else {
                 currentFocusables = Array.from(document.querySelectorAll('.focusable-item'));
-            }
-            // Ensure search input is always the first focusable item
-            if (currentFocusables[0] !== searchInput && !videoPlayerModal.classList.contains('hidden') && !seriesModal.classList.contains('hidden')) {
-                currentFocusables.unshift(searchInput);
             }
         }
 

@@ -4,7 +4,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const mongoose = require('mongoose');
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 
 // ================================================================
 // CONFIGURATION
@@ -12,10 +11,10 @@ const path = require('path');
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '7545348868:AAGjvrcDALv0O8fH5NmDzBkXFWrgIRdKYek';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://movie:movie@movie.tylkv.mongodb.net/?retryWrites=true&w=majority&appName=movie';
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 const USE_WEBHOOK = process.env.USE_WEBHOOK === 'true';
 
-// Initialize bot with polling by default (more reliable than webhooks)
+// Initialize bot with polling by default
 const bot = new TelegramBot(BOT_TOKEN, { 
   polling: !USE_WEBHOOK,
   request: {
@@ -39,6 +38,7 @@ mongoose.connect(MONGODB_URI, {
   console.log('✅ Connected to MongoDB');
 }).catch(err => {
   console.error('❌ MongoDB connection error:', err);
+  process.exit(1);
 });
 
 // Schemas
@@ -66,20 +66,35 @@ const seriesSchema = new mongoose.Schema({
   addedAt: { type: Date, default: Date.now }
 });
 
+// Add indexes for better performance
+movieSchema.index({ name: 'text' });
+seriesSchema.index({ name: 'text' });
+
 const Movie = mongoose.model('Movie', movieSchema);
 const Series = mongoose.model('Series', seriesSchema);
 
 // ================================================================
-// EXPRESS APP
+// EXPRESS APP & MIDDLEWARE
 // ================================================================
 
 const app = express();
-app.use(cors());
+
+// CORS configuration for frontend compatibility
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:8080', 'http://127.0.0.1:8080', '*'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve the frontend HTML directly
-app.use(express.static('public'));
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // ================================================================
 // BOT STATE MANAGEMENT & CONVERSATION FLOWS
@@ -103,7 +118,20 @@ bot.on('webhook_error', (error) => {
   console.error('Telegram webhook error:', error);
 });
 
-// Global handler for bot messages
+// Main menu keyboard
+const getMainMenuKeyboard = () => ({
+  reply_markup: {
+    keyboard: [
+      ['🎬 Add Movie', '📺 Add Series'],
+      ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
+      ['🌐 Frontend URL', '📊 Library Stats']
+    ],
+    resize_keyboard: true,
+    one_time_keyboard: false
+  }
+});
+
+// Bot message handler
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -113,39 +141,35 @@ bot.on('message', async (msg) => {
 
   try {
     if (text === '/start') {
-      const keyboard = {
-        reply_markup: {
-          keyboard: [
-            ['🎬 Add Movie', '📺 Add Series'],
-            ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-            ['🌐 Open Frontend', '📊 Stats']
-          ],
-          resize_keyboard: true
-        }
-      };
-      await bot.sendMessage(chatId, '🎭 Welcome to Movie & Series Manager Bot!\n\nChoose an option below:', keyboard);
+      await bot.sendMessage(chatId, 
+        '🎭 *Welcome to Media Manager Bot!*\n\n' +
+        '🎬 Add and manage your movies\n' +
+        '📺 Create and organize TV series\n' +
+        '🌐 Access your media library via web frontend\n\n' +
+        'Choose an option below:', 
+        { ...getMainMenuKeyboard(), parse_mode: 'Markdown' }
+      );
     } else if (text === '🎬 Add Movie') {
       userStates.set(chatId, 'adding_movie_name');
       tempData.set(chatId, { type: 'movie' });
       await bot.sendMessage(chatId, '🎬 Enter the movie name:', { reply_markup: { remove_keyboard: true } });
     } else if (text === '📺 Add Series') {
-      const seriesList = await Series.find({}, 'name');
+      const seriesList = await Series.find({}, 'name').limit(20);
       if (seriesList.length > 0) {
         const seriesKeyboard = seriesList.map(s => [{ text: s.name, callback_data: `add_to_series_${s._id}` }]);
         seriesKeyboard.push([{ text: '➕ Create New Series', callback_data: 'create_new_series' }]);
-        await bot.sendMessage(chatId, '📺 Choose a series to add to, or create a new one:', {
+        await bot.sendMessage(chatId, '📺 Choose a series to add episodes to, or create a new one:', {
           reply_markup: { inline_keyboard: seriesKeyboard }
         });
-        userStates.set(chatId, 'choosing_series_for_add');
       } else {
         userStates.set(chatId, 'adding_series_name');
         tempData.set(chatId, { type: 'series' });
         await bot.sendMessage(chatId, '📺 Enter the series name:', { reply_markup: { remove_keyboard: true } });
       }
     } else if (text === '✍️ Edit/Delete Movies') {
-      const movies = await Movie.find().limit(10);
+      const movies = await Movie.find().sort({ addedAt: -1 }).limit(10);
       if (movies.length === 0) {
-        await bot.sendMessage(chatId, '📽️ No movies found! Add some first.');
+        await bot.sendMessage(chatId, '📽️ No movies found! Add some first.', getMainMenuKeyboard());
       } else {
         const movieKeyboard = movies.map(movie => [
           { text: `✍️ ${movie.name}`, callback_data: `edit_movie_${movie._id}` },
@@ -157,9 +181,9 @@ bot.on('message', async (msg) => {
         });
       }
     } else if (text === '🗑️ Edit/Delete Series') {
-      const seriesList = await Series.find().limit(10);
+      const seriesList = await Series.find().sort({ addedAt: -1 }).limit(10);
       if (seriesList.length === 0) {
-        await bot.sendMessage(chatId, '📺 No series found! Add some first.');
+        await bot.sendMessage(chatId, '📺 No series found! Add some first.', getMainMenuKeyboard());
       } else {
         const seriesKeyboard = seriesList.map(series => [
           { text: `✍️ ${series.name}`, callback_data: `edit_series_${series._id}` },
@@ -170,12 +194,15 @@ bot.on('message', async (msg) => {
           reply_markup: { inline_keyboard: seriesKeyboard }
         });
       }
-    } else if (text === '🌐 Open Frontend') {
-      const frontendUrl = process.env.FRONTEND_URL || `http://localhost:${PORT}`;
-      await bot.sendMessage(chatId, `🌐 *Frontend URL:*\n${frontendUrl}\n\n🎬 Open this link to watch your movies and series!`, {
-        parse_mode: 'Markdown'
-      });
-    } else if (text === '📊 Stats') {
+    } else if (text === '🌐 Frontend URL') {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      await bot.sendMessage(chatId, 
+        `🌐 *Web Frontend:*\n${frontendUrl}\n\n` +
+        `📱 *API Server:* http://localhost:${PORT}\n\n` +
+        '🎬 Open the frontend URL to watch your movies and series!',
+        { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
+      );
+    } else if (text === '📊 Library Stats') {
       const movieCount = await Movie.countDocuments();
       const seriesCount = await Series.countDocuments();
       const totalEpisodes = await Series.aggregate([
@@ -189,16 +216,16 @@ bot.on('message', async (msg) => {
         `📊 *Library Statistics:*\n\n` +
         `🎬 Movies: ${movieCount}\n` +
         `📺 TV Series: ${seriesCount}\n` +
-        `📹 Total Episodes: ${episodeCount}\n\n` +
-        `🎭 Total Content: ${movieCount + seriesCount} items`,
-        { parse_mode: 'Markdown' }
+        `📹 Total Episodes: ${episodeCount}\n` +
+        `🎭 Total Items: ${movieCount + seriesCount}`,
+        { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
       );
     } else {
       await handleConversationFlow(chatId, text, userId);
     }
   } catch (error) {
     console.error('❌ Error handling message:', error);
-    await bot.sendMessage(chatId, '❌ An error occurred. Please try again or use /start to restart.');
+    await bot.sendMessage(chatId, '❌ An error occurred. Please try again or use /start to restart.', getMainMenuKeyboard());
   }
 });
 
@@ -207,7 +234,6 @@ bot.on('callback_query', async (callbackQuery) => {
   const msg = callbackQuery.message;
   const chatId = msg.chat.id;
   const data = callbackQuery.data;
-  const userId = callbackQuery.from.id;
 
   console.log(`🔘 Callback query: ${data}`);
 
@@ -216,9 +242,15 @@ bot.on('callback_query', async (callbackQuery) => {
       const seriesId = data.replace('add_to_series_', '');
       const series = await Series.findById(seriesId);
       if (series) {
-        tempData.set(chatId, { type: 'series', seriesId: seriesId, name: series.name, thumbnail: series.thumbnail, seasons: [...series.seasons] });
+        tempData.set(chatId, { 
+          type: 'series', 
+          seriesId: seriesId, 
+          name: series.name, 
+          thumbnail: series.thumbnail, 
+          seasons: [...series.seasons] 
+        });
         userStates.set(chatId, 'adding_season_number_existing');
-        await bot.sendMessage(chatId, `📺 Adding to "${series.name}"\n\n🔢 Enter the season number (or "done" to finish):`, { reply_markup: { remove_keyboard: true } });
+        await bot.sendMessage(chatId, `📺 Adding to "${series.name}"\n\n🔢 Enter the season number:`, { reply_markup: { remove_keyboard: true } });
       }
     } else if (data === 'create_new_series') {
       userStates.set(chatId, 'adding_series_name');
@@ -226,27 +258,19 @@ bot.on('callback_query', async (callbackQuery) => {
       await bot.sendMessage(chatId, '📺 Enter the new series name:', { reply_markup: { remove_keyboard: true } });
     } else if (data.startsWith('delete_movie_')) {
       const movieId = data.replace('delete_movie_', '');
-      try {
-        const deletedMovie = await Movie.findByIdAndDelete(movieId);
-        if (deletedMovie) {
-          await bot.sendMessage(chatId, `✅ Movie "${deletedMovie.name}" deleted successfully!`);
-        } else {
-          await bot.sendMessage(chatId, '❌ Movie not found.');
-        }
-      } catch (error) {
-        await bot.sendMessage(chatId, '❌ Error deleting movie.');
+      const deletedMovie = await Movie.findByIdAndDelete(movieId);
+      if (deletedMovie) {
+        await bot.sendMessage(chatId, `✅ Movie "${deletedMovie.name}" deleted successfully!`, getMainMenuKeyboard());
+      } else {
+        await bot.sendMessage(chatId, '❌ Movie not found.', getMainMenuKeyboard());
       }
     } else if (data.startsWith('delete_series_')) {
       const seriesId = data.replace('delete_series_', '');
-      try {
-        const deletedSeries = await Series.findByIdAndDelete(seriesId);
-        if (deletedSeries) {
-          await bot.sendMessage(chatId, `✅ Series "${deletedSeries.name}" deleted successfully!`);
-        } else {
-          await bot.sendMessage(chatId, '❌ Series not found.');
-        }
-      } catch (error) {
-        await bot.sendMessage(chatId, '❌ Error deleting series.');
+      const deletedSeries = await Series.findByIdAndDelete(seriesId);
+      if (deletedSeries) {
+        await bot.sendMessage(chatId, `✅ Series "${deletedSeries.name}" deleted successfully!`, getMainMenuKeyboard());
+      } else {
+        await bot.sendMessage(chatId, '❌ Series not found.', getMainMenuKeyboard());
       }
     }
 
@@ -257,6 +281,7 @@ bot.on('callback_query', async (callbackQuery) => {
   }
 });
 
+// Conversation flow handler
 async function handleConversationFlow(chatId, text, userId) {
   const state = userStates.get(chatId);
   const data = tempData.get(chatId) || {};
@@ -264,102 +289,52 @@ async function handleConversationFlow(chatId, text, userId) {
   try {
     switch (state) {
       case 'adding_movie_name':
-        data.name = text;
+        data.name = text.trim();
         userStates.set(chatId, 'adding_movie_thumbnail');
-        await bot.sendMessage(chatId, '📸 Enter the movie thumbnail URL:');
+        await bot.sendMessage(chatId, '📸 Enter the movie thumbnail URL (image):');
         break;
 
       case 'adding_movie_thumbnail':
-        data.thumbnail = text;
+        data.thumbnail = text.trim();
         userStates.set(chatId, 'adding_movie_streaming_url');
-        await bot.sendMessage(chatId, '🔗 Enter the streaming URL:');
+        await bot.sendMessage(chatId, '🔗 Enter the streaming URL (.mp4, .m3u8, etc.):');
         break;
 
       case 'adding_movie_streaming_url':
-        data.streamingUrl = text;
+        data.streamingUrl = text.trim();
         try {
           const movie = new Movie({ ...data, addedBy: userId });
           await movie.save();
-          await bot.sendMessage(chatId, `✅ Movie "${data.name}" added successfully!`, {
-            reply_markup: {
-              keyboard: [
-                ['🎬 Add Movie', '📺 Add Series'],
-                ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-                ['🌐 Open Frontend', '📊 Stats']
-              ],
-              resize_keyboard: true
-            }
-          });
+          await bot.sendMessage(chatId, `✅ Movie "${data.name}" added successfully!`, getMainMenuKeyboard());
         } catch (error) {
-          await bot.sendMessage(chatId, '❌ Error adding movie. Please try again.');
+          console.error('Error saving movie:', error);
+          await bot.sendMessage(chatId, '❌ Error adding movie. Please try again.', getMainMenuKeyboard());
         }
         userStates.delete(chatId);
         tempData.delete(chatId);
         break;
 
       case 'adding_series_name':
-        data.name = text;
+        data.name = text.trim();
         userStates.set(chatId, 'adding_series_thumbnail');
-        await bot.sendMessage(chatId, '📸 Enter the series thumbnail URL:');
+        await bot.sendMessage(chatId, '📸 Enter the series thumbnail URL (image):');
         break;
 
       case 'adding_series_thumbnail':
-        data.thumbnail = text;
+        data.thumbnail = text.trim();
         data.seasons = [];
         userStates.set(chatId, 'adding_season_number');
-        await bot.sendMessage(chatId, '🔢 Enter season number (or "done" to finish):');
+        await bot.sendMessage(chatId, '🔢 Enter season number:');
         break;
       
       case 'adding_season_number_existing':
       case 'adding_season_number':
-        if (text.toLowerCase() === 'done') {
-          if (data.seasons.length === 0) {
-            await bot.sendMessage(chatId, '⚠️ Please add at least one season with episodes!');
-            return;
-          }
-          try {
-            if (data.seriesId) {
-              // Update existing series
-              await Series.findByIdAndUpdate(data.seriesId, { seasons: data.seasons });
-              await bot.sendMessage(chatId, `✅ Episodes added to "${data.name}" successfully!`, {
-                reply_markup: {
-                  keyboard: [
-                    ['🎬 Add Movie', '📺 Add Series'],
-                    ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-                    ['🌐 Open Frontend', '📊 Stats']
-                  ],
-                  resize_keyboard: true
-                }
-              });
-            } else {
-              // Create new series
-              const series = new Series({ ...data, addedBy: userId });
-              await series.save();
-              await bot.sendMessage(chatId, `✅ Series "${data.name}" created successfully!`, {
-                reply_markup: {
-                  keyboard: [
-                    ['🎬 Add Movie', '📺 Add Series'],
-                    ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-                    ['🌐 Open Frontend', '📊 Stats']
-                  ],
-                  resize_keyboard: true
-                }
-              });
-            }
-          } catch (error) {
-            await bot.sendMessage(chatId, '❌ Error saving series. Please try again.');
-          }
-          userStates.delete(chatId);
-          tempData.delete(chatId);
-          return;
-        }
-        const seasonNumber = parseInt(text);
+        const seasonNumber = parseInt(text.trim());
         if (isNaN(seasonNumber) || seasonNumber <= 0) {
           await bot.sendMessage(chatId, '⚠️ Please enter a valid season number!');
           return;
         }
         
-        // Check if season already exists
         const existingSeason = data.seasons.find(s => s.seasonNumber === seasonNumber);
         if (existingSeason) {
           data.currentSeason = existingSeason;
@@ -368,80 +343,16 @@ async function handleConversationFlow(chatId, text, userId) {
         }
         
         userStates.set(chatId, 'adding_episode_number');
-        await bot.sendMessage(chatId, `📺 Season ${seasonNumber} - Enter episode number (or "next" for new season, "done" to finish):`);
+        await bot.sendMessage(chatId, `📺 Season ${seasonNumber} - Enter episode number:`);
         break;
       
       case 'adding_episode_number':
-        if (text.toLowerCase() === 'next') {
-          if (data.currentSeason.episodes.length === 0) {
-            await bot.sendMessage(chatId, '⚠️ Please add at least one episode to this season!');
-            return;
-          }
-          // Update or add the current season
-          const seasonIndex = data.seasons.findIndex(s => s.seasonNumber === data.currentSeason.seasonNumber);
-          if (seasonIndex >= 0) {
-            data.seasons[seasonIndex] = data.currentSeason;
-          } else {
-            data.seasons.push(data.currentSeason);
-          }
-          userStates.set(chatId, 'adding_season_number');
-          await bot.sendMessage(chatId, '🔢 Enter next season number (or "done" to finish):');
-          return;
-        }
-        if (text.toLowerCase() === 'done') {
-          if (data.currentSeason && data.currentSeason.episodes.length > 0) {
-            const seasonIndex = data.seasons.findIndex(s => s.seasonNumber === data.currentSeason.seasonNumber);
-            if (seasonIndex >= 0) {
-              data.seasons[seasonIndex] = data.currentSeason;
-            } else {
-              data.seasons.push(data.currentSeason);
-            }
-          }
-          if (data.seasons.length === 0) {
-            await bot.sendMessage(chatId, '⚠️ Please add at least one season with episodes!');
-            return;
-          }
-          try {
-            if (data.seriesId) {
-              await Series.findByIdAndUpdate(data.seriesId, { seasons: data.seasons });
-              await bot.sendMessage(chatId, `✅ Episodes added to "${data.name}" successfully!`, {
-                reply_markup: {
-                  keyboard: [
-                    ['🎬 Add Movie', '📺 Add Series'],
-                    ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-                    ['🌐 Open Frontend', '📊 Stats']
-                  ],
-                  resize_keyboard: true
-                }
-              });
-            } else {
-              const series = new Series({ ...data, addedBy: userId });
-              await series.save();
-              await bot.sendMessage(chatId, `✅ Series "${data.name}" created with ${data.seasons.length} season(s)!`, {
-                reply_markup: {
-                  keyboard: [
-                    ['🎬 Add Movie', '📺 Add Series'],
-                    ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-                    ['🌐 Open Frontend', '📊 Stats']
-                  ],
-                  resize_keyboard: true
-                }
-              });
-            }
-            userStates.delete(chatId);
-            tempData.delete(chatId);
-          } catch (error) {
-            await bot.sendMessage(chatId, '❌ Error saving series. Please try again.');
-          }
-          return;
-        }
-        const episodeNumber = parseInt(text);
+        const episodeNumber = parseInt(text.trim());
         if (isNaN(episodeNumber) || episodeNumber <= 0) {
           await bot.sendMessage(chatId, '⚠️ Please enter a valid episode number!');
           return;
         }
         
-        // Check if episode already exists
         const existingEpisode = data.currentSeason.episodes.find(e => e.episodeNumber === episodeNumber);
         if (existingEpisode) {
           await bot.sendMessage(chatId, `⚠️ Episode ${episodeNumber} already exists in Season ${data.currentSeason.seasonNumber}. Choose a different number.`);
@@ -454,55 +365,108 @@ async function handleConversationFlow(chatId, text, userId) {
         break;
 
       case 'adding_episode_title':
-        data.currentEpisode.title = text;
+        data.currentEpisode.title = text.trim();
         userStates.set(chatId, 'adding_episode_url');
         await bot.sendMessage(chatId, '🔗 Enter episode streaming URL:');
         break;
 
       case 'adding_episode_url':
-        data.currentEpisode.streamingUrl = text;
+        data.currentEpisode.streamingUrl = text.trim();
         data.currentSeason.episodes.push(data.currentEpisode);
+        
+        // Update or add the current season to the series
+        const seasonIndex = data.seasons.findIndex(s => s.seasonNumber === data.currentSeason.seasonNumber);
+        if (seasonIndex >= 0) {
+          data.seasons[seasonIndex] = data.currentSeason;
+        } else {
+          data.seasons.push(data.currentSeason);
+        }
         
         const totalEpisodes = data.currentSeason.episodes.length;
         await bot.sendMessage(chatId, 
           `✅ Episode added! S${data.currentSeason.seasonNumber}E${data.currentEpisode.episodeNumber}: ${data.currentEpisode.title}\n\n` +
           `📊 Season ${data.currentSeason.seasonNumber} now has ${totalEpisodes} episode${totalEpisodes !== 1 ? 's' : ''}\n\n` +
-          `📺 Enter next episode number (or "next" for new season, "done" to finish):`
+          `What would you like to do next?`,
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '➕ Add Another Episode', callback_data: 'add_another_episode' }],
+                [{ text: '🔢 Add New Season', callback_data: 'add_new_season' }],
+                [{ text: '✅ Finish Series', callback_data: 'finish_series' }]
+              ]
+            }
+          }
         );
-        userStates.set(chatId, 'adding_episode_number');
+        userStates.set(chatId, 'series_action_menu');
+        break;
+
+      case 'series_action_menu':
+        // This case is handled by callback queries
         break;
 
       default:
-        // Handle unknown states or provide help
-        const keyboard = {
-          reply_markup: {
-            keyboard: [
-              ['🎬 Add Movie', '📺 Add Series'],
-              ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-              ['🌐 Open Frontend', '📊 Stats']
-            ],
-            resize_keyboard: true
-          }
-        };
-        await bot.sendMessage(chatId, '❓ I didn\'t understand that. Please use the menu buttons or type /start to restart.', keyboard);
+        await bot.sendMessage(chatId, '❓ I didn\'t understand that. Please use the menu buttons or type /start to restart.', getMainMenuKeyboard());
         userStates.delete(chatId);
         tempData.delete(chatId);
         break;
     }
-    tempData.set(chatId, data);
+    
+    if (data && Object.keys(data).length > 0) {
+      tempData.set(chatId, data);
+    }
   } catch (error) {
     console.error('❌ Error in conversation flow:', error);
-    await bot.sendMessage(chatId, '❌ An error occurred. Please try again or use /start to restart.');
+    await bot.sendMessage(chatId, '❌ An error occurred. Please try again or use /start to restart.', getMainMenuKeyboard());
     userStates.delete(chatId);
     tempData.delete(chatId);
   }
 }
 
+// Handle additional callback queries for series management
+bot.on('callback_query', async (callbackQuery) => {
+  const data = callbackQuery.data;
+  const chatId = callbackQuery.message.chat.id;
+  const userData = tempData.get(chatId);
+
+  if (data === 'add_another_episode') {
+    userStates.set(chatId, 'adding_episode_number');
+    await bot.sendMessage(chatId, `📺 Season ${userData.currentSeason.seasonNumber} - Enter next episode number:`);
+  } else if (data === 'add_new_season') {
+    userStates.set(chatId, 'adding_season_number');
+    await bot.sendMessage(chatId, '🔢 Enter new season number:');
+  } else if (data === 'finish_series') {
+    try {
+      if (userData.seriesId) {
+        // Update existing series
+        await Series.findByIdAndUpdate(userData.seriesId, { seasons: userData.seasons });
+        await bot.sendMessage(chatId, `✅ Episodes added to "${userData.name}" successfully!`, getMainMenuKeyboard());
+      } else {
+        // Create new series
+        const series = new Series({ 
+          name: userData.name,
+          thumbnail: userData.thumbnail,
+          seasons: userData.seasons,
+          addedBy: callbackQuery.from.id
+        });
+        await series.save();
+        await bot.sendMessage(chatId, `✅ Series "${userData.name}" created with ${userData.seasons.length} season(s)!`, getMainMenuKeyboard());
+      }
+    } catch (error) {
+      console.error('Error saving series:', error);
+      await bot.sendMessage(chatId, '❌ Error saving series. Please try again.', getMainMenuKeyboard());
+    }
+    userStates.delete(chatId);
+    tempData.delete(chatId);
+  }
+
+  await bot.answerCallbackQuery(callbackQuery.id);
+});
+
 // ================================================================
-// API ENDPOINTS
+// API ENDPOINTS FOR FRONTEND
 // ================================================================
 
-// Health check endpoint
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK', 
@@ -512,57 +476,57 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Get all movies
+// Get all movies (compatible with your frontend)
 app.get('/api/movies', async (req, res) => {
   try {
-    const { page = 1, limit = 20, search } = req.query;
+    const { page = 1, limit = 50, search } = req.query;
     const query = search ? { name: { $regex: search, $options: 'i' } } : {};
     
     const movies = await Movie.find(query)
       .sort({ addedAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
     
     const total = await Movie.countDocuments(query);
     
-    res.json({
-      movies,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
-    });
+    // Return format that matches your frontend expectations
+    if (movies.length === 0) {
+      return res.json([]);
+    }
+    
+    res.json(movies);
   } catch (error) {
     console.error('❌ Error fetching movies:', error);
-    res.status(500).json({ error: 'Failed to fetch movies' });
+    res.status(500).json({ error: 'Failed to fetch movies', details: error.message });
   }
 });
 
-// Get all series
+// Get all series (compatible with your frontend)
 app.get('/api/series', async (req, res) => {
   try {
-    const { page = 1, limit = 20, search } = req.query;
+    const { page = 1, limit = 50, search } = req.query;
     const query = search ? { name: { $regex: search, $options: 'i' } } : {};
     
     const series = await Series.find(query)
       .sort({ addedAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
     
     const total = await Series.countDocuments(query);
     
-    res.json({
-      series,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
-    });
+    // Return format that matches your frontend expectations
+    if (series.length === 0) {
+      return res.json([]);
+    }
+    
+    res.json(series);
   } catch (error) {
     console.error('❌ Error fetching series:', error);
-    res.status(500).json({ error: 'Failed to fetch series' });
+    res.status(500).json({ error: 'Failed to fetch series', details: error.message });
   }
 });
 
-// Get single series by ID
+// Get single series by ID (for your frontend modal)
 app.get('/api/series/:id', async (req, res) => {
   try {
     const series = await Series.findById(req.params.id);
@@ -572,7 +536,7 @@ app.get('/api/series/:id', async (req, res) => {
     res.json(series);
   } catch (error) {
     console.error('❌ Error fetching series details:', error);
-    res.status(500).json({ error: 'Failed to fetch series details' });
+    res.status(500).json({ error: 'Failed to fetch series details', details: error.message });
   }
 });
 
@@ -600,261 +564,53 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// ================================================================
-// WEBHOOK SETUP (OPTIONAL)
-// ================================================================
-
-if (USE_WEBHOOK) {
-  const crypto = require('crypto');
-  const webhookPath = `/webhook-${crypto.randomBytes(16).toString('hex')}`;
-  
-  app.post(webhookPath, (req, res) => {
-    console.log('📨 Received webhook update');
-    try {
-      bot.processUpdate(req.body);
-      res.sendStatus(200);
-    } catch (error) {
-      console.error('❌ Error processing webhook update:', error);
-      res.sendStatus(500);
-    }
-  });
-}
-
-// Serve frontend
+// Simple route for root - just return API info
 app.get('/', (req, res) => {
-  const frontendHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie & TV Series Manager</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  res.json({
+    name: 'Media Manager API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      movies: '/api/movies',
+      series: '/api/series',
+      seriesById: '/api/series/:id',
+      stats: '/api/stats',
+      health: '/health'
+    },
+    message: 'Use your custom frontend to access the media library!'
+  });
+});
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #fff, #f0f0f0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .tabs {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 30px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 5px;
-            backdrop-filter: blur(10px);
-        }
-
-        .tab {
-            flex: 1;
-            text-align: center;
-            padding: 15px 20px;
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-size: 1.1em;
-            cursor: pointer;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .tab.active {
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 25px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-
-        .card-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-        }
-
-        .card-content {
-            padding: 20px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 50px;
-            font-size: 1.2em;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🎬 Movie & TV Series Manager</h1>
-            <p>Your personal streaming library</p>
-        </div>
-
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('movies')">🎬 Movies</button>
-            <button class="tab" onclick="showTab('series')">📺 TV Series</button>
-        </div>
-
-        <div id="movies" class="content">
-            <div class="loading">Loading movies...</div>
-            <div id="movies-grid" class="grid"></div>
-        </div>
-
-        <div id="series" class="content" style="display: none;">
-            <div class="loading">Loading TV series...</div>
-            <div id="series-grid" class="grid"></div>
-        </div>
-    </div>
-
-    <script>
-        function showTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.content').forEach(c => c.style.display = 'none');
-            
-            document.querySelector(\`[onclick="showTab('\${tab}')"]\`).classList.add('active');
-            document.getElementById(tab).style.display = 'block';
-        }
-
-        async function loadMovies() {
-            try {
-                const response = await fetch('/api/movies');
-                const data = await response.json();
-                const grid = document.getElementById('movies-grid');
-                
-                if (data.movies && data.movies.length > 0) {
-                    grid.innerHTML = data.movies.map(movie => \`
-                        <div class="card">
-                            <img src="\${movie.thumbnail}" alt="\${movie.name}" class="card-image">
-                            <div class="card-content">
-                                <h3>\${movie.name}</h3>
-                                <p>Added \${new Date(movie.addedAt).toLocaleDateString()}</p>
-                            </div>
-                        </div>
-                    \`).join('');
-                } else {
-                    grid.innerHTML = '<div class="loading">No movies found. Add some using the Telegram bot!</div>';
-                }
-            } catch (error) {
-                console.error('Error loading movies:', error);
-                document.getElementById('movies-grid').innerHTML = '<div class="loading">Error loading movies</div>';
-            }
-        }
-
-        async function loadSeries() {
-            try {
-                const response = await fetch('/api/series');
-                const data = await response.json();
-                const grid = document.getElementById('series-grid');
-                
-                if (data.series && data.series.length > 0) {
-                    grid.innerHTML = data.series.map(series => \`
-                        <div class="card">
-                            <img src="\${series.thumbnail}" alt="\${series.name}" class="card-image">
-                            <div class="card-content">
-                                <h3>\${series.name}</h3>
-                                <p>\${series.seasons.length} Season\${series.seasons.length !== 1 ? 's' : ''}</p>
-                            </div>
-                        </div>
-                    \`).join('');
-                } else {
-                    grid.innerHTML = '<div class="loading">No series found. Add some using the Telegram bot!</div>';
-                }
-            } catch (error) {
-                console.error('Error loading series:', error);
-                document.getElementById('series-grid').innerHTML = '<div class="loading">Error loading series</div>';
-            }
-        }
-
-        // Load data when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadMovies();
-            loadSeries();
-        });
-    </script>
-</body>
-</html>`;
-  
-  res.send(frontendHTML);
+// Error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Server error:', error);
+  res.status(500).json({ error: 'Internal server error', details: error.message });
 });
 
 // ================================================================
 // SERVER START
 // ================================================================
 
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log(\`🚀 Server running on port \${PORT}\`);
-  console.log(\`🌐 Frontend available at: http://localhost:\${PORT}\`);
-  console.log(\`🤖 Bot mode: \${USE_WEBHOOK ? 'Webhook' : 'Polling'}\`);
-  
-  if (USE_WEBHOOK) {
-    // Webhook setup code here if needed
-    console.log('📡 Webhook mode enabled - configure WEBHOOK_URL environment variable');
-  } else {
-    console.log('🔄 Polling mode active - bot is ready to receive messages');
-  }
-  
-  console.log('✅ Application started successfully!');
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('🚀 Media Manager API Server running on port', PORT);
+  console.log('🌐 API Base URL: http://localhost:' + PORT);
+  console.log('🤖 Bot mode:', USE_WEBHOOK ? 'Webhook' : 'Polling');
+  console.log('📋 Available endpoints:');
+  console.log('   • GET  /api/movies     - Get all movies');
+  console.log('   • GET  /api/series     - Get all series');
+  console.log('   • GET  /api/series/:id - Get series details');
+  console.log('   • GET  /api/stats      - Get library statistics');
+  console.log('   • GET  /health         - Health check');
+  console.log('✅ Server ready! Connect your frontend to this API.');
 });
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
   try {
-    if (!USE_WEBHOOK) {
-      bot.stopPolling();
-    }
+    if (!USE_WEBHOOK) bot.stopPolling();
     await mongoose.connection.close();
-    console.log('✅ MongoDB connection closed');
+    console.log('✅ Shutdown complete');
   } catch (error) {
     console.error('❌ Error during shutdown:', error);
   }
@@ -864,11 +620,9 @@ process.on('SIGTERM', async () => {
 process.on('SIGINT', async () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
   try {
-    if (!USE_WEBHOOK) {
-      bot.stopPolling();
-    }
+    if (!USE_WEBHOOK) bot.stopPolling();
     await mongoose.connection.close();
-    console.log('✅ MongoDB connection closed');
+    console.log('✅ Shutdown complete');
   } catch (error) {
     console.error('❌ Error during shutdown:', error);
   }

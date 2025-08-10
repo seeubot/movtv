@@ -16,13 +16,13 @@
             font-family: 'Inter', sans-serif;
             background-color: #0d1117;
             color: #c9d1d9;
-            overscroll-behavior-y: contain; /* Prevents scroll bounce on TV */
-            touch-action: pan-y; /* Allows vertical scrolling but prevents horizontal */
+            overscroll-behavior-y: contain;
+            touch-action: pan-y;
         }
 
         /* Highlight the currently focused element for remote control */
         .focusable-item:focus {
-            outline: 4px solid #3b82f6; /* Blue ring for focus */
+            outline: 4px solid #3b82f6;
             outline-offset: 4px;
             box-shadow: 0 0 10px #3b82f6;
             transform: scale(1.05);
@@ -64,7 +64,7 @@
         }
 
         .scrollable {
-            scrollbar-width: none; /* Firefox */
+            scrollbar-width: none;
         }
 
         /* Video player overlay for title and thumbnail */
@@ -217,7 +217,7 @@
     </div>
 
     <script>
-        // Set the API base URL from the server-side
+        // NOTE: The backend injects the correct API_BASE_URL into this file
         const API_BASE_URL = window.location.origin + '/api';
 
         // Get DOM elements
@@ -273,7 +273,7 @@
             UP: 38,
             RIGHT: 39,
             DOWN: 40,
-            BACK: 8, // Backspace key
+            BACK: 8,
             ESCAPE: 27
         };
 
@@ -286,32 +286,17 @@
             loadingDiv.classList.remove('hidden');
             errorMessageDiv.classList.add('hidden');
             try {
-                // Mock data for demonstration
-                moviesData = [
-                    { _id: 'mov1', name: 'Movie Alpha', streamingUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', thumbnail: 'https://placehold.co/400x600/1e40af/fff?text=Movie+Alpha' },
-                    { _id: 'mov2', name: 'Movie Beta', streamingUrl: 'https://www.w3schools.com/html/movie.mp4', thumbnail: 'https://placehold.co/400x600/b91c1c/fff?text=Movie+Beta' }
-                ];
-                seriesData = [
-                    { 
-                        _id: 'ser1', name: 'Series X', thumbnail: 'https://placehold.co/400x600/065f46/fff?text=Series+X',
-                        seasons: [
-                            { 
-                                seasonNumber: 1, 
-                                episodes: [
-                                    { episodeNumber: 1, title: 'Episode 1', streamingUrl: 'https://www.w3schools.com/html/mov_bbb.mp4' },
-                                    { episodeNumber: 2, title: 'Episode 2', streamingUrl: 'https://www.w3schools.com/html/movie.mp4' }
-                                ]
-                            },
-                            {
-                                seasonNumber: 2,
-                                episodes: [
-                                    { episodeNumber: 1, title: 'Episode 1', streamingUrl: 'https://www.w3schools.com/html/movie.mp4' },
-                                    { episodeNumber: 2, title: 'Episode 2', streamingUrl: 'https://www.w3schools.com/html/mov_bbb.mp4' }
-                                ]
-                            }
-                        ]
-                    }
-                ];
+                const [moviesResponse, seriesResponse] = await Promise.all([
+                    fetch(`${API_BASE_URL}/movies`),
+                    fetch(`${API_BASE_URL}/series`)
+                ]);
+                
+                if (!moviesResponse.ok || !seriesResponse.ok) {
+                    throw new Error('Failed to fetch data from API');
+                }
+                
+                moviesData = await moviesResponse.json();
+                seriesData = await seriesResponse.json();
                 
                 // Initialize filtered data with all data
                 filteredMovies = moviesData;
@@ -390,14 +375,24 @@
          * Handles clicks on movie and series cards.
          * @param {object} item - The movie or series object.
          */
-        function handleCardClick(item) {
+        async function handleCardClick(item) {
             if (item.streamingUrl) {
                 // It's a movie
                 currentVideoItem = { title: item.name, thumbnail: item.thumbnail, subtitle: 'Movie' };
                 playVideo(item.streamingUrl);
             } else {
                 // It's a series
-                openSeriesModal(item);
+                try {
+                    const response = await fetch(`${API_BASE_URL}/series/${item._id}`);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch series details.');
+                    }
+                    const seriesDetails = await response.json();
+                    openSeriesModal(seriesDetails);
+                } catch (error) {
+                    console.error('Error fetching series details:', error);
+                    alert('Could not load series details.');
+                }
             }
         }
 
@@ -568,13 +563,30 @@
         // --- Event Listeners and Remote Control Logic ---
 
         // Search input
-        searchInput.addEventListener('input', (e) => {
+        searchInput.addEventListener('input', async (e) => {
             const query = e.target.value.toLowerCase();
             
-            filteredMovies = moviesData.filter(movie => movie.name.toLowerCase().includes(query));
-            filteredSeries = seriesData.filter(series => series.name.toLowerCase().includes(query));
-            
-            renderContent();
+            loadingDiv.classList.remove('hidden');
+            try {
+                const [moviesResponse, seriesResponse] = await Promise.all([
+                    fetch(`${API_BASE_URL}/movies?search=${query}`),
+                    fetch(`${API_BASE_URL}/series?search=${query}`)
+                ]);
+                
+                if (!moviesResponse.ok || !seriesResponse.ok) {
+                    throw new Error('Failed to fetch search results.');
+                }
+                
+                filteredMovies = await moviesResponse.json();
+                filteredSeries = await seriesResponse.json();
+                
+                renderContent();
+            } catch (error) {
+                console.error('Search error:', error);
+                errorMessageDiv.classList.remove('hidden');
+            } finally {
+                loadingDiv.classList.add('hidden');
+            }
         });
 
         // Video Player Controls

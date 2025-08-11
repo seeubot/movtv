@@ -3,242 +3,367 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediaHub Frontend</title>
-    <!-- Tailwind CSS CDN for styling -->
+    <title>Media Library</title>
+    <!-- Tailwind CSS for a modern, responsive design -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a202c;
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
         }
 
-        /* Custom scrollbar styles */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
+        /* Responsive layout for the main container */
+        #app-container.player-active {
+            display: flex;
+            flex-direction: row; /* Desktop */
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #2d3748;
-            border-radius: 10px;
+        @media (max-width: 767px) {
+            #app-container.player-active {
+                flex-direction: column; /* Mobile */
+            }
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #4a5568;
-            border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #636b7d;
+
+        /* Player container styling to be fully responsive */
+        #video-player-container.player-active {
+            display: flex;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-100 p-4 sm:p-8 flex flex-col items-center">
-    <div class="w-full max-w-7xl bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-10 flex flex-col gap-6 md:gap-10">
-        <h1 class="text-3xl sm:text-5xl font-extrabold text-white text-center">
-            MediaHub
-        </h1>
+<body class="bg-gray-900 text-white font-sans flex flex-col h-screen overflow-hidden">
+    <!-- Main application container with a responsive layout -->
+    <div id="app-container" class="flex-grow flex flex-col md:flex-row h-full">
 
-        <!-- Navigation and Search Controls -->
-        <div class="flex flex-col md:flex-row items-center gap-4">
-            <div class="flex flex-row gap-2 w-full md:w-auto overflow-x-auto pb-2 flex-shrink-0">
-                <button id="movies-btn" class="flex-shrink-0 px-4 py-2 rounded-full font-semibold transition duration-300 bg-blue-500 hover:bg-blue-600 active:bg-blue-700">
-                    Movies
-                </button>
-                <button id="series-btn" class="flex-shrink-0 px-4 py-2 rounded-full font-semibold transition duration-300 bg-gray-700 hover:bg-gray-600 active:bg-gray-500">
-                    Series
-                </button>
+        <!-- Sidebar/Content Section (for mobile and desktop) -->
+        <!-- This section now takes full width on load, then adjusts when a video is played -->
+        <div id="sidebar" class="w-full md:w-1/3 flex flex-col bg-gray-800 p-4 overflow-y-auto flex-shrink-0">
+            <!-- Header with Search and Navigation -->
+            <div class="flex-shrink-0 mb-4">
+                <h1 class="text-3xl font-bold text-center mb-4">Media Library</h1>
+
+                <!-- Search bar input -->
+                <div class="relative mb-4">
+                    <input type="text" id="search-input" placeholder="Search for titles..." class="w-full p-3 pl-10 rounded-full bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+
+                <!-- View Toggle Buttons -->
+                <div class="flex space-x-2">
+                    <button id="show-movies-btn" class="flex-1 p-2 rounded-full font-semibold transition-colors duration-200 bg-blue-600 hover:bg-blue-700">Movies</button>
+                    <button id="show-series-btn" class="flex-1 p-2 rounded-full font-semibold transition-colors duration-200 bg-gray-700 hover:bg-gray-600">Series</button>
+                </div>
             </div>
-            
-            <div class="flex items-center bg-gray-700 rounded-full px-4 py-2 flex-1 w-full">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-                </svg>
-                <input id="search-input" type="text" placeholder="Search movies..." class="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-400 ml-2 outline-none">
+
+            <!-- Content Area (Movies/Series grid) -->
+            <div id="content-area" class="flex-grow grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 overflow-y-auto">
+                <!-- Content will be dynamically injected here -->
+            </div>
+
+            <!-- Loader element -->
+            <div id="loader" class="hidden flex-grow flex items-center justify-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            </div>
+
+            <!-- Empty State message -->
+            <div id="empty-state" class="hidden flex-grow items-center justify-center text-center text-gray-400">
+                <p>No media found. Try adding some via the Telegram bot!</p>
             </div>
         </div>
 
-        <!-- Main Content: Player and Media List -->
-        <div class="flex flex-col lg:flex-row gap-8">
-            <!-- Video Player Section -->
-            <div class="flex-1 flex flex-col gap-4">
-                <h2 id="item-title" class="text-xl sm:text-2xl font-bold text-white truncate">
-                    Select an item to watch.
-                </h2>
-                <div class="relative w-full aspect-video rounded-lg overflow-hidden bg-black shadow-lg">
-                    <div id="video-container" class="absolute top-0 left-0 w-full h-full flex items-center justify-center text-gray-400 text-lg sm:text-2xl">
-                        Select an item to watch.
-                    </div>
-                </div>
-            </div>
+        <!-- Video Player Section (initially hidden) -->
+        <div id="video-player-container" class="hidden w-full md:w-2/3 h-full bg-black flex-shrink-0 transition-all duration-500 ease-in-out flex-col justify-center items-center relative">
+            <!-- The HTML5 video element for playback -->
+            <video id="video-player" class="w-full h-full object-contain bg-black" controls autoplay playsinline></video>
+        </div>
 
-            <!-- Media List Section -->
-            <div id="media-list-container" class="w-full lg:w-96 overflow-y-auto max-h-[70vh] bg-gray-700 rounded-lg p-4 custom-scrollbar">
-                <div id="media-list" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-4">
-                    <!-- Media items will be rendered here by JavaScript -->
-                </div>
+    </div>
+
+    <!-- Series Modal to display seasons and episodes -->
+    <div id="series-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300">
+        <div class="bg-gray-800 rounded-lg max-w-2xl w-full p-6 relative">
+            <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4"></h2>
+            <div id="seasons-container" class="overflow-y-auto max-h-[70vh]">
+                <!-- Seasons and episodes will be injected here -->
             </div>
         </div>
     </div>
 
     <script>
-        // The base URL for your backend API.
-        const API_BASE_URL = 'http://localhost:1024/api'; // Update this to your deployed URL if needed.
-
-        // State management
-        let mediaType = 'movies';
-        let mediaItems = [];
-        let selectedItem = null;
-        let loading = true;
-        let error = null;
-        let searchTerm = '';
-        let debounceTimeout;
-
-        // DOM elements
-        const moviesBtn = document.getElementById('movies-btn');
-        const seriesBtn = document.getElementById('series-btn');
+        // The API base URL will be dynamically replaced by the server during runtime.
+        const API_BASE_URL = 'http://localhost:1024/api'; 
+        
+        // Element references
+        const contentArea = document.getElementById('content-area');
+        const showMoviesBtn = document.getElementById('show-movies-btn');
+        const showSeriesBtn = document.getElementById('show-series-btn');
         const searchInput = document.getElementById('search-input');
-        const itemTitle = document.getElementById('item-title');
-        const videoContainer = document.getElementById('video-container');
-        const mediaListContainer = document.getElementById('media-list-container');
-        const mediaList = document.getElementById('media-list');
+        const videoPlayer = document.getElementById('video-player');
+        const videoPlayerContainer = document.getElementById('video-player-container');
+        const loader = document.getElementById('loader');
+        const emptyState = document.getElementById('empty-state');
+        const seriesModal = document.getElementById('series-modal');
+        const closeBtn = document.getElementById('close-modal-btn');
+        const modalTitle = document.getElementById('modal-title');
+        const seasonsContainer = document.getElementById('seasons-container');
+        const sidebar = document.getElementById('sidebar');
+        const appContainer = document.getElementById('app-container');
 
-        // Function to render the media list and player
-        const render = () => {
-            // Render media list container
-            if (loading) {
-                mediaListContainer.innerHTML = '<div class="text-center py-10 text-lg text-gray-400">Loading...</div>';
-            } else if (error) {
-                mediaListContainer.innerHTML = `<div class="text-center py-10 text-lg text-red-400">${error}</div>`;
-            } else if (mediaItems.length === 0) {
-                mediaListContainer.innerHTML = `<div class="text-center py-10 text-lg text-gray-400">No ${mediaType} found.</div>`;
-            } else {
-                mediaListContainer.innerHTML = `<div id="media-list" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-4"></div>`;
-                const newMediaList = document.getElementById('media-list');
-                
-                mediaItems.forEach(item => {
-                    const isSelected = selectedItem && selectedItem._id === item._id;
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = `relative rounded-lg overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-105 shadow-md ${isSelected ? 'ring-4 ring-blue-500' : ''}`;
-                    itemDiv.innerHTML = `
-                        <img 
-                            src="${item.thumbnail}" 
-                            alt="${item.name}" 
-                            class="w-full aspect-[2/3] object-cover"
-                            onerror="this.onerror=null; this.src='https://placehold.co/400x600/1f2937/d1d5db?text=No+Image';"
-                        />
-                        <div class="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black to-transparent text-white text-sm font-semibold truncate">
-                            ${item.name}
-                        </div>
-                    `;
-                    itemDiv.addEventListener('click', () => handleItemClick(item));
-                    newMediaList.appendChild(itemDiv);
-                });
-            }
+        let currentView = 'movies';
 
-            // Render player section
-            if (!selectedItem) {
-                itemTitle.textContent = 'Select an item to watch.';
-                videoContainer.innerHTML = `
-                    <div class="absolute top-0 left-0 w-full h-full flex items-center justify-center text-gray-400 text-lg sm:text-2xl">
-                        ${loading ? "Loading..." : "Select an item to watch."}
-                    </div>
-                `;
-            } else {
-                let videoUrl = '';
-                let title = '';
+        // Helper function to show/hide elements
+        const show = (element) => element.classList.remove('hidden');
+        const hide = (element) => element.classList.add('hidden');
+        
+        // Helper to format season and episode numbers with leading zeros
+        const formatEpisodeNumber = (num) => String(num).padStart(2, '0');
 
-                if (mediaType === 'movies') {
-                    videoUrl = selectedItem.streamingUrl;
-                    title = selectedItem.name;
-                } else if (mediaType === 'series') {
-                    title = selectedItem.name;
-                    if (selectedItem.seasons && selectedItem.seasons.length > 0 && selectedItem.seasons[0].episodes.length > 0) {
-                        const firstEpisode = selectedItem.seasons[0].episodes[0];
-                        videoUrl = firstEpisode.streamingUrl;
-                        title = `${selectedItem.name} - S${firstEpisode.seasonNumber}E${firstEpisode.episodeNumber}: ${firstEpisode.title}`;
-                    }
-                }
-                
-                itemTitle.textContent = title;
-                videoContainer.innerHTML = `
-                    <video 
-                        src="${videoUrl}" 
-                        controls 
-                        autoplay
-                        class="absolute top-0 left-0 w-full h-full object-contain"
-                    >
-                        Your browser does not support the video tag.
-                    </video>
-                `;
-            }
-        };
-
-        // Function to fetch data from the backend
-        const fetchData = async () => {
-            loading = true;
-            error = null;
-            render(); // Initial render with loading state
-
+        // Function to fetch and render movies from the API
+        async function fetchAndRenderMovies(searchQuery = '') {
+            hidePlayer();
+            show(loader);
+            hide(contentArea);
+            hide(emptyState);
             try {
-                const url = `${API_BASE_URL}/${mediaType}?search=${encodeURIComponent(searchTerm)}`;
+                const url = searchQuery ? `${API_BASE_URL}/movies?search=${encodeURIComponent(searchQuery)}` : `${API_BASE_URL}/movies`;
                 const response = await fetch(url);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                const data = await response.json();
-                mediaItems = data;
+                const movies = await response.json();
                 
-                // Auto-select the first item if none is selected
-                if (!selectedItem && data.length > 0) {
-                    selectedItem = data[0];
+                contentArea.innerHTML = '';
+                if (movies.length === 0) {
+                    show(emptyState);
+                } else {
+                    movies.forEach(movie => {
+                        const card = document.createElement('div');
+                        card.className = 'relative group cursor-pointer overflow-hidden rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300';
+                        card.innerHTML = `
+                            <img src="${movie.thumbnail}" alt="${movie.name}" class="w-full h-48 object-cover rounded-t-lg transition-opacity duration-300 group-hover:opacity-75" onerror="this.onerror=null;this.src='https://placehold.co/400x300/1f2937/d1d5db?text=No+Image';">
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+                                <h3 class="text-lg font-semibold truncate">${movie.name}</h3>
+                            </div>
+                        `;
+                        // Event listener to play the movie when clicked
+                        card.addEventListener('click', () => {
+                            playVideo(movie.streamingUrl, movie.name);
+                        });
+                        contentArea.appendChild(card);
+                    });
+                    show(contentArea);
                 }
-            } catch (e) {
-                console.error("Error fetching data:", e);
-                error = "Failed to load data. Please check your backend connection.";
+            } catch (error) {
+                console.error('Error fetching movies:', error);
+                contentArea.innerHTML = '<p class="text-red-500 text-center">Failed to load movies. Please check the server connection.</p>';
+                show(contentArea);
             } finally {
-                loading = false;
-                render(); // Final render with data or error
+                hide(loader);
             }
+        }
+
+        // Function to fetch and render series from the API
+        async function fetchAndRenderSeries(searchQuery = '') {
+            hidePlayer();
+            show(loader);
+            hide(contentArea);
+            hide(emptyState);
+            try {
+                const url = searchQuery ? `${API_BASE_URL}/series?search=${encodeURIComponent(searchQuery)}` : `${API_BASE_URL}/series`;
+                const response = await fetch(url);
+                const seriesList = await response.json();
+                
+                contentArea.innerHTML = '';
+                if (seriesList.length === 0) {
+                    show(emptyState);
+                } else {
+                    seriesList.forEach(series => {
+                        const card = document.createElement('div');
+                        card.className = 'relative group cursor-pointer overflow-hidden rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300';
+                        card.innerHTML = `
+                            <img src="${series.thumbnail}" alt="${series.name}" class="w-full h-48 object-cover rounded-t-lg transition-opacity duration-300 group-hover:opacity-75" onerror="this.onerror=null;this.src='https://placehold.co/400x300/1f2937/d1d5db?text=No+Image';">
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+                                <h3 class="text-lg font-semibold truncate">${series.name}</h3>
+                            </div>
+                        `;
+                        // Event listener to show series details when clicked
+                        card.addEventListener('click', () => showSeriesDetails(series._id));
+                        contentArea.appendChild(card);
+                    });
+                    show(contentArea);
+                }
+            } catch (error) {
+                console.error('Error fetching series:', error);
+                contentArea.innerHTML = '<p class="text-red-500 text-center">Failed to load series. Please check the server connection.</p>';
+                show(contentArea);
+            } finally {
+                hide(loader);
+            }
+        }
+
+        // Function to display series details in a modal
+        async function showSeriesDetails(seriesId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
+                const series = await response.json();
+                
+                modalTitle.textContent = series.name;
+                seasonsContainer.innerHTML = '';
+
+                series.seasons.sort((a, b) => a.seasonNumber - b.seasonNumber).forEach(season => {
+                    const seasonDiv = document.createElement('div');
+                    seasonDiv.className = 'mb-4';
+                    
+                    const seasonHeading = document.createElement('h3');
+                    seasonHeading.className = 'text-xl font-bold mb-2 cursor-pointer text-gray-300 hover:text-white transition-colors duration-200';
+                    seasonHeading.textContent = `Season ${season.seasonNumber}`;
+                    seasonDiv.appendChild(seasonHeading);
+
+                    const episodesList = document.createElement('ul');
+                    episodesList.className = 'hidden space-y-2 pl-4';
+                    seasonDiv.appendChild(episodesList);
+
+                    // Toggle episodes list visibility
+                    seasonHeading.addEventListener('click', () => {
+                        episodesList.classList.toggle('hidden');
+                        seasonHeading.classList.toggle('text-white');
+                        seasonHeading.classList.toggle('text-gray-300');
+                    });
+
+                    season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber).forEach(episode => {
+                        const episodeItem = document.createElement('li');
+                        episodeItem.className = 'flex items-center space-x-3 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors duration-200 cursor-pointer';
+                        
+                        episodeItem.innerHTML = `
+                            <span class="font-semibold text-blue-400">E${formatEpisodeNumber(episode.episodeNumber)}</span>
+                            <span class="flex-1 truncate">${episode.title}</span>
+                            <svg class="w-6 h-6 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                            </svg>
+                        `;
+                        // Event listener to play an episode when clicked
+                        episodeItem.addEventListener('click', () => {
+                            playVideo(episode.streamingUrl, `S${season.seasonNumber}E${episode.episodeNumber}: ${episode.title}`);
+                            hide(seriesModal);
+                        });
+                        episodesList.appendChild(episodeItem);
+                    });
+                    seasonsContainer.appendChild(seasonDiv);
+                });
+
+                show(seriesModal);
+            } catch (error) {
+                console.error('Error fetching series details:', error);
+                alert('Failed to load series details. Please try again.');
+            }
+        }
+        
+        // Function to load and play a video
+        function playVideo(url, title) {
+            // Unhide the player container and adjust layout
+            show(videoPlayerContainer);
+            appContainer.classList.add('player-active');
+            
+            // Set the video source and play
+            videoPlayer.src = url;
+            videoPlayer.title = title;
+            videoPlayer.autoplay = true;
+            videoPlayer.load();
+            
+            // On mobile, hide the sidebar to give player full screen
+            if (window.innerWidth < 768) {
+                hide(sidebar);
+            }
+        }
+        
+        // Function to hide the video player and reset layout
+        function hidePlayer() {
+            hide(videoPlayerContainer);
+            appContainer.classList.remove('player-active');
+            show(sidebar);
+            videoPlayer.pause();
+            videoPlayer.src = '';
+        }
+
+        // Event listeners for UI interaction
+        showMoviesBtn.addEventListener('click', () => {
+            currentView = 'movies';
+            showMoviesBtn.classList.replace('bg-gray-700', 'bg-blue-600');
+            showMoviesBtn.classList.replace('hover:bg-gray-600', 'hover:bg-blue-700');
+            showSeriesBtn.classList.replace('bg-blue-600', 'bg-gray-700');
+            showSeriesBtn.classList.replace('hover:bg-blue-700', 'hover:bg-gray-600');
+            fetchAndRenderMovies(searchInput.value);
+        });
+
+        showSeriesBtn.addEventListener('click', () => {
+            currentView = 'series';
+            showSeriesBtn.classList.replace('bg-gray-700', 'bg-blue-600');
+            showSeriesBtn.classList.replace('hover:bg-gray-600', 'hover:bg-blue-700');
+            showMoviesBtn.classList.replace('bg-blue-600', 'bg-gray-700');
+            showMoviesBtn.classList.replace('hover:bg-blue-700', 'hover:bg-gray-600');
+            fetchAndRenderSeries(searchInput.value);
+        });
+
+        searchInput.addEventListener('input', () => {
+            if (currentView === 'movies') {
+                fetchAndRenderMovies(searchInput.value);
+            } else {
+                fetchAndRenderSeries(searchInput.value);
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            hide(seriesModal);
+        });
+        
+        // Handle mobile screen size changes for UI responsiveness
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                // Restore layout on desktop/tablet
+                if (appContainer.classList.contains('player-active')) {
+                    show(sidebar);
+                }
+            } else {
+                // On mobile, if player is active, hide sidebar
+                if (appContainer.classList.contains('player-active')) {
+                    hide(sidebar);
+                } else {
+                    show(sidebar);
+                }
+            }
+        });
+
+        // Initial content load when the page is ready
+        window.onload = () => {
+          fetchAndRenderMovies();
         };
 
-        // Event handler for item clicks
-        const handleItemClick = (item) => {
-            selectedItem = item;
-            render();
-        };
+        // Function to create a custom alert/toast message (as alerts are blocked)
+        function alert(message) {
+            const alertBox = document.createElement('div');
+            alertBox.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white p-4 rounded-lg shadow-lg z-50 transition-opacity duration-300 opacity-0';
+            alertBox.textContent = message;
+            document.body.appendChild(alertBox);
+            
+            setTimeout(() => {
+                alertBox.classList.add('opacity-100');
+            }, 10);
+            
+            setTimeout(() => {
+                alertBox.classList.remove('opacity-100');
+                setTimeout(() => alertBox.remove(), 300);
+            }, 3000);
+        }
 
-        // Event listener for Movies button
-        moviesBtn.addEventListener('click', () => {
-            mediaType = 'movies';
-            selectedItem = null;
-            searchInput.placeholder = 'Search movies...';
-            moviesBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
-            moviesBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
-            seriesBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
-            seriesBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-            fetchData();
-        });
-
-        // Event listener for Series button
-        seriesBtn.addEventListener('click', () => {
-            mediaType = 'series';
-            selectedItem = null;
-            searchInput.placeholder = 'Search series...';
-            seriesBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
-            seriesBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
-            moviesBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
-            moviesBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-            fetchData();
-        });
-
-        // Event listener for search input with debounce
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(debounceTimeout);
-            debounceTimeout = setTimeout(() => {
-                searchTerm = e.target.value;
-                fetchData();
-            }, 500); // 500ms debounce
-        });
-
-        // Initial data fetch on page load
-        document.addEventListener('DOMContentLoaded', fetchData);
     </script>
 </body>
 </html>

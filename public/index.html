@@ -3,739 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Manager</title>
-    <!-- Tailwind CSS CDN for styling -->
+    <title>Responsive Layout</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom CSS for fine-tuning and animations */
-        :root {
-            --primary-bg: #111827;
-            --card-bg: #1F2937;
-            --text-color: #F9FAFB;
-            --accent-color: #6366F1;
-            --hover-color: #4B5563;
-        }
-
         body {
             font-family: 'Inter', sans-serif;
-            background-color: var(--primary-bg);
-            color: var(--text-color);
-            overflow-x: hidden;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 1rem;
+            transition: all 0.3s ease;
         }
 
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
-        }
-
-        .media-card:hover .media-thumbnail {
-            transform: scale(1.05);
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: #2d3748;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            transition: all 0.3s ease;
         }
 
-        /* Custom video player styles */
-        .video-controls-container {
-            transition: opacity 0.3s ease;
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #a0aec0;
         }
-        .video-player-container:not(:hover) .video-controls-container {
-            opacity: 0;
+
+        .media-hub {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            background-color: #4a5568;
+            color: #fff;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: #636b7d;
+        }
+        
+        .btn.active {
+             background-color: #4299e1;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: #4a5568;
+            border-radius: 9999px;
+            padding: 0.5rem 1rem;
+        }
+
+        .search-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e2e8f0;
+            width: 100%;
+        }
+
+        .search-input::placeholder {
+            color: #a0aec0;
+        }
+
+        .player-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            height: 0;
+            overflow: hidden;
+            background-color: #171923;
+            border-radius: 0.5rem;
+        }
+
+        .media-player {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Landscape and Larger Screens */
+        @media (min-width: 768px) {
+            body {
+                padding: 2rem;
+            }
+
+            .container {
+                padding: 3rem;
+            }
+
+            .media-hub {
+                flex-direction: row;
+                gap: 2rem;
+            }
+
+            .controls {
+                flex-direction: column;
+                justify-content: flex-start;
+                gap: 1rem;
+            }
         }
     </style>
 </head>
-<body class="no-scrollbar">
-    <!-- Main Application Container -->
-    <div class="container mx-auto p-4 md:p-8">
-        <!-- Header Section -->
-        <header class="flex flex-col md:flex-row justify-between items-center py-6 border-b border-gray-700 mb-8">
-            <div class="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500 mb-4 md:mb-0">
-                MediaHub
+<body class="bg-gray-900 text-gray-100">
+    <div class="container mx-auto p-8 md:p-12 bg-gray-800 rounded-2xl shadow-xl">
+        <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-8 text-center">MediaHub</h1>
+        <div class="media-hub flex flex-col md:flex-row gap-8">
+            <!-- Navigation Controls -->
+            <div class="controls flex flex-row md:flex-col items-center md:items-start gap-4">
+                <button class="btn bg-blue-500 hover:bg-blue-600 transition duration-300">All</button>
+                <button class="btn hover:bg-gray-600 transition duration-300">Movies</button>
+                <button class="btn hover:bg-gray-600 transition duration-300">Series</button>
+                <button class="btn hover:bg-gray-600 transition duration-300">Debug</button>
             </div>
-            <!-- Navigation Buttons -->
-            <div class="flex flex-wrap justify-center gap-2">
-                <button class="nav-btn focusable active text-sm font-medium py-2 px-4 rounded-full transition-all duration-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" data-tab="all" tabindex="1">All</button>
-                <button class="nav-btn focusable text-sm font-medium py-2 px-4 rounded-full transition-all duration-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" data-tab="movies" tabindex="2">Movies</button>
-                <button class="nav-btn focusable text-sm font-medium py-2 px-4 rounded-full transition-all duration-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" data-tab="series" tabindex="3">Series</button>
-                <button id="debugBtn" class="nav-btn focusable text-xs font-medium py-2 px-4 rounded-full transition-all duration-300 bg-gray-800 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="4">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bug inline-block align-text-bottom mr-1"><path d="m19 13-6 6-3-3-6 6"/><path d="m5 10 3 3 3-3 6 6"/><path d="M14 14a2 2 0 1 0-2-2"/></svg>
-                    Debug
-                </button>
-            </div>
-        </header>
-
-        <!-- Search Section -->
-        <section class="mb-10">
-            <div class="relative max-w-2xl mx-auto">
-                <input type="text" class="search-input focusable w-full p-4 pl-12 pr-16 text-lg rounded-full border border-gray-700 bg-gray-800 text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-300" placeholder="Search movies and series..." tabindex="5">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                </div>
-                <button class="search-btn focusable absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-400 hover:text-indigo-500 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full" tabindex="6">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-right-circle"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="m12 16 4-4-4-4"/></svg>
-                </button>
-            </div>
-        </section>
-
-        <!-- Content Grid -->
-        <div id="contentGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            <div class="loading text-center col-span-full py-12">
-                <div class="w-12 h-12 border-4 border-gray-600 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4"></div>
-                <p class="text-gray-400">Loading your media library...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Video Player Overlay -->
-    <div id="videoPlayer" class="hidden fixed inset-0 z-[1000] bg-black bg-opacity-95 flex items-center justify-center">
-        <div class="video-player-container relative w-[95%] h-[90%] max-w-screen-xl bg-gray-900 rounded-xl overflow-hidden border-2 border-gray-700">
-            <video id="videoElement" class="w-full h-full object-contain" tabindex="0">
-                Your browser does not support the video tag.
-            </video>
-            <button id="closePlayer" class="focusable absolute top-4 right-4 z-20 w-10 h-10 bg-gray-800 text-gray-300 rounded-full flex items-center justify-center text-2xl transition-all duration-300 hover:bg-gray-700 hover:scale-110 focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="-1">
-                &times;
-            </button>
-            <!-- Custom Video Controls -->
-            <div id="videoControls" class="video-controls-container absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black via-black/70 to-transparent flex items-center gap-4 transition-opacity duration-300">
-                <button id="playPauseBtn" class="control-btn focusable w-12 h-12 bg-indigo-500 text-white rounded-full flex items-center justify-center text-xl hover:bg-indigo-600 transition-colors focus:outline-none focus:ring-2 focus:ring-white" tabindex="-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                </button>
-                <!-- Progress Bar -->
-                <div id="progressContainer" class="progress-container focusable flex-1 h-2 bg-gray-700 rounded-full cursor-pointer overflow-hidden transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="-1">
-                    <div id="progressBar" class="h-full bg-indigo-500 w-0"></div>
-                </div>
-                <!-- Time Display -->
-                <div id="timeDisplay" class="text-gray-400 text-sm font-mono min-w-[100px] text-center">0:00 / 0:00</div>
-                <!-- Playback Speed -->
-                <div class="relative">
-                    <button id="speedBtn" class="control-btn focusable w-12 h-12 bg-gray-800 text-gray-300 rounded-full flex items-center justify-center text-sm font-semibold hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="-1">
-                        1.0x
+            
+            <!-- Main Content Area -->
+            <div class="main-content flex-1 flex flex-col gap-6">
+                <!-- Search Box -->
+                <div class="search-container flex items-center bg-gray-700 rounded-full px-4 py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                    <input type="text" placeholder="Search movies and series..." class="search-input flex-1 bg-transparent border-none focus:ring-0">
+                    <button class="flex items-center justify-center p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
                     </button>
-                    <ul id="speedMenu" class="absolute bottom-16 right-0 w-24 bg-gray-800 text-gray-300 rounded-lg shadow-lg overflow-hidden hidden">
-                        <li><button class="w-full text-left px-4 py-2 hover:bg-gray-700 text-sm" data-speed="0.5">0.5x</button></li>
-                        <li><button class="w-full text-left px-4 py-2 hover:bg-gray-700 text-sm" data-speed="1.0">1.0x</button></li>
-                        <li><button class="w-full text-left px-4 py-2 hover:bg-gray-700 text-sm" data-speed="1.5">1.5x</button></li>
-                        <li><button class="w-full text-left px-4 py-2 hover:bg-gray-700 text-sm" data-speed="2.0">2.0x</button></li>
-                    </ul>
                 </div>
-                <!-- Volume Control -->
-                <div class="relative group">
-                    <button id="muteBtn" class="control-btn focusable w-12 h-12 bg-gray-800 text-gray-300 rounded-full flex items-center justify-center text-xl hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-                    </button>
-                    <input type="range" id="volumeSlider" class="volume-slider absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-12 h-2 rounded-full bg-gray-700 hidden group-hover:block transition-all duration-300" min="0" max="1" step="0.1" value="1" style="transform: translateX(-50%) rotate(-90deg); transform-origin: top left;">
+
+                <!-- Video Player Section -->
+                <p class="text-xl font-semibold text-gray-300">Loading your media library...</p>
+                <div class="player-container w-full">
+                    <!-- Placeholder for video player -->
+                    <div class="media-player flex items-center justify-center bg-gray-900 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.196l-3.248 1.875M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
                 </div>
-                <!-- Fullscreen Button -->
-                <button id="fullscreenBtn" class="control-btn focusable w-12 h-12 bg-gray-800 text-gray-300 rounded-full flex items-center justify-center text-xl hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize-2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" x2="14" y1="3" y2="10"/><line x1="3" x2="10" y1="21" y2="14"/></svg>
-                </button>
             </div>
         </div>
     </div>
-    
-    <!-- Series Modal -->
-    <div id="seriesModal" class="hidden fixed inset-0 z-[500] bg-black bg-opacity-90 flex items-center justify-center p-4">
-        <div class="series-modal-content relative w-full max-w-4xl bg-gray-800 border-2 border-gray-700 rounded-2xl max-h-[90vh] overflow-y-auto no-scrollbar p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="seriesTitle" class="text-3xl font-bold text-gray-100"></h2>
-                <button id="closeSeriesModal" class="focusable w-10 h-10 bg-gray-700 text-gray-300 rounded-full flex items-center justify-center text-xl transition-all hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="-1">
-                    &times;
-                </button>
-            </div>
-            <!-- Season Selector -->
-            <div class="mb-6">
-                <div id="seasonTabs" class="flex flex-wrap gap-2 mb-4"></div>
-            </div>
-            <!-- Episodes Grid -->
-            <div id="episodesGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-        </div>
-    </div>
-
-    <!-- Custom Alert/Message Box -->
-    <div id="messageBox" class="hidden fixed inset-0 z-[2000] bg-black bg-opacity-60 flex items-center justify-center p-4">
-        <div class="bg-gray-800 rounded-lg p-6 max-w-sm w-full text-center shadow-2xl border-2 border-indigo-500">
-            <div id="messageBoxIcon" class="text-4xl mb-4"></div>
-            <p id="messageBoxText" class="text-gray-200 mb-6"></p>
-            <button id="messageBoxClose" class="w-full bg-indigo-600 text-white font-bold py-2 rounded-md hover:bg-indigo-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                Close
-            </button>
-        </div>
-    </div>
-
-    <script>
-        // API Configuration - Dynamic URL detection
-        const API_BASE_URL = (() => {
-            const hostname = window.location.hostname;
-            const port = window.location.port;
-            const protocol = window.location.protocol;
-            
-            // If on localhost, use port 8000
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return `${protocol}//${hostname}:8000/api`;
-            } else {
-                // Production - use the same host and port as the frontend
-                return `${protocol}//${hostname}${port ? ':' + port : ''}/api`;
-            }
-        })();
-
-        // Global state variables
-        let allMedia = [];
-        let filteredMedia = [];
-        let currentTab = 'all';
-        let currentSeries = null;
-        let currentSeason = 1;
-
-        // Remote control navigation state
-        let focusIndex = 0;
-        let focusableElements = [];
-
-        // --- Core Application Logic ---
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🚀 MediaHub Frontend Starting...');
-            await loadMedia();
-            setupEventListeners();
-            setupRemoteControl();
-            updateFocusableElements();
-        });
-
-        /**
-         * Custom message box function to replace alert()
-         */
-        function showMessage(text, icon = '💬') {
-            const messageBox = document.getElementById('messageBox');
-            document.getElementById('messageBoxIcon').innerHTML = icon;
-            document.getElementById('messageBoxText').textContent = text;
-            messageBox.classList.remove('hidden');
-            document.getElementById('messageBoxClose').focus();
-        }
-
-        document.getElementById('messageBoxClose').addEventListener('click', () => {
-            document.getElementById('messageBox').classList.add('hidden');
-        });
-
-        /**
-         * Fetches media data from the backend API.
-         * Handles connection errors and populates the UI.
-         */
-        async function loadMedia() {
-            try {
-                const healthResponse = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
-                if (!healthResponse.ok) {
-                    throw new Error('Backend server is not responding');
-                }
-                
-                const [moviesResponse, seriesResponse] = await Promise.all([
-                    fetch(`${API_BASE_URL}/movies`).catch(() => ({ ok: false, json: () => [] })),
-                    fetch(`${API_BASE_URL}/series`).catch(() => ({ ok: false, json: () => [] }))
-                ]);
-
-                let movies = moviesResponse.ok ? await moviesResponse.json() : [];
-                let series = seriesResponse.ok ? await seriesResponse.json() : [];
-
-                allMedia = [
-                    ...movies.map(movie => ({ ...movie, type: 'movie' })),
-                    ...series.map(s => ({ ...s, type: 'series' }))
-                ];
-
-                filteredMedia = [...allMedia];
-                renderMedia();
-                
-                if (allMedia.length === 0) {
-                    document.getElementById('contentGrid').innerHTML = `
-                        <div class="loading col-span-full py-12">
-                            <p class="text-gray-300 text-lg mb-2">✨ Your media library is empty!</p>
-                            <p class="text-gray-500 text-sm">Use your Telegram bot to add movies and series.</p>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                console.error('Error loading media:', error);
-                document.getElementById('contentGrid').innerHTML = `
-                    <div class="loading col-span-full py-12 text-center">
-                        <p class="text-red-400 text-lg mb-4">❌ Unable to connect to server</p>
-                        <p class="text-gray-400 text-sm mb-4">API URL: ${API_BASE_URL}</p>
-                        <p class="text-gray-500 text-xs">Make sure your backend server is running and accessible.</p>
-                        <button class="nav-btn bg-indigo-600 hover:bg-indigo-700 text-white mt-6 py-2 px-6 rounded-full" onclick="location.reload()">
-                            🔄 Retry Connection
-                        </button>
-                    </div>
-                `;
-            }
-        }
-
-        /**
-         * Renders the media cards in the grid.
-         */
-        function renderMedia() {
-            const contentGrid = document.getElementById('contentGrid');
-            
-            if (filteredMedia.length === 0) {
-                contentGrid.innerHTML = `
-                    <div class="loading col-span-full py-12">
-                        <p class="text-gray-400">No media found matching your criteria.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            contentGrid.innerHTML = filteredMedia.map((media, index) => `
-                <div class="media-card focusable relative overflow-hidden rounded-xl bg-gray-800 border-2 border-gray-700 cursor-pointer shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="${10 + index}" data-media='${JSON.stringify(media)}'>
-                    <img src="${media.thumbnail}" alt="${media.name}" class="media-thumbnail w-full h-48 object-cover transition-transform duration-300"
-                         onerror="this.src='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100%\" height=\"100%\" viewBox=\"0 0 280 200\" preserveAspectRatio=\"xMidYMid slice\"><rect width=\"100%\" height=\"100%\" fill=\"%231F2937\"/><text x=\"50%\" y=\"50%\" dominant-baseline=\"middle\" text-anchor=\"middle\" fill=\"%236B7280\" font-size=\"20\" font-family=\"sans-serif\">No Image</text></svg>'">
-                    <div class="p-4">
-                        <h3 class="media-title text-lg font-bold text-gray-100 truncate">${media.name}</h3>
-                        <span class="media-type text-xs font-semibold px-2 py-1 rounded-full text-indigo-100 bg-indigo-500/20">${media.type === 'movie' ? '🎬 Movie' : '📺 Series'}</span>
-                    </div>
-                </div>
-            `).join('');
-
-            updateFocusableElements();
-        }
-
-        /**
-         * Sets up all the main event listeners for the application.
-         */
-        function setupEventListeners() {
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => switchTab(e.target.dataset.tab));
-            });
-
-            const searchInput = document.querySelector('.search-input');
-            const searchBtn = document.querySelector('.search-btn');
-            const performSearch = () => {
-                const query = searchInput.value.toLowerCase().trim();
-                filteredMedia = allMedia.filter(media =>
-                    media.name.toLowerCase().includes(query)
-                );
-                renderMedia();
-            };
-            searchBtn.addEventListener('click', performSearch);
-            searchInput.addEventListener('input', debounce(performSearch, 300));
-            document.getElementById('debugBtn').addEventListener('click', showDebugInfo);
-
-            document.addEventListener('click', (e) => {
-                const mediaCard = e.target.closest('.media-card');
-                if (mediaCard) {
-                    const media = JSON.parse(mediaCard.dataset.media);
-                    if (media.type === 'movie') {
-                        playVideo(media.streamingUrl);
-                    } else {
-                        openSeriesModal(media);
-                    }
-                }
-            });
-
-            setupVideoPlayer();
-            setupSeriesModal();
-        }
-
-        /**
-         * Sets up custom video player controls.
-         */
-        function setupVideoPlayer() {
-            const videoPlayer = document.getElementById('videoPlayer');
-            const videoElement = document.getElementById('videoElement');
-            const closePlayer = document.getElementById('closePlayer');
-            const playPauseBtn = document.getElementById('playPauseBtn');
-            const progressContainer = document.getElementById('progressContainer');
-            const progressBar = document.getElementById('progressBar');
-            const muteBtn = document.getElementById('muteBtn');
-            const volumeSlider = document.getElementById('volumeSlider');
-            const timeDisplay = document.getElementById('timeDisplay');
-            const fullscreenBtn = document.getElementById('fullscreenBtn');
-            const speedBtn = document.getElementById('speedBtn');
-            const speedMenu = document.getElementById('speedMenu');
-
-            closePlayer.addEventListener('click', closeVideoPlayer);
-            videoElement.addEventListener('play', () => playPauseBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pause"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`);
-            videoElement.addEventListener('pause', () => playPauseBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play"><polygon points="5 3 19 12 5 21 5 3"/></svg>`);
-            playPauseBtn.addEventListener('click', () => videoElement.paused ? videoElement.play() : videoElement.pause());
-            
-            videoElement.addEventListener('timeupdate', () => {
-                if (videoElement.duration) {
-                    const percentage = (videoElement.currentTime / videoElement.duration) * 100;
-                    progressBar.style.width = percentage + '%';
-                    const formatTime = (time) => {
-                        const min = Math.floor(time / 60);
-                        const sec = Math.floor(time % 60);
-                        return `${min}:${sec.toString().padStart(2, '0')}`;
-                    };
-                    timeDisplay.textContent = `${formatTime(videoElement.currentTime)} / ${formatTime(videoElement.duration)}`;
-                }
-            });
-
-            progressContainer.addEventListener('click', (e) => {
-                const rect = progressContainer.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const percentage = clickX / rect.width;
-                videoElement.currentTime = percentage * videoElement.duration;
-            });
-            
-            muteBtn.addEventListener('click', () => {
-                videoElement.muted = !videoElement.muted;
-                muteBtn.innerHTML = videoElement.muted 
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-x"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
-                volumeSlider.value = videoElement.muted ? 0 : videoElement.volume;
-            });
-            
-            volumeSlider.addEventListener('input', (e) => {
-                videoElement.volume = e.target.value;
-                videoElement.muted = e.target.value == 0;
-                muteBtn.innerHTML = videoElement.muted 
-                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-x"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>`
-                    : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-volume-2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`;
-            });
-            
-            fullscreenBtn.addEventListener('click', () => {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                } else {
-                    videoPlayer.requestFullscreen();
-                }
-            });
-
-            speedBtn.addEventListener('click', () => {
-                speedMenu.classList.toggle('hidden');
-            });
-            speedMenu.addEventListener('click', (e) => {
-                if (e.target.tagName === 'BUTTON') {
-                    const speed = parseFloat(e.target.dataset.speed);
-                    videoElement.playbackRate = speed;
-                    speedBtn.textContent = e.target.textContent;
-                    speedMenu.classList.add('hidden');
-                }
-            });
-        }
-        
-        /**
-         * Sets up the series modal event listeners.
-         */
-        function setupSeriesModal() {
-            document.getElementById('closeSeriesModal').addEventListener('click', closeSeriesModal);
-            document.getElementById('seriesModal').addEventListener('click', (e) => {
-                if (e.target.id === 'seriesModal') closeSeriesModal();
-            });
-        }
-
-        /**
-         * Remote control/keyboard navigation logic.
-         */
-        function setupRemoteControl() {
-            document.addEventListener('keydown', (e) => {
-                const activeElement = document.activeElement;
-                if (activeElement.id === 'videoElement' || activeElement.closest('#videoPlayer')) {
-                    // Handle video player specific keys
-                    if (e.key === ' ' || e.key === 'Enter') {
-                        e.preventDefault();
-                        document.getElementById('playPauseBtn').click();
-                    } else if (e.key === 'Escape') {
-                        e.preventDefault();
-                        closeVideoPlayer();
-                    }
-                    return;
-                }
-
-                switch (e.key) {
-                    case 'ArrowUp':
-                    case 'w':
-                        e.preventDefault();
-                        navigateFocus('up');
-                        break;
-                    case 'ArrowDown':
-                    case 's':
-                        e.preventDefault();
-                        navigateFocus('down');
-                        break;
-                    case 'ArrowLeft':
-                    case 'a':
-                        e.preventDefault();
-                        navigateFocus('left');
-                        break;
-                    case 'ArrowRight':
-                    case 'd':
-                        e.preventDefault();
-                        navigateFocus('right');
-                        break;
-                    case 'Enter':
-                        e.preventDefault();
-                        activateCurrentFocus();
-                        break;
-                    case 'Escape':
-                        e.preventDefault();
-                        handleEscape();
-                        break;
-                }
-            });
-        }
-        
-        function updateFocusableElements() {
-            focusableElements = Array.from(document.querySelectorAll('.focusable:not([tabindex="-1"])'));
-            if (focusableElements.length > 0 && focusIndex >= focusableElements.length) {
-                focusIndex = 0;
-            }
-        }
-        
-        function navigateFocus(direction) {
-            if (focusableElements.length === 0) return;
-            const currentElement = focusableElements[focusIndex];
-            if (currentElement) currentElement.blur();
-
-            const rects = focusableElements.map(el => el.getBoundingClientRect());
-            const currentRect = rects[focusIndex];
-            let nextIndex = -1;
-            let minDistance = Infinity;
-
-            for (let i = 0; i < rects.length; i++) {
-                if (i === focusIndex) continue;
-                const rect = rects[i];
-                let distance = Infinity;
-
-                if (direction === 'up' && rect.bottom <= currentRect.top) {
-                    distance = Math.abs(rect.left - currentRect.left) + Math.abs(rect.bottom - currentRect.top);
-                } else if (direction === 'down' && rect.top >= currentRect.bottom) {
-                    distance = Math.abs(rect.left - currentRect.left) + Math.abs(rect.top - currentRect.bottom);
-                } else if (direction === 'left' && rect.right <= currentRect.left) {
-                    distance = Math.abs(rect.top - currentRect.top) + Math.abs(rect.right - currentRect.left);
-                } else if (direction === 'right' && rect.left >= currentRect.right) {
-                    distance = Math.abs(rect.top - currentRect.top) + Math.abs(rect.left - currentRect.right);
-                }
-
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nextIndex = i;
-                }
-            }
-            
-            focusIndex = (nextIndex !== -1) ? nextIndex : focusIndex;
-            focusableElements[focusIndex].focus();
-        }
-        
-        function activateCurrentFocus() {
-            if (focusableElements.length > 0) {
-                focusableElements[focusIndex].click();
-            }
-        }
-
-        function handleEscape() {
-            if (!document.getElementById('videoPlayer').classList.contains('hidden')) {
-                closeVideoPlayer();
-            } else if (!document.getElementById('seriesModal').classList.contains('hidden')) {
-                closeSeriesModal();
-            }
-        }
-
-        /**
-         * Tab switching logic.
-         */
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.dataset.tab === tab);
-                btn.classList.toggle('bg-indigo-500', btn.dataset.tab === tab);
-                btn.classList.toggle('text-white', btn.dataset.tab === tab);
-                btn.classList.toggle('bg-gray-800', btn.dataset.tab !== tab);
-                btn.classList.toggle('hover:bg-gray-700', btn.dataset.tab !== tab);
-            });
-            filterByTab(tab);
-            renderMedia();
-        }
-
-        function filterByTab(tab) {
-            switch (tab) {
-                case 'movies':
-                    filteredMedia = allMedia.filter(media => media.type === 'movie');
-                    break;
-                case 'series':
-                    filteredMedia = allMedia.filter(media => media.type === 'series');
-                    break;
-                default:
-                    filteredMedia = [...allMedia];
-            }
-        }
-
-        /**
-         * Video player functions.
-         */
-        function playVideo(url) {
-            const videoPlayer = document.getElementById('videoPlayer');
-            const videoElement = document.getElementById('videoElement');
-            videoElement.src = url;
-            videoElement.load();
-            videoPlayer.classList.remove('hidden');
-            
-            setTimeout(() => {
-                videoElement.play().catch(e => console.log('Autoplay prevented:', e));
-                videoElement.focus();
-            }, 100);
-        }
-
-        function closeVideoPlayer() {
-            const videoPlayer = document.getElementById('videoPlayer');
-            const videoElement = document.getElementById('videoElement');
-            videoElement.pause();
-            videoElement.src = '';
-            videoPlayer.classList.add('hidden');
-            
-            updateFocusableElements();
-            if (focusableElements.length > 0) {
-                focusableElements[focusIndex].focus();
-            }
-        }
-        
-        /**
-         * Series modal functions.
-         */
-        async function openSeriesModal(series) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/series/${series._id}`);
-                if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                
-                currentSeries = await response.json();
-                document.getElementById('seriesTitle').textContent = currentSeries.name;
-                
-                if (currentSeries.seasons && currentSeries.seasons.length > 0) {
-                    currentSeason = currentSeries.seasons[0].seasonNumber;
-                    renderSeasonTabs();
-                    renderEpisodes();
-                } else {
-                    document.getElementById('seasonTabs').innerHTML = '';
-                    document.getElementById('episodesGrid').innerHTML = `<p class="text-center text-gray-500">No seasons available.</p>`;
-                }
-                
-                document.getElementById('seriesModal').classList.remove('hidden');
-            } catch (error) {
-                console.error('Error loading series details:', error);
-                showMessage(`Error loading series: ${error.message}`, '⚠️');
-            }
-        }
-        
-        function closeSeriesModal() {
-            document.getElementById('seriesModal').classList.add('hidden');
-            currentSeries = null;
-            updateFocusableElements();
-            if (focusableElements.length > 0) {
-                focusableElements[focusIndex].focus();
-            }
-        }
-        
-        function renderSeasonTabs() {
-            const seasonTabs = document.getElementById('seasonTabs');
-            seasonTabs.innerHTML = currentSeries.seasons.map(season => `
-                <button class="season-tab focusable text-sm font-medium py-2 px-4 rounded-full transition-all duration-300 ${season.seasonNumber === currentSeason ? 'bg-indigo-500 text-white' : 'bg-gray-700 hover:bg-gray-600'}" 
-                        data-season="${season.seasonNumber}" tabindex="-1">
-                    Season ${season.seasonNumber}
-                </button>
-            `).join('');
-
-            seasonTabs.querySelectorAll('.season-tab').forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    currentSeason = parseInt(e.target.dataset.season);
-                    renderSeasonTabs(); // Rerender to update active class
-                    renderEpisodes();
-                });
-            });
-        }
-        
-        function renderEpisodes() {
-            const episodesGrid = document.getElementById('episodesGrid');
-            const season = currentSeries.seasons.find(s => s.seasonNumber === currentSeason);
-            
-            if (!season || !season.episodes.length) {
-                episodesGrid.innerHTML = '<p class="col-span-full text-center text-gray-500">No episodes found for this season.</p>';
-                return;
-            }
-
-            episodesGrid.innerHTML = season.episodes.map(episode => `
-                <div class="episode-card focusable p-4 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors duration-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500" tabindex="-1" 
-                     data-url="${episode.streamingUrl}">
-                    <div class="text-sm font-bold text-gray-100">E${episode.episodeNumber}</div>
-                    <div class="text-md text-gray-300 truncate">${episode.title}</div>
-                </div>
-            `).join('');
-
-            episodesGrid.querySelectorAll('.episode-card').forEach(card => {
-                card.addEventListener('click', (e) => {
-                    const url = card.dataset.url;
-                    closeSeriesModal();
-                    playVideo(url);
-                });
-            });
-        }
-
-        // --- Utility Functions ---
-
-        /**
-         * Simple debounce function to limit event firing rate.
-         */
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => func(...args), wait);
-            };
-        }
-
-        /**
-         * Debug information function with better formatting.
-         */
-        async function showDebugInfo() {
-            try {
-                const healthResponse = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
-                const healthData = await healthResponse.json();
-                
-                const debugInfo = `
-🔧 DEBUG INFORMATION
-
-Frontend URL: ${window.location.href}
-API Base URL: ${API_BASE_URL}
-Server Status: ${healthData.status}
-Bot Mode: ${healthData.bot}
-MongoDB: ${healthData.mongodb}
-Server Time: ${healthData.timestamp}
-
-Frontend Stats:
-- Total Media Items: ${allMedia.length}
-- Movies: ${allMedia.filter(m => m.type === 'movie').length}
-- Series: ${allMedia.filter(m => m.type === 'series').length}
-- Current Tab: ${currentTab}
-- Filtered Items: ${filteredMedia.length}
-                `.trim();
-                
-                showMessage(debugInfo, '🔧');
-            } catch (error) {
-                const errorInfo = `
-❌ DEBUG - CONNECTION ERROR
-
-Frontend URL: ${window.location.href}
-API Base URL: ${API_BASE_URL}
-Error: ${error.message}
-
-Troubleshooting:
-1. Check if backend server is running
-2. Verify the port number (should be 8000)
-3. Check for CORS issues
-                `.trim();
-                
-                showMessage(errorInfo, '❌');
-                console.error('Debug error:', error);
-            }
-        }
-        
-        // Auto-refresh data every 30 seconds
-        setInterval(loadMedia, 30000);
-
-        // Initial focus on first load
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                updateFocusableElements();
-                if (focusableElements.length > 0) {
-                    focusableElements[0].focus();
-                }
-            }, 500);
-        });
-    </script>
 </body>
 </html>
 

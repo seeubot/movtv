@@ -1,174 +1,187 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Responsive Layout</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a202c;
-            color: #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            min-height: 100vh;
-            padding: 1rem;
-            transition: all 0.3s ease;
-        }
+import React, { useState, useEffect } from 'react';
 
-        .container {
-            width: 100%;
-            max-width: 900px;
-            background-color: #2d3748;
-            border-radius: 1rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            transition: all 0.3s ease;
-        }
+// The base URL for your backend API.
+// In a production environment, this should be set to your deployed server's URL.
+const API_BASE_URL = 'http://localhost:1024/api'; // Or your Koyeb URL, e.g., 'https://<your-app-name>.koyeb.app/api';
 
-        .header {
-            text-align: center;
-            margin-bottom: 2rem;
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #a0aec0;
-        }
+const App = () => {
+    const [mediaType, setMediaType] = useState('movies'); // 'movies' or 'series'
+    const [mediaItems, setMediaItems] = useState([]);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
-        .media-hub {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: center;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
-            background-color: #4a5568;
-            color: #fff;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-
-        .btn:hover {
-            background-color: #636b7d;
-        }
-        
-        .btn.active {
-             background-color: #4299e1;
-        }
-
-        .search-container {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            background-color: #4a5568;
-            border-radius: 9999px;
-            padding: 0.5rem 1rem;
-        }
-
-        .search-input {
-            background: transparent;
-            border: none;
-            outline: none;
-            color: #e2e8f0;
-            width: 100%;
-        }
-
-        .search-input::placeholder {
-            color: #a0aec0;
-        }
-
-        .player-container {
-            position: relative;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
-            height: 0;
-            overflow: hidden;
-            background-color: #171923;
-            border-radius: 0.5rem;
-        }
-
-        .media-player {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Landscape and Larger Screens */
-        @media (min-width: 768px) {
-            body {
-                padding: 2rem;
+    // Function to fetch data from the backend
+    const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const url = `${API_BASE_URL}/${mediaType}?search=${searchTerm}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
-
-            .container {
-                padding: 3rem;
+            const data = await response.json();
+            setMediaItems(data);
+            // Auto-select the first item if none is selected
+            if (!selectedItem && data.length > 0) {
+                handleItemClick(data[0]);
             }
+        } catch (e) {
+            console.error("Error fetching data:", e);
+            setError("Failed to load data. Please check your backend connection.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            .media-hub {
-                flex-direction: row;
-                gap: 2rem;
-            }
+    // useEffect to trigger data fetching when mediaType or searchTerm changes
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchData();
+        }, 500); // Debounce search input
 
-            .controls {
-                flex-direction: column;
-                justify-content: flex-start;
-                gap: 1rem;
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [mediaType, searchTerm]);
+
+    // Handle when a user clicks on an item
+    const handleItemClick = (item) => {
+        setSelectedItem(item);
+    };
+
+    // Get the streaming URL for the selected item
+    const getStreamingUrl = () => {
+        if (!selectedItem) return '';
+        if (mediaType === 'movies') {
+            return selectedItem.streamingUrl;
+        }
+        // For series, get the first episode's URL
+        if (mediaType === 'series' && selectedItem.seasons && selectedItem.seasons.length > 0) {
+            const firstSeason = selectedItem.seasons[0];
+            if (firstSeason.episodes && firstSeason.episodes.length > 0) {
+                return firstSeason.episodes[0].streamingUrl;
             }
         }
-    </style>
-</head>
-<body class="bg-gray-900 text-gray-100">
-    <div class="container mx-auto p-8 md:p-12 bg-gray-800 rounded-2xl shadow-xl">
-        <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-8 text-center">MediaHub</h1>
-        <div class="media-hub flex flex-col md:flex-row gap-8">
-            <!-- Navigation Controls -->
-            <div class="controls flex flex-row md:flex-col items-center md:items-start gap-4">
-                <button class="btn bg-blue-500 hover:bg-blue-600 transition duration-300">All</button>
-                <button class="btn hover:bg-gray-600 transition duration-300">Movies</button>
-                <button class="btn hover:bg-gray-600 transition duration-300">Series</button>
-                <button class="btn hover:bg-gray-600 transition duration-300">Debug</button>
-            </div>
-            
-            <!-- Main Content Area -->
-            <div class="main-content flex-1 flex flex-col gap-6">
-                <!-- Search Box -->
-                <div class="search-container flex items-center bg-gray-700 rounded-full px-4 py-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-                    </svg>
-                    <input type="text" placeholder="Search movies and series..." class="search-input flex-1 bg-transparent border-none focus:ring-0">
-                    <button class="flex items-center justify-center p-2 rounded-full bg-blue-500 hover:bg-blue-600 transition duration-300">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+        return '';
+    };
+    
+    // Get the title to display for the selected item
+    const getSelectedItemTitle = () => {
+      if (!selectedItem) return 'No media selected';
+      if (mediaType === 'movies') {
+          return selectedItem.name;
+      }
+      if (mediaType === 'series' && selectedItem.seasons && selectedItem.seasons.length > 0) {
+          const firstSeason = selectedItem.seasons[0];
+          if (firstSeason.episodes && firstSeason.episodes.length > 0) {
+              return `${selectedItem.name} - S${firstSeason.seasonNumber}E${firstSeason.episodes[0].episodeNumber}: ${firstSeason.episodes[0].title}`;
+          }
+      }
+      return selectedItem.name;
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-900 text-gray-100 p-4 sm:p-8 flex flex-col items-center">
+            <div className="w-full max-w-7xl bg-gray-800 rounded-2xl shadow-xl p-6 sm:p-10 flex flex-col gap-6 md:gap-10">
+                <h1 className="text-3xl sm:text-5xl font-extrabold text-white text-center">
+                    MediaHub
+                </h1>
+
+                {/* Navigation and Search Controls */}
+                <div className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="flex flex-row gap-2 w-full md:w-auto overflow-x-auto pb-2 flex-shrink-0">
+                        <button 
+                            onClick={() => { setMediaType('movies'); setSelectedItem(null); }}
+                            className={`flex-shrink-0 px-4 py-2 rounded-full font-semibold transition duration-300 ${mediaType === 'movies' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                        >
+                            Movies
+                        </button>
+                        <button 
+                            onClick={() => { setMediaType('series'); setSelectedItem(null); }}
+                            className={`flex-shrink-0 px-4 py-2 rounded-full font-semibold transition duration-300 ${mediaType === 'series' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
+                        >
+                            Series
+                        </button>
+                    </div>
+                    
+                    <div className="flex items-center bg-gray-700 rounded-full px-4 py-2 flex-1 w-full">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                         </svg>
-                    </button>
+                        <input 
+                            type="text" 
+                            placeholder={`Search ${mediaType}...`} 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-400 ml-2 outline-none" 
+                        />
+                    </div>
                 </div>
 
-                <!-- Video Player Section -->
-                <p class="text-xl font-semibold text-gray-300">Loading your media library...</p>
-                <div class="player-container w-full">
-                    <!-- Placeholder for video player -->
-                    <div class="media-player flex items-center justify-center bg-gray-900 rounded-lg">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.196l-3.248 1.875M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+                {/* Main Content: Player and Media List */}
+                <div className="flex flex-col lg:flex-row gap-8">
+                    {/* Video Player Section */}
+                    <div className="flex-1 flex flex-col gap-4">
+                        <h2 className="text-xl sm:text-2xl font-bold text-white truncate">
+                           {getSelectedItemTitle()}
+                        </h2>
+                        <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black shadow-lg">
+                            {selectedItem && getStreamingUrl() ? (
+                                <video 
+                                    key={getStreamingUrl()} // Key change to force re-render when video source changes
+                                    src={getStreamingUrl()} 
+                                    controls 
+                                    className="absolute top-0 left-0 w-full h-full object-contain"
+                                >
+                                    Your browser does not support the video tag.
+                                </video>
+                            ) : (
+                                <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center text-gray-400 text-lg sm:text-2xl">
+                                    {loading ? "Loading..." : "Select an item to watch."}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Media List Section */}
+                    <div className="w-full lg:w-96 overflow-y-auto max-h-[70vh] bg-gray-700 rounded-lg p-4 custom-scrollbar">
+                        {loading && (
+                            <div className="text-center py-10 text-lg text-gray-400">Loading...</div>
+                        )}
+                        {error && (
+                            <div className="text-center py-10 text-lg text-red-400">{error}</div>
+                        )}
+                        {!loading && !error && mediaItems.length === 0 && (
+                            <div className="text-center py-10 text-lg text-gray-400">No {mediaType} found.</div>
+                        )}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 gap-4">
+                            {mediaItems.map(item => (
+                                <div 
+                                    key={item._id} 
+                                    onClick={() => handleItemClick(item)}
+                                    className={`relative rounded-lg overflow-hidden cursor-pointer transition-transform duration-200 hover:scale-105 shadow-md ${selectedItem?._id === item._id ? 'ring-4 ring-blue-500' : ''}`}
+                                >
+                                    <img 
+                                        src={item.thumbnail} 
+                                        alt={item.name} 
+                                        className="w-full aspect-[2/3] object-cover"
+                                        onError={(e) => { e.target.src = 'https://placehold.co/400x600/1f2937/d1d5db?text=No+Image'; }}
+                                    />
+                                    <div className="absolute bottom-0 left-0 w-full p-2 bg-gradient-to-t from-black to-transparent text-white text-sm font-semibold truncate">
+                                        {item.name}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</body>
-</html>
+    );
+};
+
+export default App;
 

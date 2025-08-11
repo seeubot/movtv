@@ -4,9 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Library</title>
+    <!-- Inter font for a clean, modern look -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
     <!-- Tailwind CSS for a modern, responsive design -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
         /* Custom scrollbar for better aesthetics */
         ::-webkit-scrollbar {
             width: 8px;
@@ -22,42 +28,52 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #6b7280;
         }
-
-        /* Responsive layout for the main container */
-        #app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
+        
+        /* Backdrop filter for a frosted glass effect on the video container */
+        #video-player-container {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(0, 0, 0, 0.4);
+            transition: all 0.5s ease-in-out;
         }
 
-        /* Desktop layout */
-        @media (min-width: 768px) {
-            #app-container {
-                flex-direction: row;
-            }
+        /* Styles for the custom message box */
+        .message-box {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none;
+        }
+        .message-box.show {
+            opacity: 1;
+            pointer-events: auto;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white font-sans flex flex-col h-screen overflow-hidden">
+<body class="bg-gray-900 text-white flex flex-col h-screen overflow-hidden bg-gradient-to-br from-gray-900 to-black">
     <!-- Main application container with a responsive layout -->
-    <div id="app-container" class="flex-grow">
+    <div id="app-container" class="flex-grow flex flex-col md:flex-row h-full transition-all duration-500 ease-in-out">
 
         <!-- Sidebar/Content Section -->
-        <div id="sidebar" class="w-full flex-shrink-0 md:w-1/3 flex flex-col bg-gray-800 p-4 overflow-y-auto">
+        <div id="sidebar" class="w-full flex-shrink-0 md:w-1/3 flex flex-col bg-gray-800 p-4 overflow-y-auto rounded-lg md:m-4 shadow-xl transition-all duration-500 ease-in-out">
             <!-- Header with Search and Navigation -->
             <div class="flex-shrink-0 mb-4">
-                <h1 class="text-3xl font-bold text-center mb-4">Media Library</h1>
+                <h1 class="text-3xl font-bold text-center mb-4 text-blue-400">Media Library</h1>
                 
                 <!-- Search bar input -->
                 <div class="relative mb-4">
-                    <input type="text" id="search-input" placeholder="Search for titles..." class="w-full p-3 pl-10 rounded-full bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="search-input" placeholder="Search for titles..." class="w-full p-3 pl-10 rounded-full bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md">
                     <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
                     </svg>
                 </div>
 
                 <!-- View Toggle Buttons -->
-                <div class="flex space-x-2">
+                <div class="flex space-x-2 p-1 bg-gray-700 rounded-full">
                     <button id="show-movies-btn" class="flex-1 p-2 rounded-full font-semibold transition-colors duration-200 bg-blue-600 hover:bg-blue-700">Movies</button>
                     <button id="show-series-btn" class="flex-1 p-2 rounded-full font-semibold transition-colors duration-200 bg-gray-700 hover:bg-gray-600">Series</button>
                 </div>
@@ -80,16 +96,16 @@
         </div>
 
         <!-- Video Player Section (initially hidden, takes full width on landscape mobile) -->
-        <div id="video-player-container" class="hidden w-full md:w-2/3 h-full bg-black flex-shrink-0 flex-col justify-center items-center relative">
+        <div id="video-player-container" class="hidden w-full md:w-2/3 h-full flex-shrink-0 flex-col justify-center items-center relative rounded-lg m-4 shadow-xl">
             <!-- The HTML5 video element for playback -->
-            <video id="video-player" class="w-full h-full object-contain bg-black" controls autoplay playsinline></video>
+            <video id="video-player" class="w-full h-full object-contain" controls autoplay playsinline></video>
         </div>
     </div>
 
     <!-- Series Modal to display seasons and episodes -->
     <div id="series-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300">
-        <div class="bg-gray-800 rounded-lg max-w-2xl w-full p-6 relative">
-            <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+        <div class="bg-gray-800 rounded-lg max-w-2xl w-full p-6 relative shadow-2xl">
+            <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl font-bold transition-colors duration-200">&times;</button>
             <h2 id="modal-title" class="text-2xl font-bold mb-4"></h2>
             <div id="seasons-container" class="overflow-y-auto max-h-[70vh]">
                 <!-- Seasons and episodes will be injected here -->
@@ -259,15 +275,19 @@
                 show(seriesModal);
             } catch (error) {
                 console.error('Error fetching series details:', error);
-                alert('Failed to load series details. Please try again.');
+                showMessage('Failed to load series details. Please try again.');
             }
         }
         
         // Function to load and play a video
         function playVideo(url, title) {
-            // Unhide the player container and adjust layout
+            // Adjust layout for player visibility
+            appContainer.classList.add('md:flex-row');
+            appContainer.classList.remove('md:flex-col');
+            sidebar.classList.add('md:w-1/3');
+            sidebar.classList.remove('md:w-full');
+            
             show(videoPlayerContainer);
-            appContainer.classList.add('player-active');
             
             // Set the video source and play
             videoPlayer.src = url;
@@ -284,7 +304,10 @@
         // Function to hide the video player and reset layout
         function hidePlayer() {
             hide(videoPlayerContainer);
-            appContainer.classList.remove('player-active');
+            appContainer.classList.remove('md:flex-row');
+            appContainer.classList.add('md:flex-col');
+            sidebar.classList.remove('md:w-1/3');
+            sidebar.classList.add('md:w-full');
             show(sidebar);
             videoPlayer.pause();
             videoPlayer.src = '';
@@ -346,20 +369,22 @@
           fetchAndRenderMovies();
         };
 
-        // Function to create a custom alert/toast message (as alerts are blocked)
-        function alert(message) {
-            const alertBox = document.createElement('div');
-            alertBox.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white p-4 rounded-lg shadow-lg z-50 transition-opacity duration-300 opacity-0';
-            alertBox.textContent = message;
-            document.body.appendChild(alertBox);
+        // Custom function for showing toast-like messages
+        function showMessage(message) {
+            const messageBox = document.createElement('div');
+            messageBox.className = 'message-box bg-red-600 text-white p-4 rounded-lg shadow-xl';
+            messageBox.textContent = message;
+            document.body.appendChild(messageBox);
             
+            // Show the message
             setTimeout(() => {
-                alertBox.classList.add('opacity-100');
+                messageBox.classList.add('show');
             }, 10);
             
+            // Hide and remove the message after 3 seconds
             setTimeout(() => {
-                alertBox.classList.remove('opacity-100');
-                setTimeout(() => alertBox.remove(), 300);
+                messageBox.classList.remove('show');
+                setTimeout(() => messageBox.remove(), 300);
             }, 3000);
         }
 

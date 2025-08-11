@@ -1,394 +1,1704 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Library</title>
-    <!-- Inter font for a clean, modern look -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
-    <!-- Tailwind CSS for a modern, responsive design -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Custom scrollbar for better aesthetics */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1f2937;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #4b5563;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #6b7280;
-        }
-        
-        /* Backdrop filter for a frosted glass effect on the video container */
-        #video-player-container {
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            background-color: rgba(0, 0, 0, 0.4);
-            transition: all 0.5s ease-in-out;
-        }
-
-        /* Styles for the custom message box */
-        .message-box {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            pointer-events: none;
-        }
-        .message-box.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Manager</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6c5ce7;
+      --primary-dark: #5649c0;
+      --secondary: #00cec9;
+      --dark: #2d3436;
+      --light: #f5f6fa;
+      --gray: #636e72;
+      --danger: #d63031;
+      --success: #00b894;
+      --warning: #fdcb6e;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #1a1a2e;
+      color: var(--light);
+      overflow-x: hidden;
+    }
+    
+    #app {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    /* Header Styles */
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      padding: 1rem 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      position: relative;
+      z-index: 10;
+    }
+    
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .logo i {
+      font-size: 1.75rem;
+    }
+    
+    .logo h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .search-bar {
+      flex-grow: 1;
+      max-width: 500px;
+      margin: 0 2rem;
+      position: relative;
+    }
+    
+    .search-bar input {
+      width: 100%;
+      padding: 0.75rem 1.25rem;
+      border-radius: 50px;
+      border: none;
+      background-color: rgba(255, 255, 255, 0.9);
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .search-bar input:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.3);
+      background-color: white;
+    }
+    
+    .search-bar i {
+      position: absolute;
+      right: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+    }
+    
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+    }
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .stat-item i {
+      font-size: 1.25rem;
+    }
+    
+    .stat-value {
+      font-weight: 600;
+    }
+    
+    /* Main Content Layout */
+    .main-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    /* Sidebar Styles */
+    .sidebar {
+      width: 280px;
+      background-color: #16213e;
+      padding: 1.5rem;
+      overflow-y: auto;
+      transition: all 0.3s ease;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .sidebar-toggle {
+      display: none;
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      z-index: 100;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    .sidebar-section {
+      margin-bottom: 1.5rem;
+    }
+    
+    .sidebar-title {
+      font-size: 1rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .sidebar-menu {
+      list-style: none;
+    }
+    
+    .sidebar-menu li {
+      margin-bottom: 0.5rem;
+    }
+    
+    .sidebar-menu a {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-radius: 8px;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    
+    .sidebar-menu a:hover, .sidebar-menu a.active {
+      background-color: rgba(108, 92, 231, 0.2);
+      color: white;
+    }
+    
+    .sidebar-menu a i {
+      font-size: 1.1rem;
+      width: 24px;
+      text-align: center;
+    }
+    
+    /* Content Area */
+    .content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      background-color: #1a1a2e;
+    }
+    
+    .content-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    
+    .content-title {
+      font-size: 1.75rem;
+      font-weight: 600;
+    }
+    
+    .view-toggle {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .view-toggle button {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1.25rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .view-toggle button.active {
+      color: var(--primary);
+    }
+    
+    .view-toggle button:hover {
+      color: white;
+    }
+    
+    /* Media Grid */
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .media-card {
+      background: #16213e;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      position: relative;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .media-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+    }
+    
+    .media-thumbnail {
+      position: relative;
+      height: 0;
+      padding-bottom: 150%;
+      overflow: hidden;
+    }
+    
+    .media-thumbnail img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    
+    .media-card:hover .media-thumbnail img {
+      transform: scale(1.05);
+    }
+    
+    .media-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent 50%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 1rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .media-card:hover .media-overlay {
+      opacity: 1;
+    }
+    
+    .media-info {
+      padding: 1rem;
+    }
+    
+    .media-title {
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .media-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .media-type {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      background-color: var(--primary);
+      color: white;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+    }
+    
+    .play-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background-color: rgba(108, 92, 231, 0.8);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.5rem;
+      opacity: 0;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: none;
+    }
+    
+    .media-card:hover .play-button {
+      opacity: 1;
+    }
+    
+    /* Video Player Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+    
+    .video-modal {
+      width: 90%;
+      max-width: 1200px;
+      background-color: #16213e;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+    
+    .close-modal {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+      z-index: 10;
+    }
+    
+    .video-container {
+      width: 100%;
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 aspect ratio */
+      background-color: black;
+    }
+    
+    .video-player {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
+    .video-info {
+      padding: 1.5rem;
+    }
+    
+    .video-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .video-meta {
+      display: flex;
+      gap: 1rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    
+    .video-description {
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    /* Video Controls */
+    .video-controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 5;
+    }
+    
+    .video-container:hover .video-controls {
+      opacity: 1;
+    }
+    
+    .control-button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+    
+    .progress-container {
+      flex-grow: 1;
+      height: 6px;
+      background-color: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+      position: relative;
+      cursor: pointer;
+    }
+    
+    .progress-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background-color: var(--primary);
+      border-radius: 3px;
+    }
+    
+    .time-display {
+      color: white;
+      font-size: 0.9rem;
+      min-width: 80px;
+      text-align: center;
+    }
+    
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .volume-slider {
+      width: 80px;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      outline: none;
+    }
+    
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      background: white;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .fullscreen-button {
+      margin-left: auto;
+    }
+    
+    /* Series Details Modal */
+    .series-modal {
+      width: 90%;
+      max-width: 1200px;
+      max-height: 90vh;
+      background-color: #16213e;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .series-header {
+      display: flex;
+      padding: 1.5rem;
+      gap: 1.5rem;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+    
+    .series-poster {
+      width: 200px;
+      height: 300px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    
+    .series-poster img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .series-info {
+      flex-grow: 1;
+    }
+    
+    .series-title {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .series-meta {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .series-description {
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    
+    .play-series {
+      background-color: var(--secondary);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .play-series:hover {
+      background-color: #00b5b2;
+      transform: translateY(-2px);
+    }
+    
+    .series-content {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    
+    .seasons-sidebar {
+      width: 250px;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      overflow-y: auto;
+      padding: 1rem 0;
+    }
+    
+    .season-item {
+      padding: 0.75rem 1.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .season-item:hover, .season-item.active {
+      background-color: rgba(108, 92, 231, 0.2);
+    }
+    
+    .season-item.active {
+      border-left: 3px solid var(--primary);
+    }
+    
+    .season-title {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+    
+    .season-episodes {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .episodes-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    
+    .episode-card {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      background-color: rgba(255, 255, 255, 0.05);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    
+    .episode-card:hover {
+      background-color: rgba(108, 92, 231, 0.2);
+    }
+    
+    .episode-thumbnail {
+      width: 160px;
+      height: 90px;
+      border-radius: 4px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    
+    .episode-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .episode-info {
+      flex-grow: 1;
+    }
+    
+    .episode-title {
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+    
+    .episode-number {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    
+    .episode-description {
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 0.5rem;
+    }
+    
+    .play-episode {
+      background: none;
+      border: none;
+      color: var(--secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      align-self: center;
+      margin-left: 1rem;
+    }
+    
+    /* Loading State */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 200px;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Empty State */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3rem;
+      color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .empty-state i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: var(--primary);
+    }
+    
+    .empty-state h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: white;
+    }
+    
+    /* Responsive Styles */
+    @media (max-width: 1200px) {
+      .sidebar {
+        width: 240px;
+      }
+      
+      .media-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      }
+    }
+    
+    @media (max-width: 992px) {
+      .header-container {
+        flex-direction: column;
+        gap: 1rem;
+      }
+      
+      .search-bar {
+        margin: 0;
+        max-width: 100%;
+      }
+      
+      .stats {
+        width: 100%;
+        justify-content: space-around;
+      }
+      
+      .series-header {
+        flex-direction: column;
+      }
+      
+      .series-poster {
+        width: 150px;
+        height: 225px;
+        margin: 0 auto;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        bottom: 0;
+        z-index: 90;
+      }
+      
+      .sidebar.active {
+        left: 0;
+      }
+      
+      .sidebar-toggle {
+        display: block;
+      }
+      
+      .content {
+        padding: 1rem;
+      }
+      
+      .media-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+      }
+      
+      .video-modal, .series-modal {
+        width: 95%;
+      }
+      
+      .series-content {
+        flex-direction: column;
+      }
+      
+      .seasons-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        overflow-x: auto;
+        overflow-y: hidden;
+        display: flex;
+        padding: 0.5rem;
+      }
+      
+      .season-item {
+        white-space: nowrap;
+        padding: 0.5rem 1rem;
+      }
+      
+      .season-item.active {
+        border-left: none;
+        border-bottom: 3px solid var(--primary);
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .media-grid {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      }
+      
+      .media-info {
+        padding: 0.75rem;
+      }
+      
+      .media-title {
+        font-size: 0.9rem;
+      }
+      
+      .media-meta {
+        font-size: 0.75rem;
+      }
+      
+      .video-info {
+        padding: 1rem;
+      }
+      
+      .video-title {
+        font-size: 1.25rem;
+      }
+      
+      .episode-card {
+        flex-direction: column;
+      }
+      
+      .episode-thumbnail {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16/9;
+      }
+    }
+    
+    /* Landscape orientation adjustments */
+    @media (orientation: landscape) and (max-height: 600px) {
+      .main-container {
+        flex-direction: row;
+      }
+      
+      .sidebar {
+        width: 200px;
+      }
+      
+      .content {
+        padding: 1rem;
+      }
+      
+      .media-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+      }
+      
+      .video-modal {
+        width: 95%;
+        max-height: 90vh;
+      }
+      
+      .video-container {
+        padding-bottom: 0;
+        height: calc(90vh - 200px);
+      }
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-white flex flex-col h-screen overflow-hidden bg-gradient-to-br from-gray-900 to-black">
-    <!-- Main application container with a responsive layout -->
-    <div id="app-container" class="flex-grow flex flex-col md:flex-row h-full transition-all duration-500 ease-in-out">
-
-        <!-- Sidebar/Content Section -->
-        <div id="sidebar" class="w-full flex-shrink-0 md:w-1/3 flex flex-col bg-gray-800 p-4 overflow-y-auto rounded-lg md:m-4 shadow-xl transition-all duration-500 ease-in-out">
-            <!-- Header with Search and Navigation -->
-            <div class="flex-shrink-0 mb-4">
-                <h1 class="text-3xl font-bold text-center mb-4 text-blue-400">Media Library</h1>
-                
-                <!-- Search bar input -->
-                <div class="relative mb-4">
-                    <input type="text" id="search-input" placeholder="Search for titles..." class="w-full p-3 pl-10 rounded-full bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-md">
-                    <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-
-                <!-- View Toggle Buttons -->
-                <div class="flex space-x-2 p-1 bg-gray-700 rounded-full">
-                    <button id="show-movies-btn" class="flex-1 p-2 rounded-full font-semibold transition-colors duration-200 bg-blue-600 hover:bg-blue-700">Movies</button>
-                    <button id="show-series-btn" class="flex-1 p-2 rounded-full font-semibold transition-colors duration-200 bg-gray-700 hover:bg-gray-600">Series</button>
-                </div>
-            </div>
-
-            <!-- Content Area (Movies/Series grid) -->
-            <div id="content-area" class="flex-grow grid grid-cols-2 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 overflow-y-auto">
-                <!-- Content will be dynamically injected here -->
-            </div>
-
-            <!-- Loader element -->
-            <div id="loader" class="hidden flex-grow flex items-center justify-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-            </div>
-
-            <!-- Empty State message -->
-            <div id="empty-state" class="hidden flex-grow items-center justify-center text-center text-gray-400">
-                <p>No media found. Try adding some via the Telegram bot!</p>
-            </div>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-container">
+        <div class="logo">
+          <i class="fas fa-film"></i>
+          <h1>Media Manager</h1>
         </div>
-
-        <!-- Video Player Section (initially hidden, takes full width on landscape mobile) -->
-        <div id="video-player-container" class="hidden w-full md:w-2/3 h-full flex-shrink-0 flex-col justify-center items-center relative rounded-lg m-4 shadow-xl">
-            <!-- The HTML5 video element for playback -->
-            <video id="video-player" class="w-full h-full object-contain" controls autoplay playsinline></video>
+        <div class="search-bar">
+          <input type="text" placeholder="Search movies and series..." id="searchInput">
+          <i class="fas fa-search"></i>
         </div>
+        <div class="stats" id="statsContainer">
+          <div class="stat-item">
+            <i class="fas fa-film"></i>
+            <span class="stat-value" id="movieCount">0</span>
+          </div>
+          <div class="stat-item">
+            <i class="fas fa-tv"></i>
+            <span class="stat-value" id="seriesCount">0</span>
+          </div>
+          <div class="stat-item">
+            <i class="fas fa-list-ol"></i>
+            <span class="stat-value" id="episodeCount">0</span>
+          </div>
+        </div>
+      </div>
+    </header>
+    
+    <button class="sidebar-toggle" id="sidebarToggle">
+      <i class="fas fa-bars"></i>
+    </button>
+    
+    <div class="main-container">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">Menu</h3>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="#" class="active" data-section="movies">
+                <i class="fas fa-film"></i>
+                <span>Movies</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" data-section="series">
+                <i class="fas fa-tv"></i>
+                <span>TV Series</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" data-section="recent">
+                <i class="fas fa-history"></i>
+                <span>Recently Added</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">Categories</h3>
+          <ul class="sidebar-menu">
+            <li>
+              <a href="#" data-category="action">
+                <i class="fas fa-explosion"></i>
+                <span>Action</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" data-category="comedy">
+                <i class="fas fa-laugh-squint"></i>
+                <span>Comedy</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" data-category="drama">
+                <i class="fas fa-theater-masks"></i>
+                <span>Drama</span>
+              </a>
+            </li>
+            <li>
+              <a href="#" data-category="sci-fi">
+                <i class="fas fa-robot"></i>
+                <span>Sci-Fi</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </aside>
+      
+      <main class="content">
+        <div class="content-header">
+          <h2 class="content-title" id="contentTitle">Movies</h2>
+          <div class="view-toggle">
+            <button class="active" data-view="grid"><i class="fas fa-th-large"></i></button>
+            <button data-view="list"><i class="fas fa-list"></i></button>
+          </div>
+        </div>
+        
+        <div id="mediaContainer">
+          <div class="loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </main>
     </div>
-
-    <!-- Series Modal to display seasons and episodes -->
-    <div id="series-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center p-4 z-50 hidden transition-opacity duration-300">
-        <div class="bg-gray-800 rounded-lg max-w-2xl w-full p-6 relative shadow-2xl">
-            <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-white text-2xl font-bold transition-colors duration-200">&times;</button>
-            <h2 id="modal-title" class="text-2xl font-bold mb-4"></h2>
-            <div id="seasons-container" class="overflow-y-auto max-h-[70vh]">
-                <!-- Seasons and episodes will be injected here -->
+    
+    <!-- Video Player Modal -->
+    <div class="modal-overlay" id="videoModal">
+      <div class="video-modal">
+        <button class="close-modal" id="closeVideoModal">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="video-container">
+          <video class="video-player" id="videoPlayer" controls></video>
+          <div class="video-controls">
+            <button class="control-button" id="playPauseBtn">
+              <i class="fas fa-play"></i>
+            </button>
+            <div class="progress-container" id="progressContainer">
+              <div class="progress-bar" id="progressBar"></div>
             </div>
+            <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
+            <div class="volume-control">
+              <button class="control-button" id="muteBtn">
+                <i class="fas fa-volume-up"></i>
+              </button>
+              <input type="range" min="0" max="1" step="0.01" value="1" class="volume-slider" id="volumeSlider">
+            </div>
+            <button class="control-button fullscreen-button" id="fullscreenBtn">
+              <i class="fas fa-expand"></i>
+            </button>
+          </div>
         </div>
+        <div class="video-info">
+          <h3 class="video-title" id="videoTitle">Movie Title</h3>
+          <div class="video-meta">
+            <span id="videoType">Movie</span>
+            <span id="videoDate">Added on 2023-01-01</span>
+          </div>
+          <p class="video-description" id="videoDescription">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris.
+          </p>
+        </div>
+      </div>
     </div>
+    
+    <!-- Series Details Modal -->
+    <div class="modal-overlay" id="seriesModal">
+      <div class="series-modal">
+        <button class="close-modal" id="closeSeriesModal">
+          <i class="fas fa-times"></i>
+        </button>
+        <div class="series-header">
+          <div class="series-poster">
+            <img src="" alt="Series Poster" id="seriesPoster">
+          </div>
+          <div class="series-info">
+            <h2 class="series-title" id="seriesTitle">Series Title</h2>
+            <div class="series-meta">
+              <span id="seriesSeasons">0 Seasons</span>
+              <span id="seriesEpisodes">0 Episodes</span>
+            </div>
+            <p class="series-description" id="seriesDescription">
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris.
+            </p>
+            <button class="play-series" id="playFirstEpisode">
+              <i class="fas fa-play"></i>
+              <span>Play First Episode</span>
+            </button>
+          </div>
+        </div>
+        <div class="series-content">
+          <div class="seasons-sidebar" id="seasonsSidebar">
+            <!-- Seasons will be populated here -->
+          </div>
+          <div class="episodes-list" id="episodesList">
+            <!-- Episodes will be populated here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        // The API base URL will be dynamically set based on the current URL.
-        const API_BASE_URL = `${window.location.protocol}//${window.location.host}/api`;
-        
-        // Element references
-        const contentArea = document.getElementById('content-area');
-        const showMoviesBtn = document.getElementById('show-movies-btn');
-        const showSeriesBtn = document.getElementById('show-series-btn');
-        const searchInput = document.getElementById('search-input');
-        const videoPlayer = document.getElementById('video-player');
-        const videoPlayerContainer = document.getElementById('video-player-container');
-        const loader = document.getElementById('loader');
-        const emptyState = document.getElementById('empty-state');
-        const seriesModal = document.getElementById('series-modal');
-        const closeBtn = document.getElementById('close-modal-btn');
-        const modalTitle = document.getElementById('modal-title');
-        const seasonsContainer = document.getElementById('seasons-container');
-        const sidebar = document.getElementById('sidebar');
-        const appContainer = document.getElementById('app-container');
-
-        let currentView = 'movies';
-
-        // Helper function to show/hide elements
-        const show = (element) => element.classList.remove('hidden');
-        const hide = (element) => element.classList.add('hidden');
-        
-        // Helper to format season and episode numbers with leading zeros
-        const formatEpisodeNumber = (num) => String(num).padStart(2, '0');
-
-        // Function to fetch and render movies from the API
-        async function fetchAndRenderMovies(searchQuery = '') {
-            hidePlayer();
-            show(loader);
-            hide(contentArea);
-            hide(emptyState);
-            try {
-                const url = searchQuery ? `${API_BASE_URL}/movies?search=${encodeURIComponent(searchQuery)}` : `${API_BASE_URL}/movies`;
-                const response = await fetch(url);
-                const movies = await response.json();
-                
-                contentArea.innerHTML = '';
-                if (movies.length === 0) {
-                    show(emptyState);
-                } else {
-                    movies.forEach(movie => {
-                        const card = document.createElement('div');
-                        card.className = 'relative group cursor-pointer overflow-hidden rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300';
-                        card.innerHTML = `
-                            <img src="${movie.thumbnail}" alt="${movie.name}" class="w-full h-48 object-cover rounded-t-lg transition-opacity duration-300 group-hover:opacity-75" onerror="this.onerror=null;this.src='https://placehold.co/400x300/1f2937/d1d5db?text=No+Image';">
-                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-                                <h3 class="text-lg font-semibold truncate">${movie.name}</h3>
-                            </div>
-                        `;
-                        // Event listener to play the movie when clicked
-                        card.addEventListener('click', () => {
-                            playVideo(movie.streamingUrl, movie.name);
-                        });
-                        contentArea.appendChild(card);
-                    });
-                    show(contentArea);
-                }
-            } catch (error) {
-                console.error('Error fetching movies:', error);
-                contentArea.innerHTML = '<p class="text-red-500 text-center">Failed to load movies. Please check the server connection.</p>';
-                show(contentArea);
-            } finally {
-                hide(loader);
-            }
-        }
-
-        // Function to fetch and render series from the API
-        async function fetchAndRenderSeries(searchQuery = '') {
-            hidePlayer();
-            show(loader);
-            hide(contentArea);
-            hide(emptyState);
-            try {
-                const url = searchQuery ? `${API_BASE_URL}/series?search=${encodeURIComponent(searchQuery)}` : `${API_BASE_URL}/series`;
-                const response = await fetch(url);
-                const seriesList = await response.json();
-                
-                contentArea.innerHTML = '';
-                if (seriesList.length === 0) {
-                    show(emptyState);
-                } else {
-                    seriesList.forEach(series => {
-                        const card = document.createElement('div');
-                        card.className = 'relative group cursor-pointer overflow-hidden rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-300';
-                        card.innerHTML = `
-                            <img src="${series.thumbnail}" alt="${series.name}" class="w-full h-48 object-cover rounded-t-lg transition-opacity duration-300 group-hover:opacity-75" onerror="this.onerror=null;this.src='https://placehold.co/400x300/1f2937/d1d5db?text=No+Image';">
-                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-                                <h3 class="text-lg font-semibold truncate">${series.name}</h3>
-                            </div>
-                        `;
-                        // Event listener to show series details when clicked
-                        card.addEventListener('click', () => showSeriesDetails(series._id));
-                        contentArea.appendChild(card);
-                    });
-                    show(contentArea);
-                }
-            } catch (error) {
-                console.error('Error fetching series:', error);
-                contentArea.innerHTML = '<p class="text-red-500 text-center">Failed to load series. Please check the server connection.</p>';
-                show(contentArea);
-            } finally {
-                hide(loader);
-            }
-        }
-
-        // Function to display series details in a modal
-        async function showSeriesDetails(seriesId) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
-                const series = await response.json();
-                
-                modalTitle.textContent = series.name;
-                seasonsContainer.innerHTML = '';
-
-                series.seasons.sort((a, b) => a.seasonNumber - b.seasonNumber).forEach(season => {
-                    const seasonDiv = document.createElement('div');
-                    seasonDiv.className = 'mb-4';
-                    
-                    const seasonHeading = document.createElement('h3');
-                    seasonHeading.className = 'text-xl font-bold mb-2 cursor-pointer text-gray-300 hover:text-white transition-colors duration-200';
-                    seasonHeading.textContent = `Season ${season.seasonNumber}`;
-                    seasonDiv.appendChild(seasonHeading);
-
-                    const episodesList = document.createElement('ul');
-                    episodesList.className = 'hidden space-y-2 pl-4';
-                    seasonDiv.appendChild(episodesList);
-
-                    // Toggle episodes list visibility
-                    seasonHeading.addEventListener('click', () => {
-                        episodesList.classList.toggle('hidden');
-                        seasonHeading.classList.toggle('text-white');
-                        seasonHeading.classList.toggle('text-gray-300');
-                    });
-
-                    season.episodes.sort((a, b) => a.episodeNumber - b.episodeNumber).forEach(episode => {
-                        const episodeItem = document.createElement('li');
-                        episodeItem.className = 'flex items-center space-x-3 p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors duration-200 cursor-pointer';
-                        
-                        episodeItem.innerHTML = `
-                            <span class="font-semibold text-blue-400">E${formatEpisodeNumber(episode.episodeNumber)}</span>
-                            <span class="flex-1 truncate">${episode.title}</span>
-                            <svg class="w-6 h-6 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
-                            </svg>
-                        `;
-                        // Event listener to play an episode when clicked
-                        episodeItem.addEventListener('click', () => {
-                            playVideo(episode.streamingUrl, `S${season.seasonNumber}E${episode.episodeNumber}: ${episode.title}`);
-                            hide(seriesModal);
-                        });
-                        episodesList.appendChild(episodeItem);
-                    });
-                    seasonsContainer.appendChild(seasonDiv);
-                });
-
-                show(seriesModal);
-            } catch (error) {
-                console.error('Error fetching series details:', error);
-                showMessage('Failed to load series details. Please try again.');
-            }
-        }
-        
-        // Function to load and play a video
-        function playVideo(url, title) {
-            // Adjust layout for player visibility
-            appContainer.classList.add('md:flex-row');
-            appContainer.classList.remove('md:flex-col');
-            sidebar.classList.add('md:w-1/3');
-            sidebar.classList.remove('md:w-full');
-            
-            show(videoPlayerContainer);
-            
-            // Set the video source and play
-            videoPlayer.src = url;
-            videoPlayer.title = title;
-            videoPlayer.autoplay = true;
-            videoPlayer.load();
-            
-            // On mobile, hide the sidebar to give player full screen
-            if (window.innerWidth < 768) {
-                hide(sidebar);
-            }
-        }
-        
-        // Function to hide the video player and reset layout
-        function hidePlayer() {
-            hide(videoPlayerContainer);
-            appContainer.classList.remove('md:flex-row');
-            appContainer.classList.add('md:flex-col');
-            sidebar.classList.remove('md:w-1/3');
-            sidebar.classList.add('md:w-full');
-            show(sidebar);
-            videoPlayer.pause();
-            videoPlayer.src = '';
-        }
-
-        // Event listeners for UI interaction
-        showMoviesBtn.addEventListener('click', () => {
-            currentView = 'movies';
-            showMoviesBtn.classList.replace('bg-gray-700', 'bg-blue-600');
-            showMoviesBtn.classList.replace('hover:bg-gray-600', 'hover:bg-blue-700');
-            showSeriesBtn.classList.replace('bg-blue-600', 'bg-gray-700');
-            showSeriesBtn.classList.replace('hover:bg-blue-700', 'hover:bg-gray-600');
-            fetchAndRenderMovies(searchInput.value);
+  <script>
+    // API Configuration
+    const API_BASE_URL = window.location.origin + '/api';
+    
+    // DOM Elements
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    const searchInput = document.getElementById('searchInput');
+    const mediaContainer = document.getElementById('mediaContainer');
+    const contentTitle = document.getElementById('contentTitle');
+    const viewToggleButtons = document.querySelectorAll('.view-toggle button');
+    const menuLinks = document.querySelectorAll('.sidebar-menu a');
+    const statsContainer = document.getElementById('statsContainer');
+    const movieCountEl = document.getElementById('movieCount');
+    const seriesCountEl = document.getElementById('seriesCount');
+    const episodeCountEl = document.getElementById('episodeCount');
+    
+    // Modal Elements
+    const videoModal = document.getElementById('videoModal');
+    const closeVideoModal = document.getElementById('closeVideoModal');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const videoTitle = document.getElementById('videoTitle');
+    const videoType = document.getElementById('videoType');
+    const videoDate = document.getElementById('videoDate');
+    const videoDescription = document.getElementById('videoDescription');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const muteBtn = document.getElementById('muteBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    
+    const seriesModal = document.getElementById('seriesModal');
+    const closeSeriesModal = document.getElementById('closeSeriesModal');
+    const seriesTitle = document.getElementById('seriesTitle');
+    const seriesPoster = document.getElementById('seriesPoster');
+    const seriesSeasons = document.getElementById('seriesSeasons');
+    const seriesEpisodes = document.getElementById('seriesEpisodes');
+    const seriesDescription = document.getElementById('seriesDescription');
+    const playFirstEpisode = document.getElementById('playFirstEpisode');
+    const seasonsSidebar = document.getElementById('seasonsSidebar');
+    const episodesList = document.getElementById('episodesList');
+    
+    // App State
+    let currentMediaType = 'movies';
+    let currentView = 'grid';
+    let currentSearchQuery = '';
+    let currentCategory = '';
+    let currentSeries = null;
+    let currentSeason = null;
+    let mediaData = [];
+    
+    // Initialize the app
+    async function init() {
+      // Load stats
+      loadStats();
+      
+      // Load initial media
+      loadMedia('movies');
+      
+      // Set up event listeners
+      setupEventListeners();
+    }
+    
+    // Set up event listeners
+    function setupEventListeners() {
+      // Sidebar toggle
+      sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+      });
+      
+      // Search input
+      searchInput.addEventListener('input', (e) => {
+        currentSearchQuery = e.target.value.trim();
+        loadMedia(currentMediaType);
+      });
+      
+      // View toggle buttons
+      viewToggleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          viewToggleButtons.forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+          currentView = button.dataset.view;
+          renderMedia();
         });
-
-        showSeriesBtn.addEventListener('click', () => {
-            currentView = 'series';
-            showSeriesBtn.classList.replace('bg-gray-700', 'bg-blue-600');
-            showSeriesBtn.classList.replace('hover:bg-gray-600', 'hover:bg-blue-700');
-            showMoviesBtn.classList.replace('bg-blue-600', 'bg-gray-700');
-            showMoviesBtn.classList.replace('hover:bg-blue-700', 'hover:bg-gray-600');
-            fetchAndRenderSeries(searchInput.value);
+      });
+      
+      // Menu links
+      menuLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          
+          // Handle section links
+          if (link.dataset.section) {
+            menuLinks.forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            currentMediaType = link.dataset.section;
+            currentCategory = '';
+            contentTitle.textContent = link.querySelector('span').textContent;
+            loadMedia(currentMediaType);
+          }
+          
+          // Handle category links
+          if (link.dataset.category) {
+            menuLinks.forEach(l => l.classList.remove('active'));
+            currentCategory = link.dataset.category;
+            contentTitle.textContent = link.querySelector('span').textContent;
+            loadMedia(currentMediaType);
+          }
         });
-
-        searchInput.addEventListener('input', () => {
-            if (currentView === 'movies') {
-                fetchAndRenderMovies(searchInput.value);
+      });
+      
+      // Close modals
+      closeVideoModal.addEventListener('click', () => {
+        videoModal.classList.remove('active');
+        videoPlayer.pause();
+      });
+      
+      closeSeriesModal.addEventListener('click', () => {
+        seriesModal.classList.remove('active');
+      });
+      
+      // Video player controls
+      videoPlayer.addEventListener('play', () => {
+        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+      });
+      
+      videoPlayer.addEventListener('pause', () => {
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+      });
+      
+      playPauseBtn.addEventListener('click', () => {
+        if (videoPlayer.paused) {
+          videoPlayer.play();
+        } else {
+          videoPlayer.pause();
+        }
+      });
+      
+      videoPlayer.addEventListener('timeupdate', updateProgress);
+      
+      progressContainer.addEventListener('click', (e) => {
+        const rect = progressContainer.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        videoPlayer.currentTime = pos * videoPlayer.duration;
+      });
+      
+      muteBtn.addEventListener('click', () => {
+        videoPlayer.muted = !videoPlayer.muted;
+        muteBtn.innerHTML = videoPlayer.muted 
+          ? '<i class="fas fa-volume-mute"></i>' 
+          : '<i class="fas fa-volume-up"></i>';
+      });
+      
+      volumeSlider.addEventListener('input', (e) => {
+        videoPlayer.volume = e.target.value;
+        videoPlayer.muted = e.target.value === '0';
+        muteBtn.innerHTML = videoPlayer.muted 
+          ? '<i class="fas fa-volume-mute"></i>' 
+          : '<i class="fas fa-volume-up"></i>';
+      });
+      
+      fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          videoModal.requestFullscreen().catch(err => {
+            console.error('Error attempting to enable fullscreen:', err);
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      });
+      
+      // Play first episode button
+      playFirstEpisode.addEventListener('click', () => {
+        if (currentSeries && currentSeries.seasons.length > 0) {
+          const firstSeason = currentSeries.seasons[0];
+          if (firstSeason.episodes.length > 0) {
+            const firstEpisode = firstSeason.episodes[0];
+            playEpisode(firstEpisode, firstSeason.seasonNumber);
+          }
+        }
+      });
+      
+      // Close modals when clicking outside
+      document.addEventListener('click', (e) => {
+        if (videoModal.classList.contains('active') && e.target === videoModal) {
+          videoModal.classList.remove('active');
+          videoPlayer.pause();
+        }
+        
+        if (seriesModal.classList.contains('active') && e.target === seriesModal) {
+          seriesModal.classList.remove('active');
+        }
+      });
+      
+      // Keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if (videoModal.classList.contains('active')) {
+          switch (e.key) {
+            case ' ':
+              e.preventDefault();
+              if (videoPlayer.paused) {
+                videoPlayer.play();
+              } else {
+                videoPlayer.pause();
+              }
+              break;
+            case 'ArrowRight':
+              videoPlayer.currentTime += 5;
+              break;
+            case 'ArrowLeft':
+              videoPlayer.currentTime -= 5;
+              break;
+            case 'ArrowUp':
+              videoPlayer.volume = Math.min(videoPlayer.volume + 0.1, 1);
+              volumeSlider.value = videoPlayer.volume;
+              break;
+            case 'ArrowDown':
+              videoPlayer.volume = Math.max(videoPlayer.volume - 0.1, 0);
+              volumeSlider.value = videoPlayer.volume;
+              break;
+            case 'f':
+              case 'F':
+                if (!document.fullscreenElement) {
+                  videoModal.requestFullscreen();
+                } else {
+                  document.exitFullscreen();
+                }
+                break;
+            case 'Escape':
+              if (document.fullscreenElement) {
+                document.exitFullscreen();
+              } else {
+                videoModal.classList.remove('active');
+                videoPlayer.pause();
+              }
+              break;
+          }
+        }
+      });
+    }
+    
+    // Update video progress bar
+    function updateProgress() {
+      const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+      progressBar.style.width = `${progress}%`;
+      
+      const currentMinutes = Math.floor(videoPlayer.currentTime / 60);
+      const currentSeconds = Math.floor(videoPlayer.currentTime % 60);
+      const durationMinutes = Math.floor(videoPlayer.duration / 60);
+      const durationSeconds = Math.floor(videoPlayer.duration % 60);
+      
+      timeDisplay.textContent = 
+        `${currentMinutes.toString().padStart(2, '0')}:${currentSeconds.toString().padStart(2, '0')} / ` +
+        `${durationMinutes.toString().padStart(2, '0')}:${durationSeconds.toString().padStart(2, '0')}`;
+    }
+    
+    // Load library stats
+    async function loadStats() {
+      try {
+        const response = await fetch(`${API_BASE_URL}/stats`);
+        const data = await response.json();
+        
+        movieCountEl.textContent = data.movies;
+        seriesCountEl.textContent = data.series;
+        episodeCountEl.textContent = data.episodes;
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+    
+    // Load media data
+    async function loadMedia(type) {
+      mediaContainer.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+        </div>
+      `;
+      
+      try {
+        let url = `${API_BASE_URL}/${type}`;
+        if (currentSearchQuery) {
+          url += `?search=${encodeURIComponent(currentSearchQuery)}`;
+        }
+        
+        const response = await fetch(url);
+        mediaData = await response.json();
+        
+        if (mediaData.length === 0) {
+          showEmptyState();
+        } else {
+          renderMedia();
+        }
+      } catch (error) {
+        console.error(`Error loading ${type}:`, error);
+        mediaContainer.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>Error Loading Content</h3>
+            <p>Failed to fetch ${type}. Please try again later.</p>
+          </div>
+        `;
+      }
+    }
+    
+    // Show empty state
+    function showEmptyState() {
+      mediaContainer.innerHTML = `
+        <div class="empty-state">
+          <i class="fas fa-box-open"></i>
+          <h3>No Content Found</h3>
+          <p>${currentSearchQuery ? 'No results for your search.' : 'This section is empty.'}</p>
+        </div>
+      `;
+    }
+    
+    // Render media based on current view
+    function renderMedia() {
+      if (currentView === 'grid') {
+        renderGridView();
+      } else {
+        renderListView();
+      }
+    }
+    
+    // Render grid view
+    function renderGridView() {
+      let html = '<div class="media-grid">';
+      
+      mediaData.forEach(item => {
+        const isSeries = item.seasons !== undefined;
+        const type = isSeries ? 'Series' : 'Movie';
+        const date = new Date(item.addedAt).toLocaleDateString();
+        
+        html += `
+          <div class="media-card" data-id="${item._id}" data-type="${isSeries ? 'series' : 'movie'}">
+            <div class="media-thumbnail">
+              <img src="${item.thumbnail}" alt="${item.name}">
+              <span class="media-type">${type}</span>
+              <div class="media-overlay">
+                <button class="play-button">
+                  <i class="fas fa-play"></i>
+                </button>
+              </div>
+            </div>
+            <div class="media-info">
+              <h3 class="media-title">${item.name}</h3>
+              <div class="media-meta">
+                <span>${type}</span>
+                <span>${date}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      mediaContainer.innerHTML = html;
+      
+      // Add event listeners to media cards
+      document.querySelectorAll('.media-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          // Ignore if clicking on play button directly
+          if (e.target.closest('.play-button')) {
+            return;
+          }
+          
+          const id = card.dataset.id;
+          const type = card.dataset.type;
+          
+          if (type === 'series') {
+            openSeriesModal(id);
+          } else {
+            openMovieModal(id);
+          }
+        });
+        
+        // Play button
+        const playButton = card.querySelector('.play-button');
+        if (playButton) {
+          playButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = card.dataset.id;
+            const type = card.dataset.type;
+            
+            if (type === 'series') {
+              const series = mediaData.find(item => item._id === id);
+              if (series && series.seasons.length > 0 && series.seasons[0].episodes.length > 0) {
+                const firstEpisode = series.seasons[0].episodes[0];
+                playEpisode(firstEpisode, series.seasons[0].seasonNumber, series.name);
+              }
             } else {
-                fetchAndRenderSeries(searchInput.value);
+              const movie = mediaData.find(item => item._id === id);
+              if (movie) {
+                playVideo(movie.name, movie.streamingUrl, 'Movie', movie.addedAt, '');
+              }
             }
-        });
-
-        closeBtn.addEventListener('click', () => {
-            hide(seriesModal);
+          });
+        }
+      });
+    }
+    
+    // Render list view
+    function renderListView() {
+      let html = '<div class="media-list">';
+      
+      mediaData.forEach(item => {
+        const isSeries = item.seasons !== undefined;
+        const type = isSeries ? 'Series' : 'Movie';
+        const date = new Date(item.addedAt).toLocaleDateString();
+        
+        html += `
+          <div class="media-card list-view" data-id="${item._id}" data-type="${isSeries ? 'series' : 'movie'}">
+            <div class="media-thumbnail">
+              <img src="${item.thumbnail}" alt="${item.name}">
+              <span class="media-type">${type}</span>
+            </div>
+            <div class="media-info">
+              <h3 class="media-title">${item.name}</h3>
+              <div class="media-meta">
+                <span>${type}</span>
+                <span>${date}</span>
+              </div>
+              <button class="play-button">
+                <i class="fas fa-play"></i> Play
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div>';
+      mediaContainer.innerHTML = html;
+      
+      // Add event listeners to media cards (similar to grid view)
+      document.querySelectorAll('.media-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.play-button')) {
+            return;
+          }
+          
+          const id = card.dataset.id;
+          const type = card.dataset.type;
+          
+          if (type === 'series') {
+            openSeriesModal(id);
+          } else {
+            openMovieModal(id);
+          }
         });
         
-        // Handle mobile screen size changes for UI responsiveness
-        window.addEventListener('resize', () => {
-            if (window.innerWidth >= 768) {
-                // Restore layout on desktop/tablet
-                if (videoPlayer.paused === false && videoPlayer.src !== '') {
-                    show(sidebar);
-                } else {
-                    show(sidebar);
-                }
+        const playButton = card.querySelector('.play-button');
+        if (playButton) {
+          playButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = card.dataset.id;
+            const type = card.dataset.type;
+            
+            if (type === 'series') {
+              const series = mediaData.find(item => item._id === id);
+              if (series && series.seasons.length > 0 && series.seasons[0].episodes.length > 0) {
+                const firstEpisode = series.seasons[0].episodes[0];
+                playEpisode(firstEpisode, series.seasons[0].seasonNumber, series.name);
+              }
             } else {
-                // On mobile, if player is active, hide sidebar in landscape
-                const isLandscape = window.matchMedia("(orientation: landscape)").matches;
-                if (videoPlayer.paused === false && videoPlayer.src !== '' && isLandscape) {
-                    hide(sidebar);
-                } else {
-                    show(sidebar);
-                }
+              const movie = mediaData.find(item => item._id === id);
+              if (movie) {
+                playVideo(movie.name, movie.streamingUrl, 'Movie', movie.addedAt, '');
+              }
             }
-        });
-
-        // Initial content load when the page is ready
-        window.onload = () => {
-          fetchAndRenderMovies();
-        };
-
-        // Custom function for showing toast-like messages
-        function showMessage(message) {
-            const messageBox = document.createElement('div');
-            messageBox.className = 'message-box bg-red-600 text-white p-4 rounded-lg shadow-xl';
-            messageBox.textContent = message;
-            document.body.appendChild(messageBox);
-            
-            // Show the message
-            setTimeout(() => {
-                messageBox.classList.add('show');
-            }, 10);
-            
-            // Hide and remove the message after 3 seconds
-            setTimeout(() => {
-                messageBox.classList.remove('show');
-                setTimeout(() => messageBox.remove(), 300);
-            }, 3000);
+          });
         }
-
-    </script>
+      });
+    }
+    
+    // Open movie modal and play video
+    async function openMovieModal(id) {
+      try {
+        const movie = mediaData.find(item => item._id === id);
+        if (movie) {
+          playVideo(movie.name, movie.streamingUrl, 'Movie', movie.addedAt, '');
+        }
+      } catch (error) {
+        console.error('Error opening movie:', error);
+      }
+    }
+    
+    // Play video
+    function playVideo(title, url, type, date, description) {
+      videoTitle.textContent = title;
+      videoType.textContent = type;
+      videoDate.textContent = `Added on ${new Date(date).toLocaleDateString()}`;
+      videoDescription.textContent = description || 'No description available.';
+      
+      videoPlayer.src = url;
+      videoPlayer.load();
+      
+      // Reset controls
+      progressBar.style.width = '0%';
+      timeDisplay.textContent = '00:00 / 00:00';
+      volumeSlider.value = videoPlayer.volume;
+      
+      videoModal.classList.add('active');
+      
+      // Try to start playback (may be blocked by browser autoplay policies)
+      const playPromise = videoPlayer.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log('Autoplay prevented:', error);
+          // Show play button to allow manual playback
+        });
+      }
+    }
+    
+    // Open series modal
+    async function openSeriesModal(id) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/series/${id}`);
+        const series = await response.json();
+        
+        if (series) {
+          currentSeries = series;
+          renderSeriesModal(series);
+          seriesModal.classList.add('active');
+        }
+      } catch (error) {
+        console.error('Error opening series:', error);
+      }
+    }
+    
+    // Render series modal content
+    function renderSeriesModal(series) {
+      seriesTitle.textContent = series.name;
+      seriesPoster.src = series.thumbnail;
+      seriesDescription.textContent = 'No description available.';
+      
+      const totalEpisodes = series.seasons.reduce((sum, season) => sum + season.episodes.length, 0);
+      seriesSeasons.textContent = `${series.seasons.length} Season${series.seasons.length !== 1 ? 's' : ''}`;
+      seriesEpisodes.textContent = `${totalEpisodes} Episode${totalEpisodes !== 1 ? 's' : ''}`;
+      
+      // Render seasons sidebar
+      seasonsSidebar.innerHTML = '';
+      series.seasons.forEach(season => {
+        const seasonEl = document.createElement('div');
+        seasonEl.className = 'season-item';
+        if (season.seasonNumber === (currentSeason?.seasonNumber || series.seasons[0].seasonNumber)) {
+          seasonEl.classList.add('active');
+        }
+        seasonEl.innerHTML = `
+          <div class="season-title">Season ${season.seasonNumber}</div>
+          <div class="season-episodes">${season.episodes.length} episodes</div>
+        `;
+        seasonEl.addEventListener('click', () => {
+          document.querySelectorAll('.season-item').forEach(item => item.classList.remove('active'));
+          seasonEl.classList.add('active');
+          currentSeason = season;
+          renderEpisodesList(season);
+        });
+        seasonsSidebar.appendChild(seasonEl);
+      });
+      
+      // Render episodes for the first season (or current season if set)
+      const seasonToShow = currentSeason || series.seasons[0];
+      currentSeason = seasonToShow;
+      renderEpisodesList(seasonToShow);
+    }
+    
+    // Render episodes list
+    function renderEpisodesList(season) {
+      episodesList.innerHTML = '';
+      
+      season.episodes.forEach(episode => {
+        const episodeEl = document.createElement('div');
+        episodeEl.className = 'episode-card';
+        episodeEl.innerHTML = `
+          <div class="episode-thumbnail">
+            <img src="${episode.thumbnail || currentSeries.thumbnail}" alt="${episode.title}">
+          </div>
+          <div class="episode-info">
+            <h3 class="episode-title">${episode.title}</h3>
+            <div class="episode-number">S${season.seasonNumber}E${episode.episodeNumber}</div>
+            <p class="episode-description">No description available.</p>
+          </div>
+          <button class="play-episode">
+            <i class="fas fa-play"></i>
+          </button>
+        `;
+        
+        const playButton = episodeEl.querySelector('.play-episode');
+        playButton.addEventListener('click', (e) => {
+          e.stopPropagation();
+          playEpisode(episode, season.seasonNumber, currentSeries.name);
+        });
+        
+        episodeEl.addEventListener('click', () => {
+          playEpisode(episode, season.seasonNumber, currentSeries.name);
+        });
+        
+        episodesList.appendChild(episodeEl);
+      });
+    }
+    
+    // Play episode
+    function playEpisode(episode, seasonNumber, seriesName) {
+      const title = `${seriesName} - S${seasonNumber}E${episode.episodeNumber}: ${episode.title}`;
+      playVideo(title, episode.streamingUrl, 'TV Episode', '', '');
+    }
+    
+    // Initialize the app when DOM is loaded
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
-

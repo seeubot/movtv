@@ -41,6 +41,7 @@
 
     <script>
         // The base URL for your API server.
+        // IMPORTANT: Verify that your backend is running on this port (1024 by default).
         const API_BASE_URL = 'http://localhost:1024/api';
 
         // --- STATE MANAGEMENT ---
@@ -89,16 +90,36 @@
         function renderError(message) {
             appContainer.innerHTML = '';
             const errorDiv = document.createElement('div');
-            errorDiv.className = "flex justify-center items-center h-[50vh] text-red-400 text-center";
-            errorDiv.innerHTML = `<p class="text-xl font-semibold">${message}</p>`;
+            errorDiv.className = "flex flex-col justify-center items-center h-[50vh] text-red-400 text-center space-y-4";
+            errorDiv.innerHTML = `
+                <p class="text-xl font-semibold">${message}</p>
+                <p class="text-gray-400 text-sm">Please ensure your backend server is running and the API URL is correct.</p>
+            `;
             appContainer.appendChild(errorDiv);
         }
 
         // --- API & DATA FETCHING ---
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
+                return response.ok;
+            } catch (err) {
+                return false;
+            }
+        }
+
         async function fetchContent(query = '') {
             isLoading = true;
             error = null;
             render();
+
+            const isServerUp = await checkServerStatus();
+            if (!isServerUp) {
+                error = 'Could not connect to the API server. Please make sure it is running.';
+                isLoading = false;
+                render();
+                return;
+            }
 
             try {
                 const movieUrl = `${API_BASE_URL}/movies${query ? `?search=${encodeURIComponent(query)}` : ''}`;

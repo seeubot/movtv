@@ -14,6 +14,9 @@
             color: #ffffff;
             min-height: 100vh;
             overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         /* Custom scrollbar for the episode selector */
@@ -163,6 +166,26 @@
         .video-info-overlay.visible {
             display: flex;
         }
+        
+        /* Error Dialog styles */
+        .error-dialog {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #2d3748;
+            color: #fff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            z-index: 200;
+            display: none;
+            text-align: center;
+        }
+        
+        .error-dialog.visible {
+            display: block;
+        }
 
         /* Episode list overlay within the player */
         .episode-overlay {
@@ -222,45 +245,40 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center p-4">
+<body class="bg-gray-900 text-gray-200 min-h-screen p-4">
 
-    <!-- Main Content Container -->
-    <div class="container mx-auto max-w-7xl flex-grow">
+    <!-- Header Section - Initially Hidden -->
+    <header id="header-container" class="hidden flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8 w-full max-w-7xl mx-auto">
+        <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
+        <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0">
+            <!-- Stats will be dynamically injected here by JavaScript -->
+        </div>
+    </header>
 
-        <!-- Header Section - Initially Hidden -->
-        <header id="header-container" class="hidden flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8">
-            <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
-            <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0">
-                <!-- Stats will be dynamically injected here by JavaScript -->
-            </div>
-        </header>
+    <!-- Search Bar Section - Always visible -->
+    <div id="search-container" class="flex justify-center my-12 w-full max-w-7xl mx-auto">
+        <input type="text" id="search-input" data-focusable="true" placeholder="Search for movies or series..." class="focusable w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+    </div>
 
-        <!-- Search Bar Section - Always visible -->
-        <div id="search-container" class="flex justify-center my-12 w-full">
-            <input type="text" id="search-input" data-focusable="true" placeholder="Search for movies or series..." class="focusable w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+    <!-- Main Content Area - Initially Hidden -->
+    <div id="content-area" class="hidden w-full max-w-7xl mx-auto">
+        <!-- Navigation Tabs -->
+        <div class="flex space-x-4 mb-8 border-b border-gray-700">
+            <button id="movies-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
+            <button id="series-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
         </div>
 
-        <!-- Main Content Area - Initially Hidden -->
-        <div id="content-area" class="hidden">
-            <!-- Navigation Tabs -->
-            <div class="flex space-x-4 mb-8 border-b border-gray-700">
-                <button id="movies-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
-                <button id="series-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
-            </div>
-
-            <!-- Loading and Error messages -->
-            <div id="loading-message" class="flex items-center justify-center py-12">
-                <p class="text-xl font-medium">Loading data...</p>
-            </div>
-
-            <div id="error-message" class="hidden text-center text-red-400 p-4 text-xl">
-                <p>Failed to fetch data from the API. Please check if the backend is running.</p>
-            </div>
-
-            <!-- Media content will be rendered here by JavaScript -->
-            <div id="media-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+        <!-- Loading and Error messages -->
+        <div id="loading-message" class="flex items-center justify-center py-12">
+            <p class="text-xl font-medium">Loading data...</p>
         </div>
 
+        <div id="error-message" class="hidden text-center text-red-400 p-4 text-xl">
+            <p>Failed to fetch data from the API. Please check if the backend is running.</p>
+        </div>
+
+        <!-- Media content will be rendered here by JavaScript -->
+        <div id="media-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
     </div>
 
     <!-- Video Player Modal -->
@@ -288,6 +306,13 @@
 
             <!-- Loading Spinner (hidden by default) -->
             <div id="videoLoadingSpinner" class="loading-spinner"></div>
+            
+            <!-- Error Dialog (hidden by default) -->
+            <div id="videoErrorDialog" class="error-dialog">
+                <h4 class="text-xl font-bold mb-2">Streaming Error</h4>
+                <p>Failed to load the video stream. The server might be down or the URL is invalid.</p>
+                <button class="mt-4 py-2 px-4 bg-teal-500 rounded-lg font-semibold hover:bg-teal-600 transition-colors" onclick="hideVideoError()">OK</button>
+            </div>
 
             <video class="w-full h-full" id="videoPlayer"></video>
 
@@ -304,7 +329,7 @@
                 <span id="duration">00:00</span>
                 <!-- New Episodes button -->
                 <button id="episodesBtn" class="video-control-btn text-xl" data-focusable="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-video"><path d="M12 10H3"/><path d="M16 6H3"/><path d="M16 14H3"/><path d="M16 18H3"/><rect x="16" y="2" width="6" height="6" rx="1"/><path d="m16 10 2 2.5 2-2.5"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-ordered"><line x1="10" x2="21" y1="6" y2="6"/><line x1="10" x2="21" y1="12" y2="12"/><line x1="10" x2="21" y1="18" y2="18"/><path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-2"/></svg>
                 </button>
                 <button id="fullscreenBtn" class="video-control-btn text-xl" data-focusable="true">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize">
@@ -357,6 +382,9 @@
             // Episode list overlay
             const episodeOverlay = document.getElementById('episodeOverlay');
             const episodeSelector = document.getElementById('episodeSelector');
+            
+            // Error dialog
+            const videoErrorDialog = document.getElementById('videoErrorDialog');
 
             // Store the fetched data and current state
             let allMovies = [];
@@ -440,9 +468,13 @@
                                 toggleEpisodeOverlay();
                             } else if (document.activeElement.classList.contains('episode-list-item')) {
                                 document.activeElement.click();
+                            } else if (document.activeElement.id === 'closeErrorBtn') {
+                                hideVideoError();
                             }
                         } else if (e.key === 'Escape') {
-                            if (episodeOverlay.classList.contains('visible')) {
+                            if (videoErrorDialog.classList.contains('visible')) {
+                                hideVideoError();
+                            } else if (episodeOverlay.classList.contains('visible')) {
                                 toggleEpisodeOverlay();
                             } else {
                                 closePlayer();
@@ -599,13 +631,18 @@
                     
                     if (currentSeries.seasons && currentSeries.seasons.length > 0 && 
                         currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
-                        const firstEpisode = currentSeries.seasons[0].episodes[0];
+                        const firstEpisode = {
+                            ...currentSeries.seasons[0].episodes[0],
+                            thumbnail: currentSeries.thumbnail,
+                            seriesName: currentSeries.name
+                        };
                         playVideo(firstEpisode, 'series');
                     } else {
                         console.error('No episodes available for this series.');
                     }
                 } catch (e) {
                     console.error('Error loading series details:', e);
+                    showVideoError();
                 }
             };
 
@@ -644,8 +681,7 @@
                 
                 videoPlayer.play().catch(e => {
                     console.error('Error playing video:', e);
-                    // Use a message box instead of alert
-                    alert('Error playing video. Please check the URL or try again later.');
+                    showVideoError();
                 });
             };
 
@@ -672,8 +708,12 @@
                             </div>
                         `;
                         button.onclick = () => {
-                            currentMedia = episode;
-                            switchEpisode(episode.streamingUrl);
+                            const newMediaItem = {
+                                ...episode,
+                                thumbnail: currentSeries.thumbnail
+                            };
+                            currentMedia = newMediaItem;
+                            switchEpisode(newMediaItem);
                         }
                         episodeSelector.appendChild(button);
                     });
@@ -686,12 +726,13 @@
             }
 
             // Function to switch to a new episode
-            window.switchEpisode = (url) => {
-                videoPlayer.src = url;
+            window.switchEpisode = (mediaItem) => {
+                videoPlayer.src = mediaItem.streamingUrl;
                 videoPlayer.play().catch(e => {
                     console.error('Error playing video:', e);
+                    showVideoError();
                 });
-                displayEpisodeSelector(url); // Re-render to highlight the new episode
+                displayEpisodeSelector(mediaItem.streamingUrl); // Re-render to highlight the new episode
                 toggleEpisodeOverlay(); // Close the overlay after selection
             };
 
@@ -703,6 +744,17 @@
                 currentSeries = null;
                 currentMedia = null;
                 clearTimeout(controlsTimeout);
+                hideVideoError(); // Also hide any error dialog
+            };
+            
+            // Function to show the video error dialog
+            window.showVideoError = () => {
+                videoErrorDialog.classList.add('visible');
+            };
+            
+            // Function to hide the video error dialog
+            window.hideVideoError = () => {
+                videoErrorDialog.classList.remove('visible');
             };
 
             // Video player control functions
@@ -745,6 +797,7 @@
             playPauseBtn.addEventListener('click', playPauseVideo);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
             episodesBtn.addEventListener('click', toggleEpisodeOverlay);
+            videoPlayer.addEventListener('error', showVideoError);
 
             videoPlayerWrapper.addEventListener('mousemove', showControls);
             videoPlayerWrapper.addEventListener('mouseleave', () => {

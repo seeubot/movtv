@@ -83,7 +83,7 @@
             x: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
             list: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>'
         };
-        
+
         function renderLoading() {
             appContainer.innerHTML = '';
             const loadingDiv = document.createElement('div');
@@ -108,13 +108,13 @@
         async function fetchContent(query) {
             if (query.length < 3) {
                 content = [];
-                render();
+                renderContentGrid(); // Only re-render the content grid
                 return;
             }
 
             isLoading = true;
             error = null;
-            render();
+            renderContentGrid();
 
             try {
                 const [moviesResponse, seriesResponse] = await Promise.all([
@@ -143,14 +143,14 @@
                 error = 'An error occurred while fetching data. Please check the API URL and server status.';
             } finally {
                 isLoading = false;
-                render();
+                renderContentGrid();
             }
         }
         
         async function fetchSeriesDetails(seriesId) {
             isLoading = true;
             error = null;
-            render();
+            appContainer.innerHTML = renderLoading(); // Clear content and show loader
             try {
                 const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
                 if (!response.ok) {
@@ -188,10 +188,36 @@
                         </div>
                     </div>
                 </div>
-                ${content.length > 0 ? `
+                <div id="content-display">
+                    <!-- The content grid or error message will be rendered here -->
+                </div>
+            `;
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                fetchContent(searchQuery);
+            });
+            renderContentGrid(); // Initial render of the content grid section
+        }
+
+        function renderContentGrid() {
+            const contentDisplay = document.getElementById('content-display');
+            if (!contentDisplay) return;
+
+            if (isLoading) {
+                contentDisplay.innerHTML = `<div class="flex justify-center items-center h-[50vh]"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2 text-violet-400 animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>`;
+                return;
+            }
+
+            if (error) {
+                contentDisplay.innerHTML = `<div class="flex justify-center items-center h-[50vh] text-red-400 text-center"><p>${error}</p></div>`;
+                return;
+            }
+
+            contentDisplay.innerHTML = `
                 <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6" id="content-grid">
                     <!-- Content cards will be injected here -->
-                </div>` : ''}
+                </div>
             `;
             
             const contentGrid = document.getElementById('content-grid');
@@ -223,12 +249,6 @@
                     contentGrid.appendChild(card);
                 });
             }
-
-            const searchInput = document.getElementById('search-input');
-            searchInput.addEventListener('input', (e) => {
-                searchQuery = e.target.value;
-                fetchContent(searchQuery);
-            });
         }
 
         function renderSeriesPage() {
@@ -277,6 +297,7 @@
                     episodeDiv.dataset.streamingUrl = episode.streamingUrl;
                     episodeDiv.dataset.title = `${selectedSeries.name} - S${season.seasonNumber}E${episode.episodeNumber}`;
                     episodeDiv.dataset.seasonId = season.seasonNumber;
+                    episodeDiv.dataset.seriesId = selectedSeries._id;
 
                     episodeDiv.innerHTML = `
                         <div class="flex-shrink-0 text-violet-300">
@@ -300,7 +321,8 @@
         }
 
         function renderPlayerPage() {
-            if (!selectedContent) {
+            if (!selectedContent || !selectedContent.streamingUrl) {
+                error = 'Video content is unavailable.';
                 view = 'home';
                 render();
                 return;
@@ -315,18 +337,18 @@
             appContainer.innerHTML = `
                 <div class="flex flex-col lg:flex-row gap-4 p-4 sm:p-8">
                     <div class="flex-grow">
-                        <div class="w-full rounded-lg overflow-hidden shadow-2xl">
-                            <div class="aspect-w-16 aspect-h-9 relative pb-[56.25%] bg-black">
+                        <div class="w-full rounded-lg overflow-hidden shadow-2xl bg-black">
+                            <div class="relative pb-[56.25%]">
                                 <video id="video-player" controls autoplay class="absolute inset-0 w-full h-full object-contain">
                                     <source src="${selectedContent.streamingUrl}" type="video/mp4">
-                                    Your browser does not support the video tag.
+                                    <p class="text-red-400 p-4 absolute inset-0 flex items-center justify-center">Your video failed to load or is not supported. Please check the URL.</p>
                                 </video>
                             </div>
                         </div>
                         <div class="mt-6">
                             <button id="back-button" class="mb-4 py-2 px-4 rounded-full bg-zinc-700 text-white hover:bg-violet-600 transition-colors flex items-center gap-2">
                                 ${icons.x}
-                                Back to ${isSeries ? 'Series' : 'Home'}
+                                Back to ${isSeries ? 'Series' : 'Search'}
                             </button>
                             <h2 class="text-3xl font-bold text-white">${titleText}</h2>
                             ${isSeries ? `<p class="text-violet-400 text-lg">${seriesName}</p>` : ''}
@@ -339,7 +361,7 @@
                         </h3>
                         <div id="episode-list" class="flex-grow overflow-y-auto custom-scrollbar space-y-2">
                             ${currentEpisodes.map(episode => `
-                                <div data-id="${episode._id}" data-type="episode" data-streaming-url="${episode.streamingUrl}" data-title="${seriesName} - S${currentSeason.seasonNumber}E${episode.episodeNumber}" data-season-id="${currentSeason.seasonNumber}"
+                                <div data-id="${episode._id}" data-type="episode" data-streaming-url="${episode.streamingUrl}" data-title="${seriesName} - S${currentSeason.seasonNumber}E${episode.episodeNumber}" data-season-id="${currentSeason.seasonNumber}" data-series-id="${selectedSeries._id}"
                                     class="episode-item flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors ${selectedContent.id === episode._id ? 'bg-violet-600' : 'bg-zinc-700 hover:bg-violet-500'}">
                                     <div class="flex-shrink-0 text-violet-300">
                                         ${icons.play}
@@ -354,28 +376,11 @@
                 </div>
             `;
 
-            // Add event listeners for the back button and episode list
             document.getElementById('back-button').addEventListener('click', () => {
                 view = isSeries ? 'series' : 'home';
                 selectedContent = null;
                 render();
             });
-            if (isSeries) {
-                document.getElementById('episode-list').addEventListener('click', (e) => {
-                    const episodeItem = e.target.closest('.episode-item');
-                    if (episodeItem) {
-                        const newEpisode = {
-                            id: episodeItem.dataset.id,
-                            title: episodeItem.dataset.title,
-                            streamingUrl: episodeItem.dataset.streamingUrl,
-                            type: 'series',
-                            seasonId: episodeItem.dataset.seasonId
-                        };
-                        selectedContent = newEpisode;
-                        render();
-                    }
-                });
-            }
         }
 
         // --- MAIN RENDER FUNCTION ---
@@ -408,25 +413,19 @@
             const id = card.dataset.id;
             
             if (type === 'movie') {
-                selectedContent = content.find(item => item._id === id);
-                if (selectedContent) {
-                    view = 'player';
-                    render();
-                }
+                const movie = content.find(item => item._id === id);
+                selectedContent = { ...movie, type: 'movie' };
+                view = 'player';
+                render();
             } else if (type === 'series') {
                 fetchSeriesDetails(id);
-            }
-        });
-
-        appContainer.addEventListener('click', (e) => {
-            const episodeItem = e.target.closest('.episode-item');
-            if (episodeItem) {
+            } else if (type === 'episode') {
                 const newEpisode = {
-                    id: episodeItem.dataset.id,
-                    title: episodeItem.dataset.title,
-                    streamingUrl: episodeItem.dataset.streamingUrl,
+                    id: card.dataset.id,
+                    title: card.dataset.title,
+                    streamingUrl: card.dataset.streamingUrl,
                     type: 'series',
-                    seasonId: episodeItem.dataset.seasonId
+                    seasonId: card.dataset.seasonId,
                 };
                 selectedContent = newEpisode;
                 render();

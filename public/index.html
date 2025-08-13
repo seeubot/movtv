@@ -68,7 +68,7 @@
             border-color: #4ecdc4;
         }
         
-        /* New styles for the full-screen video player UI */
+        /* Styles for the full-screen video player UI */
         .video-ui-container {
             position: fixed;
             top: 0;
@@ -88,15 +88,7 @@
             background: #000;
             flex-direction: column;
         }
-        .video-player-sidebar {
-            width: 350px;
-            background-color: #1a1a1a;
-            color: #fff;
-            padding: 1rem;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
+        
         .episode-list-item.active,
         .tab-button.active,
         .focusable:focus,
@@ -122,6 +114,7 @@
             color: #fff;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
+            z-index: 100; /* Ensure controls are above other overlays */
         }
 
         .show-controls .custom-video-controls {
@@ -171,6 +164,24 @@
             display: flex;
         }
 
+        /* Episode list overlay within the player */
+        .episode-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 150;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            padding: 2rem;
+        }
+        .episode-overlay.visible {
+            display: flex;
+        }
+        
         /* Loading spinner animation */
         .loading-spinner {
             border: 6px solid rgba(255, 255, 255, 0.3);
@@ -181,6 +192,10 @@
             animation: spin 1s linear infinite;
             position: absolute;
             z-index: 30;
+            top: 50%;
+            left: 50%;
+            margin-top: -30px;
+            margin-left: -30px;
             display: none; /* Initially hidden */
         }
         .loading-spinner.visible {
@@ -252,12 +267,23 @@
     <div id="videoModal" class="hidden video-ui-container">
         <!-- Video Player Section -->
         <div id="videoPlayerWrapper" class="video-player-wrapper">
-            <button class="absolute top-4 right-4 text-white text-3xl font-bold z-10 p-2 bg-gray-900 rounded-full hover:bg-gray-700 transition-colors" onclick="closePlayer()">✕</button>
+            <button class="absolute top-4 right-4 text-white text-3xl font-bold z-20 p-2 bg-gray-900 rounded-full hover:bg-gray-700 transition-colors" onclick="closePlayer()">✕</button>
             
             <!-- Video Info Overlay (hidden by default) -->
             <div id="videoInfoOverlay" class="video-info-overlay">
                 <img id="videoInfoThumbnail" src="" alt="Thumbnail" class="w-64 h-96 object-cover rounded-xl shadow-lg mb-4">
                 <h3 id="videoInfoTitle" class="text-3xl font-bold text-white"></h3>
+            </div>
+
+            <!-- Episode list overlay (hidden by default) -->
+            <div id="episodeOverlay" class="episode-overlay">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Episodes</h3>
+                    <button class="text-white text-3xl font-bold p-2 hover:bg-gray-700 rounded-full transition-colors" onclick="toggleEpisodeOverlay()">✕</button>
+                </div>
+                <div id="episodeSelector" class="flex-grow overflow-y-auto">
+                    <!-- Episodes will be dynamically injected here -->
+                </div>
             </div>
 
             <!-- Loading Spinner (hidden by default) -->
@@ -276,6 +302,10 @@
                 <span id="currentTime">00:00</span>
                 <span>/</span>
                 <span id="duration">00:00</span>
+                <!-- New Episodes button -->
+                <button id="episodesBtn" class="video-control-btn text-xl" data-focusable="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-video"><path d="M12 10H3"/><path d="M16 6H3"/><path d="M16 14H3"/><path d="M16 18H3"/><rect x="16" y="2" width="6" height="6" rx="1"/><path d="m16 10 2 2.5 2-2.5"/></svg>
+                </button>
                 <button id="fullscreenBtn" class="video-control-btn text-xl" data-focusable="true">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize">
                         <path d="M8 3H5a2 2 0 0 0-2 2v3" />
@@ -284,17 +314,6 @@
                         <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
                     </svg>
                 </button>
-            </div>
-        </div>
-
-        <!-- Episode Sidebar Section -->
-        <div class="video-player-sidebar" id="episodeSidebar">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold">Episodes</h3>
-                <button class="lg:hidden text-lg font-bold" onclick="closePlayer()">✕</button>
-            </div>
-            <div id="episodeSelector" class="flex-grow overflow-y-auto">
-                <!-- Episodes will be dynamically injected here -->
             </div>
         </div>
     </div>
@@ -319,8 +338,6 @@
             const videoModal = document.getElementById('videoModal');
             const videoPlayer = document.getElementById('videoPlayer');
             const videoPlayerWrapper = document.getElementById('videoPlayerWrapper');
-            const episodeSidebar = document.getElementById('episodeSidebar');
-            const episodeSelector = document.getElementById('episodeSelector');
             
             // Custom video player controls
             const playPauseBtn = document.getElementById('playPauseBtn');
@@ -329,12 +346,17 @@
             const currentTimeSpan = document.getElementById('currentTime');
             const durationSpan = document.getElementById('duration');
             const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const episodesBtn = document.getElementById('episodesBtn');
 
             // Video info and loading elements
             const videoInfoOverlay = document.getElementById('videoInfoOverlay');
             const videoInfoThumbnail = document.getElementById('videoInfoThumbnail');
             const videoInfoTitle = document.getElementById('videoInfoTitle');
             const videoLoadingSpinner = document.getElementById('videoLoadingSpinner');
+            
+            // Episode list overlay
+            const episodeOverlay = document.getElementById('episodeOverlay');
+            const episodeSelector = document.getElementById('episodeSelector');
 
             // Store the fetched data and current state
             let allMovies = [];
@@ -393,15 +415,17 @@
                         // Video player navigation
                         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                             // Up/Down on the remote should navigate the episode list
-                            const episodeItems = Array.from(episodeSelector.querySelectorAll('.episode-list-item'));
-                            if (episodeItems.length > 0) {
-                                let episodeFocusIndex = episodeItems.findIndex(item => item === document.activeElement);
-                                if (e.key === 'ArrowDown') {
-                                    episodeFocusIndex = (episodeFocusIndex + 1) % episodeItems.length;
-                                } else if (e.key === 'ArrowUp') {
-                                    episodeFocusIndex = (episodeFocusIndex - 1 + episodeItems.length) % episodeItems.length;
+                            if (episodeOverlay.classList.contains('visible')) {
+                                const episodeItems = Array.from(episodeSelector.querySelectorAll('.episode-list-item'));
+                                if (episodeItems.length > 0) {
+                                    let episodeFocusIndex = episodeItems.findIndex(item => item === document.activeElement);
+                                    if (e.key === 'ArrowDown') {
+                                        episodeFocusIndex = (episodeFocusIndex + 1) % episodeItems.length;
+                                    } else if (e.key === 'ArrowUp') {
+                                        episodeFocusIndex = (episodeFocusIndex - 1 + episodeItems.length) % episodeItems.length;
+                                    }
+                                    episodeItems[episodeFocusIndex].focus();
                                 }
-                                episodeItems[episodeFocusIndex].focus();
                             }
                         } else if (e.key === 'ArrowLeft') {
                             videoPlayer.currentTime -= 10; // Seek backward 10 seconds
@@ -412,11 +436,17 @@
                                 playPauseVideo();
                             } else if (document.activeElement.id === 'fullscreenBtn') {
                                 toggleFullscreen();
+                            } else if (document.activeElement.id === 'episodesBtn') {
+                                toggleEpisodeOverlay();
                             } else if (document.activeElement.classList.contains('episode-list-item')) {
                                 document.activeElement.click();
                             }
                         } else if (e.key === 'Escape') {
-                            closePlayer();
+                            if (episodeOverlay.classList.contains('visible')) {
+                                toggleEpisodeOverlay();
+                            } else {
+                                closePlayer();
+                            }
                         }
                     }
                 });
@@ -527,7 +557,7 @@
                 if (type === 'series') {
                     card.addEventListener('click', () => loadSeriesDetails(item._id));
                 } else {
-                    card.addEventListener('click', () => playVideo(item, 'movie'));
+                    card.addEventListener('click', () => playVideo(item));
                 }
 
                 return card;
@@ -566,7 +596,6 @@
                         throw new Error('Failed to fetch series details.');
                     }
                     currentSeries = await response.json();
-                    currentMedia = currentSeries;
                     
                     if (currentSeries.seasons && currentSeries.seasons.length > 0 && 
                         currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
@@ -601,24 +630,26 @@
             };
 
             // Function to handle playing the video
-            window.playVideo = (mediaItem, type) => {
+            window.playVideo = (mediaItem, type = 'movie') => {
                 videoPlayer.src = mediaItem.streamingUrl;
                 currentMedia = mediaItem; // Store the current media item
                 videoModal.classList.remove('hidden');
                 
                 if (type === 'series' && currentSeries) {
-                    episodeSidebar.classList.remove('hidden');
+                    episodesBtn.classList.remove('hidden');
                     displayEpisodeSelector(mediaItem.streamingUrl);
                 } else {
-                    episodeSidebar.classList.add('hidden');
+                    episodesBtn.classList.add('hidden');
                 }
                 
                 videoPlayer.play().catch(e => {
                     console.error('Error playing video:', e);
+                    // Use a message box instead of alert
+                    alert('Error playing video. Please check the URL or try again later.');
                 });
             };
 
-            // Function to display the list of episodes in the sidebar
+            // Function to display the list of episodes in the overlay
             window.displayEpisodeSelector = (currentUrl) => {
                 episodeSelector.innerHTML = ''; // Clear previous content
                 currentSeries.seasons.forEach(season => {
@@ -649,6 +680,11 @@
                 });
             };
 
+            // Function to toggle the visibility of the episode overlay
+            window.toggleEpisodeOverlay = () => {
+                episodeOverlay.classList.toggle('visible');
+            }
+
             // Function to switch to a new episode
             window.switchEpisode = (url) => {
                 videoPlayer.src = url;
@@ -656,6 +692,7 @@
                     console.error('Error playing video:', e);
                 });
                 displayEpisodeSelector(url); // Re-render to highlight the new episode
+                toggleEpisodeOverlay(); // Close the overlay after selection
             };
 
             // Function to close the video player modal
@@ -707,6 +744,7 @@
             // Video player events
             playPauseBtn.addEventListener('click', playPauseVideo);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
+            episodesBtn.addEventListener('click', toggleEpisodeOverlay);
 
             videoPlayerWrapper.addEventListener('mousemove', showControls);
             videoPlayerWrapper.addEventListener('mouseleave', () => {
@@ -735,6 +773,7 @@
             videoPlayer.addEventListener('play', () => {
                 playPauseBtn.textContent = '⏸';
                 videoInfoOverlay.classList.remove('visible');
+                videoLoadingSpinner.classList.remove('visible');
             });
             
             videoPlayer.addEventListener('pause', () => {
@@ -757,6 +796,11 @@
             videoPlayer.addEventListener('playing', () => {
                 videoLoadingSpinner.classList.remove('visible');
             });
+            
+            videoPlayer.addEventListener('stalled', () => {
+                videoLoadingSpinner.classList.add('visible');
+            });
+
 
             // Setup remote navigation on initial load
             setupRemoteNavigation();

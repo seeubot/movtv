@@ -3,1294 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamVault - Your Media Library</title>
+    <title>Media Manager</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom styles for a cleaner look -->
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            overflow-x: hidden;
+            font-family: 'Inter', sans-serif;
         }
-
-        .navbar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            padding: 1rem 2rem;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        .tab-button {
+            transition: color 0.2s, border-color 0.2s;
         }
-
-        .nav-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
+        .media-card {
+            transition: transform 0.3s, box-shadow 0.3s;
         }
-
-        .logo {
-            font-size: 1.8rem;
-            font-weight: 800;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            cursor: pointer;
-        }
-
-        .nav-buttons {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .nav-btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 25px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
-        }
-
-        .nav-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .nav-btn.active {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-        }
-
-        .main-container {
-            padding-top: 100px;
-            min-height: 100vh;
-        }
-
-        .welcome-section {
-            text-align: center;
-            padding: 4rem 2rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        .welcome-title {
-            font-size: 3.5rem;
-            font-weight: 900;
-            margin-bottom: 1rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
-            background-size: 400% 400%;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradient 3s ease-in-out infinite;
-        }
-
-        @keyframes gradient {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        .welcome-subtitle {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 3rem;
-            line-height: 1.6;
-        }
-
-        .search-container {
-            position: relative;
-            max-width: 500px;
-            margin: 0 auto 3rem;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 1rem 3rem 1rem 1.5rem;
-            font-size: 1.1rem;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            outline: none;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .search-input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .search-input:focus {
-            border-color: #4ecdc4;
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.02);
-            box-shadow: 0 0 30px rgba(78, 205, 196, 0.3);
-        }
-
-        .search-icon {
-            position: absolute;
-            right: 1.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 1.2rem;
-            pointer-events: none;
-        }
-
-        .search-counter {
-            position: absolute;
-            right: 3.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.9rem;
-            font-weight: 500;
-            pointer-events: none;
-        }
-
-        .search-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.95);
-            border-radius: 20px;
-            margin-top: 0.5rem;
-            max-height: 300px;
-            overflow-y: auto;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: none;
-            z-index: 100;
-        }
-
-        .suggestion-item {
-            padding: 1rem 1.5rem;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .suggestion-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .suggestion-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            flex-shrink: 0;
-        }
-
-        .suggestion-content {
-            flex: 1;
-        }
-
-        .suggestion-title {
-            font-weight: 600;
-            margin-bottom: 0.2rem;
-        }
-
-        .suggestion-type {
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-
-
-        .clear-search {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 0.5rem 1.5rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-
-        .clear-search:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .content-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .content-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .content-card:hover {
-            transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: #4ecdc4;
-        }
-
-        .card-thumbnail {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-        }
-
-        .card-content {
-            padding: 1.5rem;
-        }
-
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: #ffffff;
-        }
-
-        .card-type {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            color: white;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .video-player-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            backdrop-filter: blur(10px);
-        }
-
-        .player-container {
-            width: 90%;
-            max-width: 1200px;
-            background: #000;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-        }
-
-        .player-header {
-            padding: 1rem 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .player-title {
-            font-size: 1.3rem;
-            font-weight: 700;
-            color: white;
-        }
-
-        .close-player {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .close-player:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(90deg);
-        }
-
-        .video-player {
-            width: 100%;
-            max-height: 70vh;
-            background: #000;
-        }
-
-        .episode-selector {
-            padding: 1rem;
-            background: rgba(255, 255, 255, 0.02);
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .season-group {
-            margin-bottom: 1rem;
-        }
-
-        .season-title {
-            font-weight: 700;
-            color: #4ecdc4;
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
-        }
-
-        .episode-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 0.5rem;
-        }
-
-        .episode-btn {
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: left;
-        }
-
-        .episode-btn:hover {
-            background: rgba(78, 205, 196, 0.2);
-            border-color: #4ecdc4;
-        }
-
-        .episode-btn.active {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            border-color: transparent;
-        }
-
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .stat-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 2rem;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .stat-number {
-            font-size: 3rem;
-            font-weight: 900;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            display: block;
-        }
-
-        .stat-label {
-            font-size: 1.1rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-top: 0.5rem;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #4ecdc4;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .no-results-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-
-        @media (max-width: 768px) {
-            .welcome-title {
-                font-size: 2.5rem;
-            }
-            
-            .content-grid {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 1rem;
-                padding: 1rem;
-            }
-            
-            .player-container {
-                width: 95%;
-            }
-            
-            .nav-content {
-                padding: 0 1rem;
-            }
-            
-            .nav-buttons {
-                gap: 0.5rem;
-            }
-            
-            .nav-btn {
-                padding: 0.4rem 0.8rem;
-                font-size: 0.9rem;
-            }
-
-            .search-counter {
-                display: none;
-            }
+        .media-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-content">
-            <div class="logo" onclick="showSection('home')">StreamVault</div>
-            <div class="nav-buttons">
-                <button class="nav-btn active" data-section="home">Home</button>
-                <button class="nav-btn" data-section="movies">Movies</button>
-                <button class="nav-btn" data-section="series">Series</button>
-                <button class="nav-btn" data-section="stats">Stats</button>
+<body class="bg-gray-900 text-gray-200 min-h-screen">
+
+    <div class="container mx-auto p-4 md:p-8">
+
+        <!-- Header Section -->
+        <header class="flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8">
+            <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
+            <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0">
+                <!-- Stats will be dynamically injected here by JavaScript -->
             </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="flex space-x-4 mb-8 border-b border-gray-700">
+            <button id="movies-tab" class="tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
+            <button id="series-tab" class="tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
         </div>
-    </nav>
 
-    <div class="main-container">
-        <!-- Home Section -->
-        <section id="home" class="section active">
-            <div class="welcome-section">
-                <h1 class="welcome-title">Welcome to StreamVault</h1>
-                <p class="welcome-subtitle">Discover and stream your favorite movies and TV series with our premium media library. High-quality content at your fingertips.</p>
-                
-                <div class="search-container">
-                    <input type="text" class="search-input" id="searchInput" placeholder="Search for movies, series..." autocomplete="off">
-                    <span class="search-counter" id="searchCounter"></span>
-                    <span class="search-icon">🔍</span>
-                    <div class="search-suggestions" id="searchSuggestions"></div>
-                </div>
+        <!-- Main Content Area -->
+        <div id="content-area">
+            <!-- Loading and Error messages -->
+            <div id="loading-message" class="flex items-center justify-center py-12">
+                <p class="text-xl font-medium">Loading data...</p>
             </div>
-            
-            <div id="searchResults" class="content-grid" style="display: none;"></div>
-        </section>
 
-        <!-- Movies Section -->
-        <section id="movies" class="section">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Loading movies...</p>
+            <div id="error-message" class="hidden text-center text-red-400 p-4 text-xl">
+                <p>Failed to fetch data from the API. Please check if the backend is running.</p>
             </div>
-            <div id="moviesGrid" class="content-grid"></div>
-        </section>
 
-        <!-- Series Section -->
-        <section id="series" class="section">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Loading series...</p>
-            </div>
-            <div id="seriesGrid" class="content-grid"></div>
-        </section>
+            <!-- Media content will be rendered here by JavaScript -->
+            <div id="media-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+        </div>
 
-        <!-- Stats Section -->
-        <section id="stats" class="section">
-            <div class="stats-container" id="statsContainer">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading statistics...</p>
-                </div>
-            </div>
-        </section>
     </div>
 
-    <!-- Video Player Modal -->
-    <div class="video-player-modal" id="videoModal">
-        <div class="player-container">
-            <div class="player-header">
-                <div class="player-title" id="playerTitle">Now Playing</div>
-                <button class="close-player" onclick="closePlayer()">✕</button>
-            </div>
-            <video class="video-player" id="videoPlayer" controls autoplay>
-                Your browser does not support the video tag.
-            </video>
-            <div class="episode-selector" id="episodeSelector" style="display: none;"></div>
-        </div>
-    </div>
-
+    <!-- JavaScript for fetching data and rendering the UI -->
     <script>
-        // Configuration - This will be replaced by the server
-        const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
-        
-        let allMovies = [];
-        let allSeries = [];
-        let currentSeries = null;
-        let searchResults = [];
-        let currentSearchQuery = '';
+        document.addEventListener('DOMContentLoaded', () => {
+            // Base URL for the backend API.
+            const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
 
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeApp();
-            setupEventListeners();
-        });
+            // DOM elements
+            const loadingMessage = document.getElementById('loading-message');
+            const errorMessage = document.getElementById('error-message');
+            const mediaGrid = document.getElementById('media-grid');
+            const statsContainer = document.getElementById('stats-container');
+            const moviesTab = document.getElementById('movies-tab');
+            const seriesTab = document.getElementById('series-tab');
 
-        // Debug API connectivity
-        async function testAPIConnection() {
-            console.log('Testing API connection...');
-            try {
-                const response = await fetch(`${API_BASE_URL}/stats`);
-                console.log('API test response status:', response.status);
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('API test successful:', data);
-                } else {
-                    console.error('API test failed:', response.status, response.statusText);
-                }
-            } catch (error) {
-                console.error('API connection error:', error);
-            }
-        }
+            // Store the fetched data
+            let movies = [];
+            let series = [];
+            let stats = {};
 
-        function initializeApp() {
-            // Test API connection first
-            testAPIConnection();
-            
-            // Load initial data
-            loadMovies();
-            loadSeries();
-            loadStats();
-        }
+            // Initial active tab
+            let activeTab = 'movies';
 
-        function setupEventListeners() {
-            // Navigation
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const section = btn.dataset.section;
-                    showSection(section);
-                });
-            });
+            // Function to fetch data from all endpoints concurrently
+            const fetchData = async () => {
+                loadingMessage.classList.remove('hidden');
+                errorMessage.classList.add('hidden');
+                mediaGrid.innerHTML = '';
 
-            // Enhanced search functionality
-            const searchInput = document.getElementById('searchInput');
-            const searchSuggestions = document.getElementById('searchSuggestions');
-            const searchCounter = document.getElementById('searchCounter');
-            let searchTimeout;
+                try {
+                    // Use Promise.all to make all three API calls at the same time
+                    const [moviesResponse, seriesResponse, statsResponse] = await Promise.all([
+                        fetch(`${API_BASE_URL}/movies`),
+                        fetch(`${API_BASE_URL}/series`),
+                        fetch(`${API_BASE_URL}/stats`)
+                    ]);
 
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                const query = e.target.value.trim();
-                currentSearchQuery = query;
-                
-                // Update character counter
-                updateSearchCounter(query);
-                
-                if (query.length >= 3) {
-                    searchTimeout = setTimeout(() => {
-                        performSearch(query);
-                        showSuggestions(query);
-                    }, 300);
-                } else if (query.length === 0) {
-                    clearSearch();
-                } else {
-                    hideSuggestions();
-                    // Show partial search indicator
-                    document.getElementById('searchResults').style.display = 'none';
-                }
-            });
-
-            searchInput.addEventListener('focus', (e) => {
-                const query = e.target.value.trim();
-                if (query.length >= 3) {
-                    showSuggestions(query);
-                }
-            });
-
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const query = e.target.value.trim();
-                    if (query.length >= 3) {
-                        hideSuggestions();
-                        performSearch(query);
+                    // Check if responses are OK before parsing
+                    if (!moviesResponse.ok || !seriesResponse.ok || !statsResponse.ok) {
+                        throw new Error('One or more API responses were not successful.');
                     }
-                } else if (e.key === 'Escape') {
-                    hideSuggestions();
-                    if (e.target.value.trim() === '') {
-                        clearSearch();
-                    }
+
+                    // Parse JSON data
+                    movies = await moviesResponse.json();
+                    series = await seriesResponse.json();
+                    stats = await statsResponse.json();
+
+                    // Render the initial content
+                    updateStats();
+                    renderContent();
+
+                } catch (e) {
+                    console.error("Failed to fetch data:", e);
+                    errorMessage.classList.remove('hidden');
+                } finally {
+                    // Hide loading message once all operations are complete
+                    loadingMessage.classList.add('hidden');
                 }
-            });
+            };
 
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.search-container')) {
-                    hideSuggestions();
-                }
-            });
-        }
-
-        function updateSearchCounter(query) {
-            const counter = document.getElementById('searchCounter');
-            if (query.length < 3 && query.length > 0) {
-                counter.textContent = `${query.length}/3`;
-                counter.style.display = 'block';
-                counter.style.color = 'rgba(255, 255, 255, 0.4)';
-            } else if (query.length >= 3) {
-                counter.textContent = '✓';
-                counter.style.display = 'block';
-                counter.style.color = '#4ecdc4';
-            } else {
-                counter.style.display = 'none';
-            }
-        }
-
-        function showSection(sectionId) {
-            // Clear search when switching sections
-            if (sectionId !== 'home') {
-                clearSearch();
-            }
-
-            // Update navigation
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.section === sectionId) {
-                    btn.classList.add('active');
-                }
-            });
-
-            // Show/hide sections
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
-            document.getElementById(sectionId).classList.add('active');
-        }
-
-        async function loadMovies() {
-            try {
-                console.log('Loading movies from:', `${API_BASE_URL}/movies`);
-                const response = await fetch(`${API_BASE_URL}/movies`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                console.log('Movies response status:', response.status);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('Movies data received:', data);
-                allMovies = Array.isArray(data) ? data : [];
-                displayMovies(allMovies);
-            } catch (error) {
-                console.error('Error loading movies:', error);
-                const grid = document.getElementById('moviesGrid');
-                const loading = grid.previousElementSibling;
-                if (loading) loading.style.display = 'none';
-                grid.innerHTML = `<div class="no-results"><div class="no-results-icon">⚠️</div><p>Error loading movies: ${error.message}</p><p><small>Check console for details</small></p></div>`;
-            }
-        }
-
-        async function loadSeries() {
-            try {
-                console.log('Loading series from:', `${API_BASE_URL}/series`);
-                const response = await fetch(`${API_BASE_URL}/series`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                console.log('Series response status:', response.status);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                console.log('Series data received:', data);
-                allSeries = Array.isArray(data) ? data : [];
-                displaySeries(allSeries);
-            } catch (error) {
-                console.error('Error loading series:', error);
-                const grid = document.getElementById('seriesGrid');
-                const loading = grid.previousElementSibling;
-                if (loading) loading.style.display = 'none';
-                grid.innerHTML = `<div class="no-results"><div class="no-results-icon">⚠️</div><p>Error loading series: ${error.message}</p><p><small>Check console for details</small></p></div>`;
-            }
-        }
-
-        async function loadStats() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/stats`);
-                const stats = await response.json();
-                displayStats(stats);
-            } catch (error) {
-                console.error('Error loading stats:', error);
-                document.getElementById('statsContainer').innerHTML = '<div class="no-results"><div class="no-results-icon">⚠️</div><p>Error loading statistics. Please try again later.</p></div>';
-            }
-        }
-
-        function displayMovies(movies) {
-            const grid = document.getElementById('moviesGrid');
-            const loading = grid.previousElementSibling;
-            loading.style.display = 'none';
-
-            if (movies.length === 0) {
-                grid.innerHTML = '<div class="no-results"><div class="no-results-icon">🎬</div><p>No movies found in the library.</p></div>';
-                return;
-            }
-
-            grid.innerHTML = movies.map(movie => createMovieCard(movie)).join('');
-        }
-
-        function displaySeries(series) {
-            const grid = document.getElementById('seriesGrid');
-            const loading = grid.previousElementSibling;
-            loading.style.display = 'none';
-
-            if (series.length === 0) {
-                grid.innerHTML = '<div class="no-results"><div class="no-results-icon">📺</div><p>No series found in the library.</p></div>';
-                return;
-            }
-
-            grid.innerHTML = series.map(show => createSeriesCard(show)).join('');
-        }
-
-        function displayStats(stats) {
-            const container = document.getElementById('statsContainer');
-            container.innerHTML = `
-                <div class="stat-card">
-                    <span class="stat-number">${stats.movies || 0}</span>
-                    <div class="stat-label">Movies</div>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number">${stats.series || 0}</span>
-                    <div class="stat-label">TV Series</div>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number">${stats.episodes || 0}</span>
-                    <div class="stat-label">Episodes</div>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-number">${stats.total || 0}</span>
-                    <div class="stat-label">Total Items</div>
-                </div>
-            `;
-        }
-
-        function createMovieCard(movie) {
-            return `
-                <div class="content-card" onclick="playVideo('${movie.streamingUrl}', '${escapeHtml(movie.name)}', 'movie')">
-                    <img class="card-thumbnail" src="${movie.thumbnail}" alt="${escapeHtml(movie.name)}" onerror="this.src='${getPlaceholderImage('movie')}'">
-                    <div class="card-content">
-                        <h3 class="card-title">${escapeHtml(movie.name)}</h3>
-                        <span class="card-type">Movie</span>
+            // Function to update the stats in the header
+            const updateStats = () => {
+                statsContainer.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <span class="text-2xl font-bold text-teal-400">${stats.movies}</span>
+                        <span class="text-sm text-gray-400">Movies</span>
                     </div>
-                </div>
-            `;
-        }
-
-        function createSeriesCard(show) {
-            const seasonCount = show.seasons?.length || 0;
-            return `
-                <div class="content-card" onclick="loadSeriesDetails('${show._id}')">
-                    <img class="card-thumbnail" src="${show.thumbnail}" alt="${escapeHtml(show.name)}" onerror="this.src='${getPlaceholderImage('series')}'">
-                    <div class="card-content">
-                        <h3 class="card-title">${escapeHtml(show.name)}</h3>
-                        <span class="card-type">TV Series • ${seasonCount} Season${seasonCount !== 1 ? 's' : ''}</span>
+                    <div class="flex flex-col items-center">
+                        <span class="text-2xl font-bold text-purple-400">${stats.series}</span>
+                        <span class="text-sm text-gray-400">Series</span>
                     </div>
-                </div>
-            `;
-        }
-
-        function getPlaceholderImage(type) {
-            const emoji = type === 'movie' ? '🎬' : '📺';
-            return `data:image/svg+xml;base64,${btoa(`<svg width="280" height="180" viewBox="0 0 280 180" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="280" height="180" fill="url(#gradient)"/><defs><linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ff6b6b"/><stop offset="100%" stop-color="#4ecdc4"/></linearGradient></defs><text x="140" y="90" font-family="Arial" font-size="24" fill="white" text-anchor="middle" dy="0.3em">${emoji}</text></svg>`)}`;
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function performSearch(query) {
-            if (query.length < 3) return;
-
-            searchResults = searchContent(query);
-            const resultsContainer = document.getElementById('searchResults');
-            
-            if (searchResults.length === 0) {
-                resultsContainer.innerHTML = `
-                    <div class="no-results">
-                        <div class="no-results-icon">🔍</div>
-                        <p>No results found for "${escapeHtml(query)}"</p>
-                        <small>Try searching with different keywords or check your spelling</small>
-                        <div class="clear-search" onclick="clearSearch()" style="margin-top: 1rem; display: inline-block;">Clear Search</div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-2xl font-bold text-orange-400">${stats.episodes}</span>
+                        <span class="text-sm text-gray-400">Episodes</span>
                     </div>
                 `;
-            } else {
-                const resultsGrid = searchResults.map(item => {
-                    if (item.type === 'movie') {
-                        return createMovieCard(item);
-                    } else {
-                        return createSeriesCard(item);
-                    }
-                }).join('');
-                
-                resultsContainer.innerHTML = `
-                    <div style="text-align: center; padding: 2rem; background: rgba(255, 255, 255, 0.02); border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-                        <div style="font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(45deg, #ff6b6b, #4ecdc4); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                            Search Results
-                        </div>
-                        <div style="color: rgba(255, 255, 255, 0.6);">
-                            Found ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${escapeHtml(query)}"
-                        </div>
-                        <div class="clear-search" onclick="clearSearch()" style="margin-top: 1rem; display: inline-block;">Clear Search</div>
-                    </div>
-                    <div class="content-grid">${resultsGrid}</div>
-                `;
-            }
-            
-            resultsContainer.style.display = 'block';
-        }
-                        <small>Try searching with different keywords or check your spelling</small>
+            };
+
+            // Function to render a single media card element
+            const createMediaCard = (item, type) => {
+                const card = document.createElement('div');
+                card.className = 'media-card relative w-full overflow-hidden bg-gray-800 rounded-2xl shadow-xl';
+
+                const thumbnail = item.thumbnail || 'https://placehold.co/400x600/1f2937/d1d5db?text=No+Image';
+                const seasonsInfo = type === 'series' && item.seasons
+                    ? `<p class="text-sm text-gray-400 mt-1">${item.seasons.length} ${item.seasons.length > 1 ? 'seasons' : 'season'}</p>`
+                    : '';
+
+                card.innerHTML = `
+                    <img src="${thumbnail}" alt="${item.name}" class="w-full h-80 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x600/1f2937/d1d5db?text=No+Image';">
+                    <div class="p-4">
+                        <h3 class="text-lg font-semibold text-white truncate">${item.name}</h3>
+                        ${seasonsInfo}
                     </div>
                 `;
-            } else {
-                const resultsGrid = searchResults.map(item => {
-                    if (item.type === 'movie') {
-                        return createMovieCard(item);
-                    } else {
-                        return createSeriesCard(item);
-                    }
-                }).join('');
-                
-                resultsContainer.innerHTML = headerHtml + `<div class="content-grid">${resultsGrid}</div>`;
-            }
-            
-            resultsContainer.style.display = 'block';
-        }
+                return card;
+            };
 
-        function showSuggestions(query) {
-            if (query.length < 3) {
-                hideSuggestions();
-                return;
-            }
+            // Function to render the media content based on the active tab
+            const renderContent = () => {
+                mediaGrid.innerHTML = ''; // Clear previous content
 
-            const suggestions = document.getElementById('searchSuggestions');
-            const results = searchContent(query).slice(0, 6); // Show top 6 suggestions
-            
-            if (results.length === 0) {
-                suggestions.style.display = 'none';
-                return;
-            }
-
-            suggestions.innerHTML = results.map(item => `
-                <div class="suggestion-item" onclick="selectSuggestion('${escapeHtml(item.name)}', '${item.type}', '${item.id}')">
-                    <div class="suggestion-icon">${item.type === 'movie' ? '🎬' : '📺'}</div>
-                    <div class="suggestion-content">
-                        <div class="suggestion-title">${highlightMatch(item.name, query)}</div>
-                        <div class="suggestion-type">${item.type === 'movie' ? 'Movie' : `TV Series • ${item.seasons?.length || 0} Season${item.seasons?.length !== 1 ? 's' : ''}`}</div>
+                const dataToRender = activeTab === 'movies' ? movies : series;
+                const type = activeTab === 'movies' ? 'movie' : 'series';
+                const emptyMessage = `
+                    <div class="col-span-full text-center text-gray-500 text-lg py-12">
+                        No ${activeTab} found. Add some from the Telegram bot!
                     </div>
-                </div>
-            `).join('');
-            
-            suggestions.style.display = 'block';
-        }
+                `;
 
-        function highlightMatch(text, query) {
-            const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
-            return escapeHtml(text).replace(regex, '<mark style="background: rgba(78, 205, 196, 0.3); color: #4ecdc4; padding: 0;">$1</mark>');
-        }
-
-        function escapeRegex(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\                        <small>Try searching with different keywords or check your spelling');
-        }
-
-        function hideSuggestions() {
-            document.getElementById('searchSuggestions').style.display = 'none';
-        }
-
-        function clearSearch() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('searchCounter').style.display = 'none';
-            document.getElementById('searchResults').style.display = 'none';
-            hideSuggestions();
-            currentSearchQuery = '';
-            searchResults = [];
-        }
-
-        function searchContent(query) {
-            const queryLower = query.toLowerCase();
-            
-            const movieResults = allMovies.filter(movie => 
-                movie.name.toLowerCase().includes(queryLower)
-            ).map(movie => ({ ...movie, type: 'movie', id: movie._id }));
-
-            const seriesResults = allSeries.filter(series => 
-                series.name.toLowerCase().includes(queryLower)
-            ).map(series => ({ ...series, type: 'series', id: series._id }));
-
-            // Sort by relevance (exact match first, then starts with, then contains)
-            const allResults = [...movieResults, ...seriesResults];
-            
-            return allResults.sort((a, b) => {
-                const aName = a.name.toLowerCase();
-                const bName = b.name.toLowerCase();
-                
-                // Exact match gets highest priority
-                if (aName === queryLower && bName !== queryLower) return -1;
-                if (bName === queryLower && aName !== queryLower) return 1;
-                
-                // Starts with query gets second priority
-                const aStartsWith = aName.startsWith(queryLower);
-                const bStartsWith = bName.startsWith(queryLower);
-                if (aStartsWith && !bStartsWith) return -1;
-                if (bStartsWith && !aStartsWith) return 1;
-                
-                // Then sort by position of match
-                const aIndex = aName.indexOf(queryLower);
-                const bIndex = bName.indexOf(queryLower);
-                if (aIndex !== bIndex) return aIndex - bIndex;
-                
-                // Finally sort alphabetically
-                return aName.localeCompare(bName);
-            });
-        }
-
-        function selectSuggestion(name, type, id) {
-            document.getElementById('searchInput').value = name;
-            hideSuggestions();
-            
-            if (type === 'movie') {
-                const movie = allMovies.find(m => m._id === id);
-                if (movie) {
-                    playVideo(movie.streamingUrl, movie.name, 'movie');
-                }
-            } else {
-                loadSeriesDetails(id);
-            }
-        }
-
-        async function loadSeriesDetails(seriesId) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
-                if (!response.ok) {
-                    throw new Error('Series not found');
-                }
-                currentSeries = await response.json();
-                
-                // Play first episode of first season by default
-                if (currentSeries.seasons && currentSeries.seasons.length > 0 && 
-                    currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
-                    const firstEpisode = currentSeries.seasons[0].episodes[0];
-                    playVideo(firstEpisode.streamingUrl, 
-                             `${currentSeries.name} - S${currentSeries.seasons[0].seasonNumber}E${firstEpisode.episodeNumber}: ${firstEpisode.title}`, 
-                             'series');
-                } else {
-                    alert('No episodes available for this series.');
-                }
-            } catch (error) {
-                console.error('Error loading series details:', error);
-                alert('Error loading series details. Please try again.');
-            }
-        }
-
-        function playVideo(url, title, type) {
-            const modal = document.getElementById('videoModal');
-            const player = document.getElementById('videoPlayer');
-            const playerTitle = document.getElementById('playerTitle');
-            const episodeSelector = document.getElementById('episodeSelector');
-            
-            playerTitle.textContent = title;
-            player.src = url;
-            modal.style.display = 'flex';
-            
-            // Show episode selector for series
-            if (type === 'series' && currentSeries) {
-                episodeSelector.style.display = 'block';
-                displayEpisodeSelector();
-            } else {
-                episodeSelector.style.display = 'none';
-            }
-            
-            // Play the video
-            player.play().catch(e => {
-                console.error('Error playing video:', e);
-                alert('Error playing video. Please check the streaming URL or try again later.');
-            });
-        }
-
-        function displayEpisodeSelector() {
-            const selector = document.getElementById('episodeSelector');
-            const currentUrl = document.getElementById('videoPlayer').src;
-            
-            selector.innerHTML = currentSeries.seasons.map(season => `
-                <div class="season-group">
-                    <div class="season-title">Season ${season.seasonNumber}</div>
-                    <div class="episode-list">
-                        ${season.episodes.map(episode => `
-                            <button class="episode-btn ${episode.streamingUrl === currentUrl ? 'active' : ''}" 
-                                    onclick="switchEpisode('${episode.streamingUrl}', '${escapeHtml(currentSeries.name)}', ${season.seasonNumber}, ${episode.episodeNumber}, '${escapeHtml(episode.title)}')">
-                                E${episode.episodeNumber}: ${escapeHtml(episode.title)}
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function switchEpisode(url, seriesName, seasonNumber, episodeNumber, episodeTitle) {
-            const player = document.getElementById('videoPlayer');
-            const playerTitle = document.getElementById('playerTitle');
-            
-            player.src = url;
-            playerTitle.textContent = `${seriesName} - S${seasonNumber}E${episodeNumber}: ${episodeTitle}`;
-            
-            // Update active episode button
-            document.querySelectorAll('.episode-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            player.play().catch(e => {
-                console.error('Error playing video:', e);
-                alert('Error playing video. Please check the streaming URL or try again later.');
-            });
-        }
-
-        function closePlayer() {
-            const modal = document.getElementById('videoModal');
-            const player = document.getElementById('videoPlayer');
-            
-            player.pause();
-            player.src = '';
-            modal.style.display = 'none';
-            currentSeries = null;
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            // Global shortcuts
-            if (e.key === 'Escape') {
-                const modal = document.getElementById('videoModal');
-                if (modal.style.display === 'flex') {
-                    closePlayer();
-                }
-            }
-            
-            // Search shortcut (Ctrl/Cmd + K)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-                e.preventDefault();
-                document.getElementById('searchInput').focus();
-            }
-            
-            // Space bar to play/pause (when video player is focused or modal is open)
-            if (e.key === ' ') {
-                const modal = document.getElementById('videoModal');
-                if (modal.style.display === 'flex') {
-                    e.preventDefault();
-                    const player = document.getElementById('videoPlayer');
-                    if (player.paused) {
-                        player.play();
-                    } else {
-                        player.pause();
-                    }
-                }
-            }
-        });
-
-        // Handle video player events
-        const videoPlayer = document.getElementById('videoPlayer');
-        
-        videoPlayer.addEventListener('error', (e) => {
-            console.error('Video playback error:', e);
-            alert('Error loading video. The streaming URL might be invalid or the server is not responding.');
-        });
-
-        videoPlayer.addEventListener('loadstart', () => {
-            console.log('Video loading started...');
-        });
-
-        videoPlayer.addEventListener('canplay', () => {
-            console.log('Video ready to play');
-        });
-
-        // Auto-hide mouse cursor during video playback
-        let mouseTimer;
-        const playerContainer = document.querySelector('.player-container');
-        
-        playerContainer.addEventListener('mousemove', () => {
-            playerContainer.style.cursor = 'default';
-            clearTimeout(mouseTimer);
-            mouseTimer = setTimeout(() => {
-                if (document.getElementById('videoModal').style.display === 'flex' && !videoPlayer.paused) {
-                    playerContainer.style.cursor = 'none';
-                }
-            }, 3000);
-        });
-
-        playerContainer.addEventListener('mouseleave', () => {
-            if (document.getElementById('videoModal').style.display === 'flex' && !videoPlayer.paused) {
-                playerContainer.style.cursor = 'none';
-            }
-        });
-
-        // Prevent context menu on video
-        videoPlayer.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-        });
-
-        // Handle fullscreen changes
-        document.addEventListener('fullscreenchange', () => {
-            const player = document.getElementById('videoPlayer');
-            if (document.fullscreenElement) {
-                player.style.height = '100vh';
-                player.style.maxHeight = 'none';
-            } else {
-                player.style.height = 'auto';
-                player.style.maxHeight = '70vh';
-            }
-        });
-
-        // Debounced window resize handler for responsive design
-        let resizeTimer;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(() => {
-                // Recalculate layout if needed
-                const modal = document.getElementById('videoModal');
-                if (modal.style.display === 'flex') {
-                    // Adjust player size on resize
-                    const player = document.getElementById('videoPlayer');
-                    player.style.maxHeight = '70vh';
-                }
-            }, 250);
-        });
-
-        // Performance optimization: lazy load images
-        function setupLazyLoading() {
-            if ('IntersectionObserver' in window) {
-                const imageObserver = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        if (entry.isIntersecting) {
-                            const img = entry.target;
-                            img.src = img.dataset.src;
-                            img.classList.remove('lazy');
-                            imageObserver.unobserve(img);
-                        }
+                if (dataToRender.length > 0) {
+                    dataToRender.forEach(item => {
+                        const card = createMediaCard(item, type);
+                        mediaGrid.appendChild(card);
                     });
-                });
+                } else {
+                    mediaGrid.innerHTML = emptyMessage;
+                }
+            };
 
-                document.querySelectorAll('img[data-src]').forEach(img => {
-                    imageObserver.observe(img);
-                });
-            }
-        }
+            // Function to handle tab switching
+            const switchTab = (tab) => {
+                activeTab = tab;
+                if (tab === 'movies') {
+                    moviesTab.classList.add('text-white', 'border-b-2', 'border-teal-400');
+                    seriesTab.classList.remove('text-white', 'border-b-2', 'border-purple-400');
+                    seriesTab.classList.add('text-gray-400', 'hover:text-gray-200');
+                } else {
+                    seriesTab.classList.add('text-white', 'border-b-2', 'border-purple-400');
+                    moviesTab.classList.remove('text-white', 'border-b-2', 'border-teal-400');
+                    moviesTab.classList.add('text-gray-400', 'hover:text-gray-200');
+                }
+                renderContent();
+            };
 
-        // Initialize lazy loading after content is loaded
-        setTimeout(setupLazyLoading, 1000);
+            // Add event listeners for the tabs
+            moviesTab.addEventListener('click', () => switchTab('movies'));
+            seriesTab.addEventListener('click', () => switchTab('series'));
 
-        // Error handling for network issues
-        window.addEventListener('online', () => {
-            console.log('Connection restored');
+            // Initial data fetch
+            fetchData();
         });
-
-        window.addEventListener('offline', () => {
-            console.log('Connection lost');
-            alert('Internet connection lost. Some features may not work properly.');
-        });
-
-        // Analytics and usage tracking (basic)
-        function trackSearch(query, resultCount) {
-            console.log(`Search performed: "${query}" - ${resultCount} results`);
-            // You can integrate with analytics services here
-        }
-
-        function trackVideoPlay(title, type) {
-            console.log(`Video played: ${title} (${type})`);
-            // You can integrate with analytics services here
-        }
-
-        // Update search function to include tracking
-        const originalPerformSearch = performSearch;
-        performSearch = function(query) {
-            originalPerformSearch(query);
-            trackSearch(query, searchResults.length);
-        };
-
-        // Update video play function to include tracking
-        const originalPlayVideo = playVideo;
-        playVideo = function(url, title, type) {
-            originalPlayVideo(url, title, type);
-            trackVideoPlay(title, type);
-        };
     </script>
 </body>
 </html>

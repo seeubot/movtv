@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         body {
@@ -34,12 +35,21 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #8b5cf6;
         }
+        .plyr--full-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background-color: black;
+        }
     </style>
 </head>
 <body class="bg-zinc-900 text-white min-h-screen antialiased">
     <div id="root">
         <!-- Header -->
-        <header class="sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-lg border-b border-zinc-700 p-4 flex items-center justify-between">
+        <header id="header" class="sticky top-0 z-50 bg-zinc-900/80 backdrop-blur-lg border-b border-zinc-700 p-4 flex items-center justify-between">
             <h1 class="text-2xl sm:text-3xl font-bold text-violet-400 tracking-wider">Media Manager</h1>
         </header>
 
@@ -49,6 +59,8 @@
         </main>
     </div>
 
+    <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8"></script>
     <script>
         const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
 
@@ -63,6 +75,7 @@
 
         // --- DOM ELEMENTS ---
         const appContainer = document.getElementById('app-container');
+        const header = document.getElementById('header');
 
         // --- HELPER FUNCTIONS ---
         function createIcon(svgString, classes) {
@@ -108,7 +121,7 @@
         async function fetchContent(query) {
             if (query.length < 3) {
                 content = [];
-                renderContentGrid(); // Only re-render the content grid
+                renderContentGrid();
                 return;
             }
 
@@ -150,7 +163,8 @@
         async function fetchSeriesDetails(seriesId) {
             isLoading = true;
             error = null;
-            appContainer.innerHTML = renderLoading(); // Clear content and show loader
+            appContainer.innerHTML = '';
+            renderLoading();
             try {
                 const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
                 if (!response.ok) {
@@ -197,7 +211,7 @@
                 searchQuery = e.target.value;
                 fetchContent(searchQuery);
             });
-            renderContentGrid(); // Initial render of the content grid section
+            renderContentGrid();
         }
 
         function renderContentGrid() {
@@ -287,11 +301,11 @@
                 seasonDiv.innerHTML = `<h4 class="text-xl font-bold text-gray-100 mb-2">Season ${season.seasonNumber}</h4>`;
                 
                 const episodesList = document.createElement('div');
-                episodesList.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2';
+                episodesList.className = 'grid grid-cols-1 md:grid-cols-2 gap-2';
 
                 season.episodes.sort((a,b) => a.episodeNumber - b.episodeNumber).forEach(episode => {
                     const episodeDiv = document.createElement('div');
-                    episodeDiv.className = 'flex items-center gap-2 p-3 bg-zinc-700 rounded-lg hover:bg-violet-600 cursor-pointer transition-colors';
+                    episodeDiv.className = 'flex items-center gap-4 p-3 bg-zinc-700 rounded-lg hover:bg-violet-600 cursor-pointer transition-colors';
                     episodeDiv.dataset.type = 'episode';
                     episodeDiv.dataset.id = episode._id;
                     episodeDiv.dataset.streamingUrl = episode.streamingUrl;
@@ -301,10 +315,12 @@
 
                     episodeDiv.innerHTML = `
                         <div class="flex-shrink-0 text-violet-300">
-                            ${icons.play}
+                            <div class="w-10 h-10 flex items-center justify-center rounded-full bg-violet-500/20">
+                                ${icons.play}
+                            </div>
                         </div>
                         <div class="flex-grow">
-                            <p class="font-semibold text-gray-200 truncate">E${episode.episodeNumber}: ${episode.title}</p>
+                            <p class="font-semibold text-gray-200">E${episode.episodeNumber}: ${episode.title}</p>
                         </div>
                     `;
                     episodesList.appendChild(episodeDiv);
@@ -334,18 +350,18 @@
             const currentSeason = isSeries ? selectedSeries.seasons.find(s => s.seasonNumber == selectedContent.seasonId) : null;
             const currentEpisodes = currentSeason ? currentSeason.episodes.sort((a,b) => a.episodeNumber - b.episodeNumber) : [];
 
+            // Hide the header for the player view
+            header.classList.add('hidden');
+
             appContainer.innerHTML = `
-                <div class="flex flex-col lg:flex-row gap-4 p-4 sm:p-8">
-                    <div class="flex-grow">
-                        <div class="w-full rounded-lg overflow-hidden shadow-2xl bg-black">
-                            <div class="relative pb-[56.25%]">
-                                <video id="video-player" controls autoplay class="absolute inset-0 w-full h-full object-contain">
-                                    <source src="${selectedContent.streamingUrl}" type="video/mp4">
-                                    <p class="text-red-400 p-4 absolute inset-0 flex items-center justify-center">Your video failed to load or is not supported. Please check the URL.</p>
-                                </video>
-                            </div>
+                <div class="flex flex-col lg:flex-row gap-4 p-0 md:p-8 w-full h-full">
+                    <div class="flex-grow flex-col">
+                        <div class="w-full h-auto lg:h-[75vh] rounded-lg overflow-hidden shadow-2xl bg-black">
+                            <video id="video-player" class="plyr" controls autoplay>
+                                <source src="${selectedContent.streamingUrl}" type="video/mp4">
+                            </video>
                         </div>
-                        <div class="mt-6">
+                        <div class="mt-6 p-4 md:p-0">
                             <button id="back-button" class="mb-4 py-2 px-4 rounded-full bg-zinc-700 text-white hover:bg-violet-600 transition-colors flex items-center gap-2">
                                 ${icons.x}
                                 Back to ${isSeries ? 'Series' : 'Search'}
@@ -375,8 +391,30 @@
                     </div>` : ''}
                 </div>
             `;
-
+            
+            // Initialize Plyr and HLS
+            const video = document.getElementById('video-player');
+            let plyr;
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(selectedContent.streamingUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    plyr = new Plyr(video);
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = selectedContent.streamingUrl;
+                plyr = new Plyr(video);
+            } else {
+                plyr = new Plyr(video);
+            }
+            
             document.getElementById('back-button').addEventListener('click', () => {
+                // Destroy the Plyr instance before leaving the page
+                if (plyr) {
+                    plyr.destroy();
+                }
+                header.classList.remove('hidden');
                 view = isSeries ? 'series' : 'home';
                 selectedContent = null;
                 render();
@@ -385,6 +423,9 @@
 
         // --- MAIN RENDER FUNCTION ---
         function render() {
+            if (view !== 'player') {
+                header.classList.remove('hidden');
+            }
             if (isLoading) {
                 renderLoading();
             } else if (error) {

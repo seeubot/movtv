@@ -1,3 +1,5 @@
+// This file contains the main logic for the Telegram bot and Express API.
+
 require('dotenv').config();
 
 const TelegramBot = require('node-telegram-bot-api');
@@ -147,6 +149,7 @@ const getMainMenuKeyboard = () => ({
 });
 
 // Helper function to extract IDs safely
+// This function is still useful for general purpose, but we will use a more direct method for the problematic cases.
 const extractId = (data, prefix) => {
   if (data.startsWith(prefix)) {
     return data.substring(prefix.length);
@@ -390,8 +393,12 @@ bot.on('callback_query', async (callbackQuery) => {
             await bot.sendMessage(chatId, '❌ Invalid edit option.', getMainMenuKeyboard());
             break;
         }
+    // FIX: The callback query for editing episodes was passing the wrong value.
+    // The previous code would try to find a series with an ID that included "episodes_".
+    // We now correctly extract just the ObjectId from the data string.
     } else if (data.startsWith('edit_series_episodes_')) {
-      const seriesId = extractId(data, 'edit_series_episodes_');
+      // Use string splitting to ensure we get a clean ObjectId
+      const seriesId = data.split('_').pop();
       const series = await Series.findById(seriesId);
       if (!series) {
         await bot.sendMessage(chatId, '❌ Series not found. Please try again.', getMainMenuKeyboard());

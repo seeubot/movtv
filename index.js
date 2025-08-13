@@ -175,6 +175,8 @@ bot.on('message', async (msg) => {
 
   try {
     if (text === '/start') {
+      userStates.delete(chatId);
+      tempData.delete(chatId);
       await bot.sendMessage(chatId, 
         '🎭 *Welcome to Media Manager Bot!*\n\n' +
         '🎬 Add and manage your movies\n' +
@@ -190,9 +192,9 @@ bot.on('message', async (msg) => {
     } else if (text === '📺 Add Series') {
       const seriesList = await Series.find({}, 'name').limit(20);
       if (seriesList.length > 0) {
-        const seriesKeyboard = seriesList.map(s => [{ text: s.name, callback_data: `add_to_series_${s._id}` }]);
+        const seriesKeyboard = seriesList.map(s => [{ text: s.name, callback_data: `add_new_season_to_series_${s._id}` }]);
         seriesKeyboard.push([{ text: '➕ Create New Series', callback_data: 'create_new_series' }]);
-        await bot.sendMessage(chatId, '📺 Choose a series to add episodes to, or create a new one:', {
+        await bot.sendMessage(chatId, '📺 Choose a series to add seasons/episodes to, or create a new one:', {
           reply_markup: { inline_keyboard: seriesKeyboard }
         });
       } else {
@@ -262,6 +264,8 @@ bot.on('message', async (msg) => {
   } catch (error) {
     console.error('❌ Error handling message:', error);
     await bot.sendMessage(chatId, '❌ An error occurred. Please try again or use /start to restart.', getMainMenuKeyboard());
+    userStates.delete(chatId);
+    tempData.delete(chatId);
   }
 });
 
@@ -274,19 +278,19 @@ bot.on('callback_query', async (callbackQuery) => {
   console.log(`🔘 Callback query: ${data}`);
 
   try {
-    if (data.startsWith('add_to_series_')) {
-      const seriesId = data.replace('add_to_series_', '');
+    if (data.startsWith('add_new_season_to_series_')) {
+      const seriesId = data.replace('add_new_season_to_series_', '');
       const series = await Series.findById(seriesId);
       if (series) {
-        tempData.set(chatId, { 
-          type: 'series', 
-          seriesId: seriesId, 
-          name: series.name, 
-          thumbnail: series.thumbnail, 
-          seasons: [...series.seasons] 
+        tempData.set(chatId, {
+          type: 'series',
+          seriesId: seriesId,
+          name: series.name,
+          thumbnail: series.thumbnail,
+          seasons: [...series.seasons]
         });
-        userStates.set(chatId, 'adding_season_number_existing');
-        await bot.sendMessage(chatId, `📺 Adding to "${series.name}"\n\n🔢 Enter the season number:`, { reply_markup: { remove_keyboard: true } });
+        userStates.set(chatId, 'adding_season_number_for_existing_series');
+        await bot.sendMessage(chatId, `📺 Adding to "${series.name}"\n\n🔢 Enter the new season number:`, { reply_markup: { remove_keyboard: true } });
       }
     } else if (data === 'create_new_series') {
       userStates.set(chatId, 'adding_series_name');
@@ -412,20 +416,56 @@ bot.on('callback_query', async (callbackQuery) => {
       }
       
       const series = await Series.findById(userData.seriesId);
-      if (!series || series.seasons.length === 0) {
-        await bot.sendMessage(chatId, '❌ No seasons found. Add a season first.', getMainMenuKeyboard());
+      if (!series) {
+        await bot.sendMessage(chatId, '❌ Series not found. Please try again.', getMainMenuKeyboard());
         return;
       }
-      const seasonKeyboard = series.seasons.map(s => [
-        { text: `Season ${s.seasonNumber}`, callback_data: `add_to_series_${series._id}` }
-      ]);
-      await bot.sendMessage(chatId, '📺 Select a season to manage episodes:', {
-        reply_markup: { inline_keyboard: seasonKeyboard }
+      
+      let keyboard = [];
+      if (series.seasons && series.seasons.length > 0) {
+        keyboard = series.seasons.map(s => [
+          { text: `Season ${s.seasonNumber}`, callback_data: `select_season_${series._id}_${s.seasonNumber}` }
+        ]);
+      }
+      keyboard.push([{ text: '➕ Add New Season', callback_data: `add_new_season_to_series_${series._id}` }]);
+      
+      await bot.sendMessage(chatId, '📺 *Select a season to add episodes to, or add a new season:*', {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard }
       });
+    } else if (data.startsWith('select_season_')) {
+        const parts = data.split('_');
+        const seriesId = parts[2];
+        const seasonNumber = parseInt(parts[3]);
+        
+        const series = await Series.findById(seriesId);
+        if (!series) {
+          await bot.sendMessage(chatId, '❌ Series not found. Please try again.', getMainMenuKeyboard());
+          return;
+        }
+        
+        const selectedSeason = series.seasons.find(s => s.seasonNumber === seasonNumber);
+        if (!selectedSeason) {
+            await bot.sendMessage(chatId, '❌ Season not found. Please try again.', getMainMenuKeyboard());
+            return;
+        }
+        
+        // Use the existing series data and set the current season
+        tempData.set(chatId, {
+            type: 'series',
+            seriesId: seriesId,
+            name: series.name,
+            thumbnail: series.thumbnail,
+            seasons: series.seasons,
+            currentSeason: selectedSeason
+        });
+        
+        userStates.set(chatId, 'adding_episode_to_existing_season');
+        await bot.sendMessage(chatId, `📺 Adding to Series "${series.name}", Season ${seasonNumber}.\n\n🔢 Enter episode number:`, { reply_markup: { remove_keyboard: true } });
     } else if (data === 'add_another_episode') {
       const userData = tempData.get(chatId);
       if (userData && userData.currentSeason) {
-        userStates.set(chatId, 'adding_episode_number');
+        userStates.set(chatId, 'adding_episode_number_to_existing_season'); // Use the more specific state
         await bot.sendMessage(chatId, `📺 Season ${userData.currentSeason.seasonNumber} - Enter next episode number:`);
       }
     } else if (data === 'add_new_season') {
@@ -433,16 +473,20 @@ bot.on('callback_query', async (callbackQuery) => {
       await bot.sendMessage(chatId, '🔢 Enter new season number:');
     } else if (data === 'finish_series') {
       const userData = tempData.get(chatId);
-      if (userData && userData.seriesId) {
-        try {
+      if (!userData || !userData.type === 'series') {
+          await bot.sendMessage(chatId, '❌ No series in progress. Please start over.', getMainMenuKeyboard());
+          userStates.delete(chatId);
+          tempData.delete(chatId);
+          return;
+      }
+      
+      try {
+        if (userData.seriesId) {
+          // Existing series - update seasons
           await Series.findByIdAndUpdate(userData.seriesId, { seasons: userData.seasons });
-          await bot.sendMessage(chatId, `✅ Episodes added to "${userData.name}" successfully!`, getMainMenuKeyboard());
-        } catch (error) {
-          console.error('Error saving series:', error);
-          await bot.sendMessage(chatId, '❌ Error saving series. Please try again.', getMainMenuKeyboard());
-        }
-      } else if (userData) {
-        try {
+          await bot.sendMessage(chatId, `✅ Series "${userData.name}" updated successfully!`, getMainMenuKeyboard());
+        } else {
+          // New series - create
           const series = new Series({ 
             name: userData.name,
             thumbnail: userData.thumbnail,
@@ -451,10 +495,10 @@ bot.on('callback_query', async (callbackQuery) => {
           });
           await series.save();
           await bot.sendMessage(chatId, `✅ Series "${userData.name}" created with ${userData.seasons.length} season(s)!`, getMainMenuKeyboard());
-        } catch (error) {
-          console.error('Error saving series:', error);
-          await bot.sendMessage(chatId, '❌ Error saving series. Please try again.', getMainMenuKeyboard());
         }
+      } catch (error) {
+        console.error('Error saving series:', error);
+        await bot.sendMessage(chatId, '❌ Error saving series. Please try again.', getMainMenuKeyboard());
       }
       userStates.delete(chatId);
       tempData.delete(chatId);
@@ -517,7 +561,7 @@ async function handleConversationFlow(chatId, text, userId) {
         await bot.sendMessage(chatId, '🔢 Enter season number:');
         break;
       
-      case 'adding_season_number_existing':
+      case 'adding_season_number_for_existing_series':
       case 'adding_season_number':
         const seasonNumber = parseInt(text.trim());
         if (isNaN(seasonNumber) || seasonNumber <= 0) {
@@ -527,15 +571,16 @@ async function handleConversationFlow(chatId, text, userId) {
         
         const existingSeason = data.seasons.find(s => s.seasonNumber === seasonNumber);
         if (existingSeason) {
-          data.currentSeason = existingSeason;
-        } else {
-          data.currentSeason = { seasonNumber, episodes: [] };
+          await bot.sendMessage(chatId, '⚠️ This season already exists. Please enter a different season number.');
+          return;
         }
         
+        data.currentSeason = { seasonNumber, episodes: [] };
         userStates.set(chatId, 'adding_episode_number');
         await bot.sendMessage(chatId, `📺 Season ${seasonNumber} - Enter episode number:`);
         break;
       
+      case 'adding_episode_to_existing_season':
       case 'adding_episode_number':
         const episodeNumber = parseInt(text.trim());
         if (isNaN(episodeNumber) || episodeNumber <= 0) {
@@ -550,13 +595,13 @@ async function handleConversationFlow(chatId, text, userId) {
         }
         
         data.currentEpisode = { episodeNumber };
-        userStates.set(chatId, 'adding_episode_title');
+        userStates.set(chatId, `adding_episode_title`); // Set a new state for the title
         await bot.sendMessage(chatId, `📺 S${data.currentSeason.seasonNumber}E${episodeNumber} - Enter episode title:`);
         break;
-
+        
       case 'adding_episode_title':
         data.currentEpisode.title = text.trim();
-        userStates.set(chatId, 'adding_episode_url');
+        userStates.set(chatId, `adding_episode_url`);
         await bot.sendMessage(chatId, '🔗 Enter episode streaming URL:');
         break;
 
@@ -581,7 +626,7 @@ async function handleConversationFlow(chatId, text, userId) {
             reply_markup: {
               inline_keyboard: [
                 [{ text: '➕ Add Another Episode', callback_data: 'add_another_episode' }],
-                [{ text: '🔢 Add New Season', callback_data: 'add_new_season' }],
+                [{ text: '🔢 Add New Season', callback_data: `add_new_season_to_series_${data.seriesId}` }],
                 [{ text: '✅ Finish Series', callback_data: 'finish_series' }]
               ]
             }

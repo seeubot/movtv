@@ -514,7 +514,7 @@
     </div>
 
     <script>
-        // Configuration - This will be replaced by the server
+        // Configuration - This has been updated to your new API
         const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
         
         let allMovies = [];
@@ -604,14 +604,11 @@
             document.getElementById(sectionId).classList.add('active');
         }
 
-        // Simulating API calls to fetch data
+        // Fetching data from the new API endpoint
         async function loadMovies() {
             try {
-                // Mock data instead of fetch
-                allMovies = [
-                    { _id: 'm1', name: 'Interstellar', thumbnail: 'https://placehold.co/280x180/4ecdc4/ffffff?text=Interstellar', streamingUrl: 'https://cdn.glitch.me/cbf0076a-5437-4d9f-972c-d6980315a6b0/interstellar-clip.mp4?v=1630129200000' },
-                    { _id: 'm2', name: 'The Martian', thumbnail: 'https://placehold.co/280x180/45b7d1/ffffff?text=The+Martian', streamingUrl: 'https://cdn.glitch.me/cbf0076a-5437-4d9f-972c-d6980315a6b0/the-martian-clip.mp4?v=1630129200000' }
-                ];
+                const response = await fetch(`${API_BASE_URL}/movies`);
+                allMovies = await response.json();
                 displayContent(allMovies, document.getElementById('moviesGrid'), 'movie');
             } catch (error) {
                 console.error('Error loading movies:', error);
@@ -620,37 +617,8 @@
 
         async function loadSeries() {
             try {
-                // Mock data instead of fetch
-                allSeries = [
-                    { 
-                        _id: 's1', 
-                        name: 'Breaking Bad', 
-                        thumbnail: 'https://placehold.co/280x180/96ceb4/ffffff?text=Breaking+Bad',
-                        seasons: [
-                            {
-                                seasonNumber: 1,
-                                episodes: [
-                                    { episodeNumber: 1, title: 'Pilot', streamingUrl: 'https://cdn.glitch.me/cbf0076a-5437-4d9f-972c-d6980315a6b0/pilot.mp4?v=1630129200000' },
-                                    { episodeNumber: 2, title: 'Cat\'s in the Bag...', streamingUrl: 'https://cdn.glitch.me/cbf0076a-5437-4d9f-972c-d6980315a6b0/cats-in-the-bag.mp4?v=1630129200000' }
-                                ]
-                            }
-                        ]
-                    },
-                    { 
-                        _id: 's2', 
-                        name: 'The Office', 
-                        thumbnail: 'https://placehold.co/280x180/ff6b6b/ffffff?text=The+Office',
-                        seasons: [
-                            {
-                                seasonNumber: 1,
-                                episodes: [
-                                    { episodeNumber: 1, title: 'Pilot', streamingUrl: 'https://cdn.glitch.me/cbf0076a-5437-4d9f-972c-d6980315a6b0/office-pilot.mp4?v=1630129200000' },
-                                    { episodeNumber: 2, title: 'Diversity Day', streamingUrl: 'https://cdn.glitch.me/cbf0076a-5437-4d9f-972c-d6980315a6b0/office-diversity.mp4?v=1630129200000' }
-                                ]
-                            }
-                        ]
-                    }
-                ];
+                const response = await fetch(`${API_BASE_URL}/series`);
+                allSeries = await response.json();
                 displayContent(allSeries, document.getElementById('seriesGrid'), 'series');
             } catch (error) {
                 console.error('Error loading series:', error);
@@ -769,16 +737,21 @@
         }
 
         async function loadSeriesDetails(seriesId) {
-            currentSeries = allSeries.find(s => s._id === seriesId);
-            
-            if (currentSeries && currentSeries.seasons && currentSeries.seasons.length > 0 && 
-                currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
-                const firstEpisode = currentSeries.seasons[0].episodes[0];
-                playVideo(firstEpisode.streamingUrl, 
-                         `${currentSeries.name} - S${currentSeries.seasons[0].seasonNumber}E${firstEpisode.episodeNumber}: ${firstEpisode.title}`, 
-                         'series');
-            } else {
-                console.error('No episodes available for this series.');
+            try {
+                const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
+                currentSeries = await response.json();
+                
+                if (currentSeries && currentSeries.seasons && currentSeries.seasons.length > 0 && 
+                    currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
+                    const firstEpisode = currentSeries.seasons[0].episodes[0];
+                    playVideo(firstEpisode.streamingUrl, 
+                             `${currentSeries.name} - S${currentSeries.seasons[0].seasonNumber}E${firstEpisode.episodeNumber}: ${firstEpisode.title}`, 
+                             'series');
+                } else {
+                    console.error('No episodes available for this series.');
+                }
+            } catch (error) {
+                console.error('Error loading series details:', error);
             }
         }
         

@@ -21,28 +21,36 @@
             transform: scale(1.05);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
+        .modal {
+            background-color: rgba(0, 0, 0, 0.75);
+        }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 min-h-screen">
+<body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center">
 
-    <div class="container mx-auto p-4 md:p-8">
+    <div class="container mx-auto p-4 md:p-8 flex-grow">
 
         <!-- Header Section -->
         <header class="flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8">
             <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
-            <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0">
+            <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0 hidden">
                 <!-- Stats will be dynamically injected here by JavaScript -->
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <div class="flex space-x-4 mb-8 border-b border-gray-700">
-            <button id="movies-tab" class="tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
-            <button id="series-tab" class="tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
+        <!-- Search Bar Section -->
+        <div id="search-container" class="flex justify-center my-12 w-full">
+            <input type="text" id="search-input" placeholder="Search for movies or series..." class="w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
         </div>
 
         <!-- Main Content Area -->
-        <div id="content-area">
+        <div id="content-area" class="hidden">
+            <!-- Navigation Tabs -->
+            <div class="flex space-x-4 mb-8 border-b border-gray-700">
+                <button id="movies-tab" class="tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
+                <button id="series-tab" class="tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
+            </div>
+
             <!-- Loading and Error messages -->
             <div id="loading-message" class="flex items-center justify-center py-12">
                 <p class="text-xl font-medium">Loading data...</p>
@@ -58,6 +66,16 @@
 
     </div>
 
+    <!-- Episode Modal -->
+    <div id="episode-modal" class="modal fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="modal-content bg-gray-800 text-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto relative">
+            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+            <div id="modal-body">
+                <!-- Episode details will be dynamically injected here -->
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript for fetching data and rendering the UI -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -65,71 +83,105 @@
             const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
 
             // DOM elements
+            const searchInput = document.getElementById('search-input');
+            const statsContainer = document.getElementById('stats-container');
+            const contentArea = document.getElementById('content-area');
             const loadingMessage = document.getElementById('loading-message');
             const errorMessage = document.getElementById('error-message');
             const mediaGrid = document.getElementById('media-grid');
-            const statsContainer = document.getElementById('stats-container');
             const moviesTab = document.getElementById('movies-tab');
             const seriesTab = document.getElementById('series-tab');
+            const episodeModal = document.getElementById('episode-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const modalBody = document.getElementById('modal-body');
 
             // Store the fetched data
-            let movies = [];
-            let series = [];
+            let allMovies = [];
+            let allSeries = [];
             let stats = {};
 
             // Initial active tab
             let activeTab = 'movies';
 
-            // Function to fetch data from all endpoints concurrently
-            const fetchData = async () => {
-                loadingMessage.classList.remove('hidden');
-                errorMessage.classList.add('hidden');
-                mediaGrid.innerHTML = '';
-
+            // Function to fetch all data
+            const fetchAllData = async () => {
                 try {
-                    // Use Promise.all to make all three API calls at the same time
                     const [moviesResponse, seriesResponse, statsResponse] = await Promise.all([
                         fetch(`${API_BASE_URL}/movies`),
                         fetch(`${API_BASE_URL}/series`),
                         fetch(`${API_BASE_URL}/stats`)
                     ]);
-
-                    // Check if responses are OK before parsing
+                    
                     if (!moviesResponse.ok || !seriesResponse.ok || !statsResponse.ok) {
                         throw new Error('One or more API responses were not successful.');
                     }
 
-                    // Parse JSON data
-                    movies = await moviesResponse.json();
-                    series = await seriesResponse.json();
+                    allMovies = await moviesResponse.json();
+                    allSeries = await seriesResponse.json();
                     stats = await statsResponse.json();
-
-                    // Render the initial content
-                    updateStats();
-                    renderContent();
+                    updateStats(stats);
 
                 } catch (e) {
                     console.error("Failed to fetch data:", e);
                     errorMessage.classList.remove('hidden');
-                } finally {
-                    // Hide loading message once all operations are complete
-                    loadingMessage.classList.add('hidden');
                 }
+            };
+            
+            // Function to handle search input
+            const handleSearch = async () => {
+                const query = searchInput.value.toLowerCase().trim();
+
+                // Do nothing until at least 3 characters are typed
+                if (query.length < 3) {
+                    contentArea.classList.add('hidden');
+                    statsContainer.classList.add('hidden');
+                    mediaGrid.innerHTML = '';
+                    return;
+                }
+
+                // Show content area and loading message
+                contentArea.classList.remove('hidden');
+                statsContainer.classList.remove('hidden');
+                loadingMessage.classList.remove('hidden');
+                mediaGrid.innerHTML = '';
+                errorMessage.classList.add('hidden');
+
+                // If data hasn't been fetched yet, fetch it.
+                if (allMovies.length === 0 && allSeries.length === 0) {
+                    await fetchAllData();
+                }
+
+                loadingMessage.classList.add('hidden');
+
+                // Filter the fetched data based on the query
+                const filteredMovies = allMovies.filter(movie => movie.name.toLowerCase().includes(query));
+                const filteredSeries = allSeries.filter(series => series.name.toLowerCase().includes(query));
+                
+                // Update stats based on filtered data
+                const filteredStats = {
+                    movies: filteredMovies.length,
+                    series: filteredSeries.length,
+                    episodes: filteredSeries.reduce((total, series) => total + (series.seasons?.length || 0), 0) // Simplified episode count
+                };
+                updateStats(filteredStats);
+
+                // Render the filtered content
+                renderContent(filteredMovies, filteredSeries);
             };
 
             // Function to update the stats in the header
-            const updateStats = () => {
+            const updateStats = (currentStats) => {
                 statsContainer.innerHTML = `
                     <div class="flex flex-col items-center">
-                        <span class="text-2xl font-bold text-teal-400">${stats.movies}</span>
+                        <span class="text-2xl font-bold text-teal-400">${currentStats.movies}</span>
                         <span class="text-sm text-gray-400">Movies</span>
                     </div>
                     <div class="flex flex-col items-center">
-                        <span class="text-2xl font-bold text-purple-400">${stats.series}</span>
+                        <span class="text-2xl font-bold text-purple-400">${currentStats.series}</span>
                         <span class="text-sm text-gray-400">Series</span>
                     </div>
                     <div class="flex flex-col items-center">
-                        <span class="text-2xl font-bold text-orange-400">${stats.episodes}</span>
+                        <span class="text-2xl font-bold text-orange-400">${currentStats.episodes}</span>
                         <span class="text-sm text-gray-400">Episodes</span>
                     </div>
                 `;
@@ -138,7 +190,7 @@
             // Function to render a single media card element
             const createMediaCard = (item, type) => {
                 const card = document.createElement('div');
-                card.className = 'media-card relative w-full overflow-hidden bg-gray-800 rounded-2xl shadow-xl';
+                card.className = 'media-card relative w-full overflow-hidden bg-gray-800 rounded-2xl shadow-xl cursor-pointer';
 
                 const thumbnail = item.thumbnail || 'https://placehold.co/400x600/1f2937/d1d5db?text=No+Image';
                 const seasonsInfo = type === 'series' && item.seasons
@@ -152,18 +204,24 @@
                         ${seasonsInfo}
                     </div>
                 `;
+
+                // Add click event for series to show episodes
+                if (type === 'series') {
+                    card.addEventListener('click', () => showEpisodes(item._id, item.name));
+                }
+
                 return card;
             };
 
             // Function to render the media content based on the active tab
-            const renderContent = () => {
+            const renderContent = (moviesToRender, seriesToRender) => {
                 mediaGrid.innerHTML = ''; // Clear previous content
 
-                const dataToRender = activeTab === 'movies' ? movies : series;
+                const dataToRender = activeTab === 'movies' ? moviesToRender : seriesToRender;
                 const type = activeTab === 'movies' ? 'movie' : 'series';
                 const emptyMessage = `
                     <div class="col-span-full text-center text-gray-500 text-lg py-12">
-                        No ${activeTab} found. Add some from the Telegram bot!
+                        No ${activeTab} found for this search query.
                     </div>
                 `;
 
@@ -174,6 +232,38 @@
                     });
                 } else {
                     mediaGrid.innerHTML = emptyMessage;
+                }
+            };
+
+            // Function to fetch and display episodes for a series
+            const showEpisodes = async (seriesId, seriesName) => {
+                modalBody.innerHTML = `<p class="text-center text-gray-400">Loading episodes for ${seriesName}...</p>`;
+                episodeModal.classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch series details.');
+                    }
+                    const seriesDetails = await response.json();
+                    
+                    const episodesHtml = seriesDetails.seasons.map(season => {
+                        const seasonHtml = season.episodes.map(episode => `
+                            <li class="p-2 border-b border-gray-700 last:border-b-0">${episode.name || 'Untitled Episode'}</li>
+                        `).join('');
+                        return `
+                            <h4 class="text-xl font-bold mt-4 mb-2">Season ${season.seasonNumber}</h4>
+                            <ul class="list-disc list-inside space-y-1">${seasonHtml}</ul>
+                        `;
+                    }).join('');
+
+                    modalBody.innerHTML = `
+                        <h3 class="text-3xl font-bold text-white mb-4">${seriesName} Episodes</h3>
+                        ${episodesHtml}
+                    `;
+                } catch (e) {
+                    console.error("Error fetching episodes:", e);
+                    modalBody.innerHTML = `<p class="text-center text-red-400">Failed to load episodes.</p>`;
                 }
             };
 
@@ -189,15 +279,26 @@
                     moviesTab.classList.remove('text-white', 'border-b-2', 'border-teal-400');
                     moviesTab.classList.add('text-gray-400', 'hover:text-gray-200');
                 }
-                renderContent();
+
+                // Re-render content based on the current search query
+                const query = searchInput.value.toLowerCase().trim();
+                const filteredMovies = allMovies.filter(movie => movie.name.toLowerCase().includes(query));
+                const filteredSeries = allSeries.filter(series => series.name.toLowerCase().includes(query));
+                renderContent(filteredMovies, filteredSeries);
             };
 
-            // Add event listeners for the tabs
+            // Event listeners
+            searchInput.addEventListener('input', handleSearch);
             moviesTab.addEventListener('click', () => switchTab('movies'));
             seriesTab.addEventListener('click', () => switchTab('series'));
+            closeModalBtn.addEventListener('click', () => episodeModal.classList.add('hidden'));
 
-            // Initial data fetch
-            fetchData();
+            // Close modal when clicking outside
+            episodeModal.addEventListener('click', (event) => {
+                if (event.target === episodeModal) {
+                    episodeModal.classList.add('hidden');
+                }
+            });
         });
     </script>
 </body>

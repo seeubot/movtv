@@ -17,6 +17,9 @@
       --danger: #d63031;
       --success: #00b894;
       --warning: #fdcb6e;
+      --bg-color: #1a1a2e;
+      --card-bg-color: #16213e;
+      --text-color: #f5f6fa;
     }
     
     * {
@@ -27,24 +30,30 @@
     
     body {
       font-family: 'Poppins', sans-serif;
-      background-color: #1a1a2e;
-      color: var(--light);
+      background-color: var(--bg-color);
+      color: var(--text-color);
       overflow-x: hidden;
-    }
-    
-    #app {
       display: flex;
       flex-direction: column;
       min-height: 100vh;
     }
     
+    #app {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    
     /* Header Styles */
     header {
       background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-      padding: 1rem 2rem;
+      padding: 1.5rem 2rem;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       position: relative;
       z-index: 10;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
     
     .header-container {
@@ -52,7 +61,7 @@
       justify-content: space-between;
       align-items: center;
       max-width: 1400px;
-      margin: 0 auto;
+      width: 100%;
     }
     
     .logo {
@@ -73,7 +82,6 @@
     .search-bar {
       flex-grow: 1;
       max-width: 500px;
-      margin: 0 2rem;
       position: relative;
     }
     
@@ -101,108 +109,71 @@
       color: var(--gray);
     }
     
-    .stats {
-      display: flex;
-      gap: 1.5rem;
-    }
-    
-    .stat-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .stat-item i {
-      font-size: 1.25rem;
-    }
-    
-    .stat-value {
-      font-weight: 600;
-    }
-    
-    /* Main Content Layout */
-    .main-container {
-      display: flex;
+    /* Hero Search Section */
+    .hero-search-section {
       flex: 1;
-      overflow: hidden;
-    }
-    
-    /* Sidebar Styles */
-    .sidebar {
-      width: 280px;
-      background-color: #16213e;
-      padding: 1.5rem;
-      overflow-y: auto;
-      transition: all 0.3s ease;
-      border-right: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .sidebar-toggle {
-      display: none;
-      position: fixed;
-      top: 1rem;
-      left: 1rem;
-      z-index: 100;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 1.25rem;
-      cursor: pointer;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-    }
-    
-    .sidebar-section {
-      margin-bottom: 1.5rem;
-    }
-    
-    .sidebar-title {
-      font-size: 1rem;
-      font-weight: 500;
-      color: rgba(255, 255, 255, 0.7);
-      margin-bottom: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    
-    .sidebar-menu {
-      list-style: none;
-    }
-    
-    .sidebar-menu li {
-      margin-bottom: 0.5rem;
-    }
-    
-    .sidebar-menu a {
       display: flex;
+      justify-content: center;
       align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem;
-      border-radius: 8px;
-      color: rgba(255, 255, 255, 0.8);
-      text-decoration: none;
-      transition: all 0.2s ease;
-    }
-    
-    .sidebar-menu a:hover, .sidebar-menu a.active {
-      background-color: rgba(108, 92, 231, 0.2);
-      color: white;
-    }
-    
-    .sidebar-menu a i {
-      font-size: 1.1rem;
-      width: 24px;
+      flex-direction: column;
+      padding: 2rem;
       text-align: center;
     }
     
-    /* Content Area */
+    .hero-search-section h2 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+    
+    .hero-search-section p {
+      font-size: 1.25rem;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 2rem;
+    }
+    
+    .hero-search-bar {
+      max-width: 600px;
+      width: 100%;
+      position: relative;
+    }
+    
+    .hero-search-bar input {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      border-radius: 50px;
+      border: none;
+      background-color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+    }
+    
+    .hero-search-bar input:focus {
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.5);
+      background-color: white;
+    }
+    
+    .hero-search-bar i {
+      position: absolute;
+      right: 1.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+      font-size: 1.2rem;
+    }
+    
+    /* Main Content Layout */
     .content {
       flex: 1;
       padding: 2rem;
       overflow-y: auto;
-      background-color: #1a1a2e;
+      background-color: var(--bg-color);
+      display: none; /* Initially hidden */
+    }
+    
+    .content.active {
+      display: block; /* Shown when content is loaded */
     }
     
     .content-header {
@@ -247,12 +218,13 @@
     }
     
     .media-card {
-      background: #16213e;
+      background: var(--card-bg-color);
       border-radius: 12px;
       overflow: hidden;
       transition: all 0.3s ease;
       position: relative;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
     }
     
     .media-card:hover {
@@ -380,12 +352,10 @@
     }
     
     .video-modal {
-      width: 90%;
-      max-width: 1200px;
-      background-color: #16213e;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      background-color: var(--bg-color);
       position: relative;
     }
     
@@ -396,48 +366,42 @@
       background: none;
       border: none;
       color: white;
-      font-size: 1.5rem;
+      font-size: 2rem;
       cursor: pointer;
       z-index: 10;
+      background-color: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .video-container {
       width: 100%;
-      position: relative;
-      padding-bottom: 56.25%; /* 16:9 aspect ratio */
+      height: 100%;
       background-color: black;
+      position: relative;
     }
     
     .video-player {
-      position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
       border: none;
+      object-fit: contain;
     }
     
     .video-info {
-      padding: 1.5rem;
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      z-index: 5;
     }
     
     .video-title {
       font-size: 1.5rem;
       font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
-    
-    .video-meta {
-      display: flex;
-      gap: 1rem;
-      color: rgba(255, 255, 255, 0.7);
-      margin-bottom: 1rem;
-      font-size: 0.9rem;
-    }
-    
-    .video-description {
-      line-height: 1.6;
-      color: rgba(255, 255, 255, 0.8);
     }
     
     /* Video Controls */
@@ -464,15 +428,15 @@
       background: none;
       border: none;
       color: white;
-      font-size: 1.25rem;
+      font-size: 1.5rem;
       cursor: pointer;
     }
     
     .progress-container {
       flex-grow: 1;
-      height: 6px;
+      height: 8px;
       background-color: rgba(255, 255, 255, 0.2);
-      border-radius: 3px;
+      border-radius: 4px;
       position: relative;
       cursor: pointer;
     }
@@ -483,7 +447,7 @@
       left: 0;
       height: 100%;
       background-color: var(--primary);
-      border-radius: 3px;
+      border-radius: 4px;
     }
     
     .time-display {
@@ -528,7 +492,7 @@
       width: 90%;
       max-width: 1200px;
       max-height: 90vh;
-      background-color: #16213e;
+      background-color: var(--card-bg-color);
       border-radius: 12px;
       overflow: hidden;
       display: flex;
@@ -638,48 +602,68 @@
       flex: 1;
       overflow-y: auto;
       padding: 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
     }
     
     .episode-card {
-      display: flex;
-      gap: 1rem;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-bottom: 1rem;
+      position: relative;
       background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      overflow: hidden;
       transition: all 0.2s ease;
       cursor: pointer;
     }
-    
+
     .episode-card:hover {
-      background-color: rgba(108, 92, 231, 0.2);
+        transform: translateY(-3px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
     
     .episode-thumbnail {
-      width: 160px;
-      height: 90px;
-      border-radius: 4px;
+      width: 100%;
+      height: 0;
+      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      position: relative;
       overflow: hidden;
-      flex-shrink: 0;
     }
     
     .episode-thumbnail img {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .episode-card:hover .episode-thumbnail img {
+        transform: scale(1.05);
     }
     
     .episode-info {
-      flex-grow: 1;
+      padding: 1rem;
+      position: relative;
     }
     
     .episode-title {
       font-weight: 500;
+      font-size: 1rem;
       margin-bottom: 0.25rem;
+      line-height: 1.4;
     }
     
     .episode-number {
-      color: var(--primary);
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.85rem;
       font-weight: 600;
     }
     
@@ -687,16 +671,35 @@
       font-size: 0.9rem;
       color: rgba(255, 255, 255, 0.7);
       margin-top: 0.5rem;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
-    
+
     .play-episode {
-      background: none;
-      border: none;
-      color: var(--secondary);
-      font-size: 1.5rem;
-      cursor: pointer;
-      align-self: center;
-      margin-left: 1rem;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 50px;
+        height: 50px;
+        background-color: rgba(108, 92, 231, 0.8);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        opacity: 0;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: none;
+        z-index: 2;
+    }
+
+    .episode-card:hover .play-episode {
+        opacity: 1;
     }
     
     /* Loading State */
@@ -744,30 +747,10 @@
     }
     
     /* Responsive Styles */
-    @media (max-width: 1200px) {
-      .sidebar {
-        width: 240px;
-      }
-      
-      .media-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      }
-    }
-    
     @media (max-width: 992px) {
       .header-container {
         flex-direction: column;
         gap: 1rem;
-      }
-      
-      .search-bar {
-        margin: 0;
-        max-width: 100%;
-      }
-      
-      .stats {
-        width: 100%;
-        justify-content: space-around;
       }
       
       .series-header {
@@ -779,25 +762,13 @@
         height: 225px;
         margin: 0 auto;
       }
+      
+      .episodes-list {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      }
     }
     
     @media (max-width: 768px) {
-      .sidebar {
-        position: fixed;
-        top: 0;
-        left: -280px;
-        bottom: 0;
-        z-index: 90;
-      }
-      
-      .sidebar.active {
-        left: 0;
-      }
-      
-      .sidebar-toggle {
-        display: block;
-      }
-      
       .content {
         padding: 1rem;
       }
@@ -834,6 +805,11 @@
         border-left: none;
         border-bottom: 3px solid var(--primary);
       }
+
+      .episodes-list {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+      }
     }
     
     @media (max-width: 576px) {
@@ -860,163 +836,64 @@
       .video-title {
         font-size: 1.25rem;
       }
-      
-      .episode-card {
-        flex-direction: column;
+
+      .episodes-list {
+        grid-template-columns: 1fr;
       }
-      
-      .episode-thumbnail {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 16/9;
-      }
-    }
-    
-    /* Landscape orientation adjustments */
-    @media (orientation: landscape) and (max-height: 600px) {
-      .main-container {
-        flex-direction: row;
-      }
-      
-      .sidebar {
-        width: 200px;
-      }
-      
-      .content {
-        padding: 1rem;
-      }
-      
-      .media-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
-      }
-      
-      .video-modal {
-        width: 95%;
-        max-height: 90vh;
-      }
-      
-      .video-container {
-        padding-bottom: 0;
-        height: calc(90vh - 200px);
+
+      .episode-card .episode-info {
+        padding-top: 3rem;
       }
     }
   </style>
 </head>
 <body>
   <div id="app">
-    <header>
+    <!-- Header with logo and search bar (visible after initial search) -->
+    <header id="mainHeader">
       <div class="header-container">
         <div class="logo">
           <i class="fas fa-film"></i>
           <h1>Media Manager</h1>
         </div>
         <div class="search-bar">
-          <input type="text" placeholder="Search movies and series..." id="searchInput">
+          <input type="text" placeholder="Search movies and series..." id="mainSearchInput">
           <i class="fas fa-search"></i>
-        </div>
-        <div class="stats" id="statsContainer">
-          <div class="stat-item">
-            <i class="fas fa-film"></i>
-            <span class="stat-value" id="movieCount">0</span>
-          </div>
-          <div class="stat-item">
-            <i class="fas fa-tv"></i>
-            <span class="stat-value" id="seriesCount">0</span>
-          </div>
-          <div class="stat-item">
-            <i class="fas fa-list-ol"></i>
-            <span class="stat-value" id="episodeCount">0</span>
-          </div>
         </div>
       </div>
     </header>
-    
-    <button class="sidebar-toggle" id="sidebarToggle">
-      <i class="fas fa-bars"></i>
-    </button>
-    
-    <div class="main-container">
-      <aside class="sidebar" id="sidebar">
-        <div class="sidebar-section">
-          <h3 class="sidebar-title">Menu</h3>
-          <ul class="sidebar-menu">
-            <li>
-              <a href="#" class="active" data-section="movies">
-                <i class="fas fa-film"></i>
-                <span>Movies</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" data-section="series">
-                <i class="fas fa-tv"></i>
-                <span>TV Series</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" data-section="recent">
-                <i class="fas fa-history"></i>
-                <span>Recently Added</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-        
-        <div class="sidebar-section">
-          <h3 class="sidebar-title">Categories</h3>
-          <ul class="sidebar-menu">
-            <li>
-              <a href="#" data-category="action">
-                <i class="fas fa-explosion"></i>
-                <span>Action</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" data-category="comedy">
-                <i class="fas fa-laugh-squint"></i>
-                <span>Comedy</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" data-category="drama">
-                <i class="fas fa-theater-masks"></i>
-                <span>Drama</span>
-              </a>
-            </li>
-            <li>
-              <a href="#" data-category="sci-fi">
-                <i class="fas fa-robot"></i>
-                <span>Sci-Fi</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </aside>
-      
-      <main class="content">
-        <div class="content-header">
-          <h2 class="content-title" id="contentTitle">Movies</h2>
-          <div class="view-toggle">
-            <button class="active" data-view="grid"><i class="fas fa-th-large"></i></button>
-            <button data-view="list"><i class="fas fa-list"></i></button>
-          </div>
-        </div>
-        
-        <div id="mediaContainer">
-          <div class="loading">
-            <div class="spinner"></div>
-          </div>
-        </div>
-      </main>
+
+    <!-- Initial hero search section (visible before initial search) -->
+    <div id="heroSearchSection" class="hero-search-section">
+      <div class="logo">
+        <i class="fas fa-film fa-3x"></i>
+        <h1>Media Manager</h1>
+      </div>
+      <h2>Discover Your Next Favorite Show</h2>
+      <p>Search thousands of movies and series.</p>
+      <div class="hero-search-bar">
+        <input type="text" placeholder="Search..." id="heroSearchInput">
+        <i class="fas fa-search"></i>
+      </div>
     </div>
+    
+    <!-- Main content area for search results -->
+    <main class="content" id="mediaContent">
+      <div id="mediaContainer">
+        <!-- Media content will be populated here -->
+      </div>
+    </main>
     
     <!-- Video Player Modal -->
     <div class="modal-overlay" id="videoModal">
-      <div class="video-modal">
+      <div class="video-modal" id="videoModalContent">
         <button class="close-modal" id="closeVideoModal">
           <i class="fas fa-times"></i>
         </button>
         <div class="video-container">
+          <div class="video-info">
+            <h3 class="video-title" id="videoTitle"></h3>
+          </div>
           <video class="video-player" id="videoPlayer" controls></video>
           <div class="video-controls">
             <button class="control-button" id="playPauseBtn">
@@ -1032,20 +909,7 @@
               </button>
               <input type="range" min="0" max="1" step="0.01" value="1" class="volume-slider" id="volumeSlider">
             </div>
-            <button class="control-button fullscreen-button" id="fullscreenBtn">
-              <i class="fas fa-expand"></i>
-            </button>
           </div>
-        </div>
-        <div class="video-info">
-          <h3 class="video-title" id="videoTitle">Movie Title</h3>
-          <div class="video-meta">
-            <span id="videoType">Movie</span>
-            <span id="videoDate">Added on 2023-01-01</span>
-          </div>
-          <p class="video-description" id="videoDescription">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in dui mauris.
-          </p>
         </div>
       </div>
     </div>
@@ -1089,36 +953,31 @@
 
   <script>
     // API Configuration
-    const API_BASE_URL = window.location.origin + '/api';
+    // In a real-world scenario, you would have a backend API. This is a mock URL.
+    const API_BASE_URL = 'https://mock-api.com/media';
     
     // DOM Elements
-    const sidebarToggle = document.getElementById('sidebarToggle');
-    const sidebar = document.getElementById('sidebar');
-    const searchInput = document.getElementById('searchInput');
+    const mainHeader = document.getElementById('mainHeader');
+    const mainSearchInput = document.getElementById('mainSearchInput');
+    const heroSearchSection = document.getElementById('heroSearchSection');
+    const heroSearchInput = document.getElementById('heroSearchInput');
+    const mediaContent = document.getElementById('mediaContent');
     const mediaContainer = document.getElementById('mediaContainer');
     const contentTitle = document.getElementById('contentTitle');
     const viewToggleButtons = document.querySelectorAll('.view-toggle button');
-    const menuLinks = document.querySelectorAll('.sidebar-menu a');
-    const statsContainer = document.getElementById('statsContainer');
-    const movieCountEl = document.getElementById('movieCount');
-    const seriesCountEl = document.getElementById('seriesCount');
-    const episodeCountEl = document.getElementById('episodeCount');
     
     // Modal Elements
     const videoModal = document.getElementById('videoModal');
+    const videoModalContent = document.getElementById('videoModalContent');
     const closeVideoModal = document.getElementById('closeVideoModal');
     const videoPlayer = document.getElementById('videoPlayer');
     const videoTitle = document.getElementById('videoTitle');
-    const videoType = document.getElementById('videoType');
-    const videoDate = document.getElementById('videoDate');
-    const videoDescription = document.getElementById('videoDescription');
     const playPauseBtn = document.getElementById('playPauseBtn');
     const progressContainer = document.getElementById('progressContainer');
     const progressBar = document.getElementById('progressBar');
     const timeDisplay = document.getElementById('timeDisplay');
     const muteBtn = document.getElementById('muteBtn');
     const volumeSlider = document.getElementById('volumeSlider');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
     
     const seriesModal = document.getElementById('seriesModal');
     const closeSeriesModal = document.getElementById('closeSeriesModal');
@@ -1132,70 +991,36 @@
     const episodesList = document.getElementById('episodesList');
     
     // App State
-    let currentMediaType = 'movies';
-    let currentView = 'grid';
     let currentSearchQuery = '';
-    let currentCategory = '';
+    let mediaData = [];
     let currentSeries = null;
     let currentSeason = null;
-    let mediaData = [];
     
+    // Helper function to create a dummy video URL
+    const getDummyVideoUrl = () => {
+        const dummyVideoUrls = [
+            'https://d1f2113f019b8893d9a1-77884813f568600d8b4e877e69c1ce81.ssl.cf2.rackcdn.com/10901237-7f9999a896d842d03b0d778d227f311c-1481541315-mobile.mp4',
+            'https://d1f2113f019b8893d9a1-77884813f568600d8b4e877e69c1ce81.ssl.cf2.rackcdn.com/26456012-7f9999a896d842d03b0d778d227f311c-1481541285-mobile.mp4',
+            'https://d1f2113f019b8893d9a1-77884813f568600d8b4e877e69c1ce81.ssl.cf2.rackcdn.com/26442654-7f9999a896d842d03b0d778d227f311c-1481541315-mobile.mp4'
+        ];
+        return dummyVideoUrls[Math.floor(Math.random() * dummyVideoUrls.length)];
+    };
+
     // Initialize the app
-    async function init() {
-      // Load stats
-      loadStats();
-      
-      // Load initial media
-      loadMedia('movies');
-      
-      // Set up event listeners
+    function init() {
       setupEventListeners();
     }
     
     // Set up event listeners
     function setupEventListeners() {
-      // Sidebar toggle
-      sidebarToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
-      });
-      
-      // Search input
-      searchInput.addEventListener('input', (e) => {
-        currentSearchQuery = e.target.value.trim();
-        loadMedia(currentMediaType);
-      });
-      
-      // View toggle buttons
-      viewToggleButtons.forEach(button => {
-        button.addEventListener('click', () => {
-          viewToggleButtons.forEach(btn => btn.classList.remove('active'));
-          button.classList.add('active');
-          currentView = button.dataset.view;
-          renderMedia();
-        });
-      });
-      
-      // Menu links
-      menuLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          
-          // Handle section links
-          if (link.dataset.section) {
-            menuLinks.forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
-            currentMediaType = link.dataset.section;
-            currentCategory = '';
-            contentTitle.textContent = link.querySelector('span').textContent;
-            loadMedia(currentMediaType);
-          }
-          
-          // Handle category links
-          if (link.dataset.category) {
-            menuLinks.forEach(l => l.classList.remove('active'));
-            currentCategory = link.dataset.category;
-            contentTitle.textContent = link.querySelector('span').textContent;
-            loadMedia(currentMediaType);
+      // Listen for search input on both search bars
+      [heroSearchInput, mainSearchInput].forEach(input => {
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            currentSearchQuery = e.target.value.trim();
+            if (currentSearchQuery) {
+              loadMedia();
+            }
           }
         });
       });
@@ -1204,6 +1029,9 @@
       closeVideoModal.addEventListener('click', () => {
         videoModal.classList.remove('active');
         videoPlayer.pause();
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        }
       });
       
       closeSeriesModal.addEventListener('click', () => {
@@ -1250,23 +1078,13 @@
           : '<i class="fas fa-volume-up"></i>';
       });
       
-      fullscreenBtn.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-          videoModal.requestFullscreen().catch(err => {
-            console.error('Error attempting to enable fullscreen:', err);
-          });
-        } else {
-          document.exitFullscreen();
-        }
-      });
-      
       // Play first episode button
       playFirstEpisode.addEventListener('click', () => {
         if (currentSeries && currentSeries.seasons.length > 0) {
           const firstSeason = currentSeries.seasons[0];
           if (firstSeason.episodes.length > 0) {
             const firstEpisode = firstSeason.episodes[0];
-            playEpisode(firstEpisode, firstSeason.seasonNumber);
+            playEpisode(firstEpisode, firstSeason.seasonNumber, currentSeries.name);
           }
         }
       });
@@ -1276,56 +1094,13 @@
         if (videoModal.classList.contains('active') && e.target === videoModal) {
           videoModal.classList.remove('active');
           videoPlayer.pause();
+          if (document.fullscreenElement) {
+              document.exitFullscreen();
+          }
         }
         
         if (seriesModal.classList.contains('active') && e.target === seriesModal) {
           seriesModal.classList.remove('active');
-        }
-      });
-      
-      // Keyboard shortcuts
-      document.addEventListener('keydown', (e) => {
-        if (videoModal.classList.contains('active')) {
-          switch (e.key) {
-            case ' ':
-              e.preventDefault();
-              if (videoPlayer.paused) {
-                videoPlayer.play();
-              } else {
-                videoPlayer.pause();
-              }
-              break;
-            case 'ArrowRight':
-              videoPlayer.currentTime += 5;
-              break;
-            case 'ArrowLeft':
-              videoPlayer.currentTime -= 5;
-              break;
-            case 'ArrowUp':
-              videoPlayer.volume = Math.min(videoPlayer.volume + 0.1, 1);
-              volumeSlider.value = videoPlayer.volume;
-              break;
-            case 'ArrowDown':
-              videoPlayer.volume = Math.max(videoPlayer.volume - 0.1, 0);
-              volumeSlider.value = videoPlayer.volume;
-              break;
-            case 'f':
-              case 'F':
-                if (!document.fullscreenElement) {
-                  videoModal.requestFullscreen();
-                } else {
-                  document.exitFullscreen();
-                }
-                break;
-            case 'Escape':
-              if (document.fullscreenElement) {
-                document.exitFullscreen();
-              } else {
-                videoModal.classList.remove('active');
-                videoPlayer.pause();
-              }
-              break;
-          }
         }
       });
     }
@@ -1345,36 +1120,24 @@
         `${durationMinutes.toString().padStart(2, '0')}:${durationSeconds.toString().padStart(2, '0')}`;
     }
     
-    // Load library stats
-    async function loadStats() {
-      try {
-        const response = await fetch(`${API_BASE_URL}/stats`);
-        const data = await response.json();
-        
-        movieCountEl.textContent = data.movies;
-        seriesCountEl.textContent = data.series;
-        episodeCountEl.textContent = data.episodes;
-      } catch (error) {
-        console.error('Error loading stats:', error);
-      }
-    }
-    
     // Load media data
-    async function loadMedia(type) {
+    async function loadMedia() {
+      // Hide hero section and show main content
+      heroSearchSection.style.display = 'none';
+      mediaContent.classList.add('active');
+      mainHeader.style.display = 'flex';
+      mainSearchInput.value = currentSearchQuery;
+      
       mediaContainer.innerHTML = `
         <div class="loading">
           <div class="spinner"></div>
         </div>
       `;
       
+      // Mock API call to get media data
       try {
-        let url = `${API_BASE_URL}/${type}`;
-        if (currentSearchQuery) {
-          url += `?search=${encodeURIComponent(currentSearchQuery)}`;
-        }
-        
-        const response = await fetch(url);
-        mediaData = await response.json();
+        const mockData = generateMockData(currentSearchQuery);
+        mediaData = mockData;
         
         if (mediaData.length === 0) {
           showEmptyState();
@@ -1382,12 +1145,12 @@
           renderMedia();
         }
       } catch (error) {
-        console.error(`Error loading ${type}:`, error);
+        console.error('Error loading media:', error);
         mediaContainer.innerHTML = `
           <div class="empty-state">
             <i class="fas fa-exclamation-triangle"></i>
             <h3>Error Loading Content</h3>
-            <p>Failed to fetch ${type}. Please try again later.</p>
+            <p>Failed to fetch media. Please try again later.</p>
           </div>
         `;
       }
@@ -1399,31 +1162,27 @@
         <div class="empty-state">
           <i class="fas fa-box-open"></i>
           <h3>No Content Found</h3>
-          <p>${currentSearchQuery ? 'No results for your search.' : 'This section is empty.'}</p>
+          <p>No results for your search: "${currentSearchQuery}"</p>
         </div>
       `;
     }
     
     // Render media based on current view
     function renderMedia() {
-      if (currentView === 'grid') {
-        renderGridView();
-      } else {
-        renderListView();
-      }
+      renderGridView();
     }
     
-    // Render grid view
+    // Render grid view (the only view in this version)
     function renderGridView() {
       let html = '<div class="media-grid">';
       
       mediaData.forEach(item => {
         const isSeries = item.seasons !== undefined;
         const type = isSeries ? 'Series' : 'Movie';
-        const date = new Date(item.addedAt).toLocaleDateString();
+        const date = new Date().toLocaleDateString();
         
         html += `
-          <div class="media-card" data-id="${item._id}" data-type="${isSeries ? 'series' : 'movie'}">
+          <div class="media-card" data-id="${item.id}" data-type="${isSeries ? 'series' : 'movie'}">
             <div class="media-thumbnail">
               <img src="${item.thumbnail}" alt="${item.name}">
               <span class="media-type">${type}</span>
@@ -1450,138 +1209,49 @@
       // Add event listeners to media cards
       document.querySelectorAll('.media-card').forEach(card => {
         card.addEventListener('click', (e) => {
-          // Ignore if clicking on play button directly
+          // Check if the click was on the play button
           if (e.target.closest('.play-button')) {
-            return;
-          }
-          
-          const id = card.dataset.id;
-          const type = card.dataset.type;
-          
-          if (type === 'series') {
-            openSeriesModal(id);
-          } else {
-            openMovieModal(id);
-          }
-        });
-        
-        // Play button
-        const playButton = card.querySelector('.play-button');
-        if (playButton) {
-          playButton.addEventListener('click', (e) => {
             e.stopPropagation();
             const id = card.dataset.id;
             const type = card.dataset.type;
             
             if (type === 'series') {
-              const series = mediaData.find(item => item._id === id);
-              if (series && series.seasons.length > 0 && series.seasons[0].episodes.length > 0) {
-                const firstEpisode = series.seasons[0].episodes[0];
-                playEpisode(firstEpisode, series.seasons[0].seasonNumber, series.name);
-              }
+                const series = mediaData.find(item => item.id == id);
+                if (series && series.seasons.length > 0 && series.seasons[0].episodes.length > 0) {
+                    const firstEpisode = series.seasons[0].episodes[0];
+                    playEpisode(firstEpisode, series.seasons[0].seasonNumber, series.name);
+                }
             } else {
-              const movie = mediaData.find(item => item._id === id);
-              if (movie) {
-                playVideo(movie.name, movie.streamingUrl, 'Movie', movie.addedAt, '');
-              }
+                const movie = mediaData.find(item => item.id == id);
+                if (movie) {
+                    playVideo(movie.name, movie.videoUrl, 'Movie');
+                }
             }
-          });
-        }
-      });
-    }
-    
-    // Render list view
-    function renderListView() {
-      let html = '<div class="media-list">';
-      
-      mediaData.forEach(item => {
-        const isSeries = item.seasons !== undefined;
-        const type = isSeries ? 'Series' : 'Movie';
-        const date = new Date(item.addedAt).toLocaleDateString();
-        
-        html += `
-          <div class="media-card list-view" data-id="${item._id}" data-type="${isSeries ? 'series' : 'movie'}">
-            <div class="media-thumbnail">
-              <img src="${item.thumbnail}" alt="${item.name}">
-              <span class="media-type">${type}</span>
-            </div>
-            <div class="media-info">
-              <h3 class="media-title">${item.name}</h3>
-              <div class="media-meta">
-                <span>${type}</span>
-                <span>${date}</span>
-              </div>
-              <button class="play-button">
-                <i class="fas fa-play"></i> Play
-              </button>
-            </div>
-          </div>
-        `;
-      });
-      
-      html += '</div>';
-      mediaContainer.innerHTML = html;
-      
-      // Add event listeners to media cards (similar to grid view)
-      document.querySelectorAll('.media-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-          if (e.target.closest('.play-button')) {
-            return;
-          }
-          
-          const id = card.dataset.id;
-          const type = card.dataset.type;
-          
-          if (type === 'series') {
-            openSeriesModal(id);
           } else {
-            openMovieModal(id);
-          }
-        });
-        
-        const playButton = card.querySelector('.play-button');
-        if (playButton) {
-          playButton.addEventListener('click', (e) => {
-            e.stopPropagation();
             const id = card.dataset.id;
             const type = card.dataset.type;
             
             if (type === 'series') {
-              const series = mediaData.find(item => item._id === id);
-              if (series && series.seasons.length > 0 && series.seasons[0].episodes.length > 0) {
-                const firstEpisode = series.seasons[0].episodes[0];
-                playEpisode(firstEpisode, series.seasons[0].seasonNumber, series.name);
-              }
+              openSeriesModal(id);
             } else {
-              const movie = mediaData.find(item => item._id === id);
-              if (movie) {
-                playVideo(movie.name, movie.streamingUrl, 'Movie', movie.addedAt, '');
-              }
+              openMovieModal(id);
             }
-          });
-        }
+          }
+        });
       });
     }
     
     // Open movie modal and play video
-    async function openMovieModal(id) {
-      try {
-        const movie = mediaData.find(item => item._id === id);
-        if (movie) {
-          playVideo(movie.name, movie.streamingUrl, 'Movie', movie.addedAt, '');
-        }
-      } catch (error) {
-        console.error('Error opening movie:', error);
+    function openMovieModal(id) {
+      const movie = mediaData.find(item => item.id == id);
+      if (movie) {
+        playVideo(movie.name, movie.videoUrl, 'Movie');
       }
     }
     
     // Play video
-    function playVideo(title, url, type, date, description) {
+    function playVideo(title, url, type) {
       videoTitle.textContent = title;
-      videoType.textContent = type;
-      videoDate.textContent = `Added on ${new Date(date).toLocaleDateString()}`;
-      videoDescription.textContent = description || 'No description available.';
-      
       videoPlayer.src = url;
       videoPlayer.load();
       
@@ -1592,30 +1262,24 @@
       
       videoModal.classList.add('active');
       
-      // Try to start playback (may be blocked by browser autoplay policies)
-      const playPromise = videoPlayer.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.log('Autoplay prevented:', error);
-          // Show play button to allow manual playback
+      // Enter fullscreen and play video
+      videoModalContent.requestFullscreen().then(() => {
+        videoPlayer.play().catch(error => {
+            console.log('Autoplay prevented:', error);
         });
-      }
+      }).catch(err => {
+        console.error('Error attempting to enable fullscreen:', err);
+      });
     }
     
     // Open series modal
-    async function openSeriesModal(id) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/series/${id}`);
-        const series = await response.json();
-        
-        if (series) {
-          currentSeries = series;
-          renderSeriesModal(series);
-          seriesModal.classList.add('active');
-        }
-      } catch (error) {
-        console.error('Error opening series:', error);
+    function openSeriesModal(id) {
+      const series = mediaData.find(item => item.id == id);
+      
+      if (series) {
+        currentSeries = series;
+        renderSeriesModal(series);
+        seriesModal.classList.add('active');
       }
     }
     
@@ -1623,7 +1287,7 @@
     function renderSeriesModal(series) {
       seriesTitle.textContent = series.name;
       seriesPoster.src = series.thumbnail;
-      seriesDescription.textContent = 'No description available.';
+      seriesDescription.textContent = series.description || 'No description available.';
       
       const totalEpisodes = series.seasons.reduce((sum, season) => sum + season.episodes.length, 0);
       seriesSeasons.textContent = `${series.seasons.length} Season${series.seasons.length !== 1 ? 's' : ''}`;
@@ -1664,17 +1328,17 @@
         const episodeEl = document.createElement('div');
         episodeEl.className = 'episode-card';
         episodeEl.innerHTML = `
-          <div class="episode-thumbnail">
-            <img src="${episode.thumbnail || currentSeries.thumbnail}" alt="${episode.title}">
-          </div>
-          <div class="episode-info">
-            <h3 class="episode-title">${episode.title}</h3>
-            <div class="episode-number">S${season.seasonNumber}E${episode.episodeNumber}</div>
-            <p class="episode-description">No description available.</p>
-          </div>
-          <button class="play-episode">
-            <i class="fas fa-play"></i>
-          </button>
+            <div class="episode-thumbnail">
+                <img src="${episode.thumbnail || currentSeries.thumbnail}" alt="${episode.title}">
+                <button class="play-episode">
+                    <i class="fas fa-play"></i>
+                </button>
+            </div>
+            <div class="episode-info">
+                <h3 class="episode-title">${episode.title}</h3>
+                <span class="episode-number">S${season.seasonNumber}E${episode.episodeNumber}</span>
+                <p class="episode-description">No description available.</p>
+            </div>
         `;
         
         const playButton = episodeEl.querySelector('.play-episode');
@@ -1694,7 +1358,55 @@
     // Play episode
     function playEpisode(episode, seasonNumber, seriesName) {
       const title = `${seriesName} - S${seasonNumber}E${episode.episodeNumber}: ${episode.title}`;
-      playVideo(title, episode.streamingUrl, 'TV Episode', '', '');
+      playVideo(title, episode.videoUrl, 'TV Episode');
+    }
+
+    // Mock data generator for demonstration
+    function generateMockData(query) {
+      const numItems = Math.floor(Math.random() * 10) + 5;
+      const media = [];
+      for (let i = 0; i < numItems; i++) {
+        const type = Math.random() > 0.5 ? 'movie' : 'series';
+        const name = `${query} - Item ${i+1}`;
+        const thumbnail = `https://placehold.co/400x600/6c5ce7/ffffff?text=${encodeURIComponent(name.slice(0, 15))}`;
+        const videoUrl = getDummyVideoUrl();
+        
+        if (type === 'movie') {
+          media.push({
+            id: `movie-${i}`,
+            name,
+            thumbnail,
+            videoUrl,
+            description: `This is a great movie about ${query}.`
+          });
+        } else {
+          const numSeasons = Math.floor(Math.random() * 3) + 1;
+          const seasons = [];
+          for (let s = 1; s <= numSeasons; s++) {
+            const numEpisodes = Math.floor(Math.random() * 8) + 4;
+            const episodes = [];
+            for (let e = 1; e <= numEpisodes; e++) {
+              episodes.push({
+                id: `series-${i}-s${s}-e${e}`,
+                title: `${name} - Episode ${e}`,
+                episodeNumber: e,
+                thumbnail: `https://placehold.co/1280x720/00cec9/16213e?text=S${s}E${e}`,
+                videoUrl: getDummyVideoUrl(),
+                description: `Summary of episode ${e}.`
+              });
+            }
+            seasons.push({ seasonNumber: s, episodes });
+          }
+          media.push({
+            id: `series-${i}`,
+            name,
+            thumbnail,
+            description: `This is an amazing series about ${query}.`,
+            seasons
+          });
+        }
+      }
+      return media;
     }
     
     // Initialize the app when DOM is loaded
@@ -1702,3 +1414,4 @@
   </script>
 </body>
 </html>
+

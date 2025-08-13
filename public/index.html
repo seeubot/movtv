@@ -10,19 +10,29 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* A simple spinner animation */
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
         .animate-spin {
             animation: spin 1s linear infinite;
         }
-        /* Aspect ratio for thumbnail containers */
-        .aspect-h-9 {
-            padding-bottom: 56.25%;
-        }
         .aspect-w-16 {
-            padding-bottom: 150%; /* Adjust for portrait thumbnails */
+            padding-bottom: 150%;
+        }
+        /* Custom scrollbar for episode list */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #27272a;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #a78bfa;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #8b5cf6;
         }
     </style>
 </head>
@@ -34,14 +44,13 @@
         </header>
 
         <!-- Main Content Area -->
-        <main class="container mx-auto p-4 md:p-6 lg:p-8" id="app-container">
+        <main class="container mx-auto p-4 md:p-6 lg:p-8 flex-grow" id="app-container">
             <!-- Content will be rendered here by JavaScript -->
         </main>
     </div>
 
     <script>
-        // The base URL for your API server.
-        const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
+        const API_BASE_URL = 'http://localhost:1024/api';
 
         // --- STATE MANAGEMENT ---
         let content = [];
@@ -56,7 +65,6 @@
         const appContainer = document.getElementById('app-container');
 
         // --- HELPER FUNCTIONS ---
-        // Function to create an SVG icon from a string.
         function createIcon(svgString, classes) {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = svgString;
@@ -72,7 +80,8 @@
             search: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
             play: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
             loader: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
-            x: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
+            x: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+            list: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>'
         };
         
         function renderLoading() {
@@ -97,7 +106,7 @@
 
         // --- API & DATA FETCHING ---
         async function fetchContent(query) {
-            if (!query) {
+            if (query.length < 3) {
                 content = [];
                 render();
                 return;
@@ -162,11 +171,11 @@
         // --- RENDERING FUNCTIONS ---
         function renderHomePage() {
             appContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center min-h-[50vh] text-center">
-                    <h2 class="text-3xl font-bold text-gray-200 mb-6">Your Media Library</h2>
+                <div class="flex flex-col items-center justify-center pt-16 pb-8 text-center">
+                    <h2 class="text-4xl font-bold text-gray-200 mb-6">Discover Your Next Favorite</h2>
                     <div class="w-full max-w-2xl">
                         <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                                 ${icons.search}
                             </div>
                             <input
@@ -179,50 +188,46 @@
                         </div>
                     </div>
                 </div>
+                ${content.length > 0 ? `
                 <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6" id="content-grid">
                     <!-- Content cards will be injected here -->
-                </div>
+                </div>` : ''}
             `;
             
             const contentGrid = document.getElementById('content-grid');
-            content.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "group cursor-pointer rounded-lg overflow-hidden shadow-lg transform hover:scale-105 transition-all duration-300 relative";
-                card.dataset.id = item._id;
-                card.dataset.type = item.type;
+            if (contentGrid) {
+                content.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "group cursor-pointer rounded-lg overflow-hidden shadow-lg transform hover:scale-105 transition-all duration-300 relative";
+                    card.dataset.id = item._id;
+                    card.dataset.type = item.type;
 
-                const titleText = item.name;
-                const thumbnailUrl = item.thumbnail;
+                    const titleText = item.name;
+                    const thumbnailUrl = item.thumbnail;
 
-                card.innerHTML = `
-                    <div class="w-full relative pb-[150%]">
-                        <img
-                            src="${thumbnailUrl}"
-                            alt="${titleText}"
-                            class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-80"
-                            onerror="this.onerror=null;this.src='https://placehold.co/600x900/1f2937/d1d5db?text=No+Image';"
-                        />
-                    </div>
-                    <div class="absolute inset-0 bg-gradient-to-t from-black to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div class="absolute bottom-0 left-0 p-4 w-full">
-                        <h3 class="text-white text-sm sm:text-base font-semibold truncate group-hover:whitespace-normal group-hover:overflow-visible group-hover:text-clip">
-                            ${titleText}
-                        </h3>
-                    </div>
-                `;
-                contentGrid.appendChild(card);
-            });
+                    card.innerHTML = `
+                        <div class="w-full relative pb-[150%]">
+                            <img
+                                src="${thumbnailUrl}"
+                                alt="${titleText}"
+                                class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-80"
+                                onerror="this.onerror=null;this.src='https://placehold.co/600x900/1f2937/d1d5db?text=No+Image';"
+                            />
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                             <h3 class="text-white text-sm sm:text-base font-semibold truncate group-hover:whitespace-normal group-hover:overflow-visible group-hover:text-clip">
+                                ${titleText}
+                            </h3>
+                        </div>
+                    `;
+                    contentGrid.appendChild(card);
+                });
+            }
 
-            // Add event listener for searching
             const searchInput = document.getElementById('search-input');
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    searchQuery = e.target.value;
-                    fetchContent(searchQuery);
-                }
-            });
             searchInput.addEventListener('input', (e) => {
                 searchQuery = e.target.value;
+                fetchContent(searchQuery);
             });
         }
 
@@ -245,6 +250,7 @@
                         </div>
                         <div class="flex-grow">
                             <h2 class="text-4xl font-bold text-white mb-4">${selectedSeries.name}</h2>
+                            <p class="text-gray-400 mb-6">${selectedSeries.synopsis}</p>
                             <h3 class="text-2xl font-semibold text-violet-400 mb-4">Seasons & Episodes</h3>
                             <div id="seasons-container" class="space-y-4">
                                 <!-- Seasons will be injected here -->
@@ -270,6 +276,7 @@
                     episodeDiv.dataset.id = episode._id;
                     episodeDiv.dataset.streamingUrl = episode.streamingUrl;
                     episodeDiv.dataset.title = `${selectedSeries.name} - S${season.seasonNumber}E${episode.episodeNumber}`;
+                    episodeDiv.dataset.seasonId = season.seasonNumber;
 
                     episodeDiv.innerHTML = `
                         <div class="flex-shrink-0 text-violet-300">
@@ -300,35 +307,75 @@
             }
 
             const titleText = selectedContent.title || selectedContent.name;
-            const seriesName = selectedContent.type === 'series' ? selectedContent.seriesName : '';
+            const isSeries = selectedContent.type === 'series' && selectedSeries;
+            const seriesName = isSeries ? selectedSeries.name : '';
+            const currentSeason = isSeries ? selectedSeries.seasons.find(s => s.seasonNumber == selectedContent.seasonId) : null;
+            const currentEpisodes = currentSeason ? currentSeason.episodes.sort((a,b) => a.episodeNumber - b.episodeNumber) : [];
 
             appContainer.innerHTML = `
-                <div class="p-4 sm:p-8 flex flex-col items-center">
-                    <button id="back-button" class="self-start mb-4 py-2 px-4 rounded-full bg-zinc-700 text-white hover:bg-violet-600 transition-colors flex items-center gap-2">
-                        ${icons.home}
-                        Back to ${selectedContent.type === 'movie' ? 'Home' : 'Series'}
-                    </button>
-                    <div class="w-full max-w-4xl rounded-lg overflow-hidden shadow-2xl">
-                        <div class="aspect-w-16 aspect-h-9" style="position: relative; padding-bottom: 56.25%;">
-                            <video controls autoplay class="absolute inset-0 w-full h-full object-cover rounded-lg">
-                                <source src="${selectedContent.streamingUrl}" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>
+                <div class="flex flex-col lg:flex-row gap-4 p-4 sm:p-8">
+                    <div class="flex-grow">
+                        <div class="w-full rounded-lg overflow-hidden shadow-2xl">
+                            <div class="aspect-w-16 aspect-h-9 relative pb-[56.25%] bg-black">
+                                <video id="video-player" controls autoplay class="absolute inset-0 w-full h-full object-contain">
+                                    <source src="${selectedContent.streamingUrl}" type="video/mp4">
+                                    Your browser does not support the video tag.
+                                </video>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <button id="back-button" class="mb-4 py-2 px-4 rounded-full bg-zinc-700 text-white hover:bg-violet-600 transition-colors flex items-center gap-2">
+                                ${icons.x}
+                                Back to ${isSeries ? 'Series' : 'Home'}
+                            </button>
+                            <h2 class="text-3xl font-bold text-white">${titleText}</h2>
+                            ${isSeries ? `<p class="text-violet-400 text-lg">${seriesName}</p>` : ''}
                         </div>
                     </div>
-                    <div class="mt-6 text-center">
-                        <h2 class="text-3xl font-bold text-white mb-2">${titleText}</h2>
-                        ${seriesName ? `<p class="text-violet-400 text-lg">${seriesName}</p>` : ''}
-                    </div>
+                    ${isSeries ? `
+                    <div class="w-full lg:w-80 flex-shrink-0 bg-zinc-800 rounded-lg p-4 shadow-lg flex flex-col">
+                        <h3 class="text-2xl font-bold text-violet-400 mb-4 flex items-center gap-2">
+                           ${icons.list} Episodes
+                        </h3>
+                        <div id="episode-list" class="flex-grow overflow-y-auto custom-scrollbar space-y-2">
+                            ${currentEpisodes.map(episode => `
+                                <div data-id="${episode._id}" data-type="episode" data-streaming-url="${episode.streamingUrl}" data-title="${seriesName} - S${currentSeason.seasonNumber}E${episode.episodeNumber}" data-season-id="${currentSeason.seasonNumber}"
+                                    class="episode-item flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors ${selectedContent.id === episode._id ? 'bg-violet-600' : 'bg-zinc-700 hover:bg-violet-500'}">
+                                    <div class="flex-shrink-0 text-violet-300">
+                                        ${icons.play}
+                                    </div>
+                                    <div class="flex-grow">
+                                        <p class="font-semibold text-gray-200 truncate">E${episode.episodeNumber}: ${episode.title}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>` : ''}
                 </div>
             `;
 
-            // Add event listener for the back button
+            // Add event listeners for the back button and episode list
             document.getElementById('back-button').addEventListener('click', () => {
-                view = selectedContent.type === 'movie' ? 'home' : 'series';
+                view = isSeries ? 'series' : 'home';
                 selectedContent = null;
                 render();
             });
+            if (isSeries) {
+                document.getElementById('episode-list').addEventListener('click', (e) => {
+                    const episodeItem = e.target.closest('.episode-item');
+                    if (episodeItem) {
+                        const newEpisode = {
+                            id: episodeItem.dataset.id,
+                            title: episodeItem.dataset.title,
+                            streamingUrl: episodeItem.dataset.streamingUrl,
+                            type: 'series',
+                            seasonId: episodeItem.dataset.seasonId
+                        };
+                        selectedContent = newEpisode;
+                        render();
+                    }
+                });
+            }
         }
 
         // --- MAIN RENDER FUNCTION ---
@@ -353,7 +400,6 @@
         }
 
         // --- EVENT LISTENERS ---
-        // Listen for clicks on the content grid
         appContainer.addEventListener('click', (e) => {
             const card = e.target.closest('[data-id]');
             if (!card) return;
@@ -369,18 +415,24 @@
                 }
             } else if (type === 'series') {
                 fetchSeriesDetails(id);
-            } else if (type === 'episode') {
-                selectedContent = {
-                    title: card.dataset.title,
-                    streamingUrl: card.dataset.streamingUrl,
-                    type: 'series'
+            }
+        });
+
+        appContainer.addEventListener('click', (e) => {
+            const episodeItem = e.target.closest('.episode-item');
+            if (episodeItem) {
+                const newEpisode = {
+                    id: episodeItem.dataset.id,
+                    title: episodeItem.dataset.title,
+                    streamingUrl: episodeItem.dataset.streamingUrl,
+                    type: 'series',
+                    seasonId: episodeItem.dataset.seasonId
                 };
-                view = 'player';
+                selectedContent = newEpisode;
                 render();
             }
         });
 
-        // Initial load
         window.onload = () => {
             render();
         };

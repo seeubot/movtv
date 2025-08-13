@@ -3,17 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Manager</title>
+    <title>StreamVault - Your Media Library</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Custom styles for a cleaner look -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            overflow-x: hidden;
         }
-        .tab-button {
-            transition: color 0.2s, border-color 0.2s;
+
+        /* Custom scrollbar for the episode selector */
+        .episode-selector::-webkit-scrollbar {
+            width: 8px;
         }
+        .episode-selector::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        .episode-selector::-webkit-scrollbar-thumb {
+            background-color: #4ecdc4;
+            border-radius: 20px;
+            border: 2px solid #1f2937;
+        }
+        .episode-selector {
+            scrollbar-width: thin;
+            scrollbar-color: #4ecdc4 #1f2937;
+        }
+
         .media-card {
             transition: transform 0.3s, box-shadow 0.3s;
         }
@@ -21,29 +40,59 @@
             transform: scale(1.05);
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
         }
-        .modal {
-            background-color: rgba(0, 0, 0, 0.75);
+
+        .search-input:focus {
+            border-color: #4ecdc4;
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(78, 205, 196, 0.3);
+        }
+
+        .video-player-modal {
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .player-container {
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .close-player:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: rotate(90deg);
+        }
+
+        .episode-btn:hover {
+            background: rgba(78, 205, 196, 0.2);
+            border-color: #4ecdc4;
+        }
+
+        .episode-btn.active {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border-color: transparent;
         }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center">
+<body class="bg-gray-900 text-gray-200 min-h-screen flex flex-col items-center p-4">
 
-    <div class="container mx-auto p-4 md:p-8 flex-grow">
+    <!-- Main Content Container -->
+    <div class="container mx-auto max-w-7xl flex-grow">
 
-        <!-- Header Section -->
-        <header class="flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8">
+        <!-- Header Section - Initially Hidden -->
+        <header id="header-container" class="hidden flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8">
             <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
-            <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0 hidden">
+            <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0">
                 <!-- Stats will be dynamically injected here by JavaScript -->
             </div>
         </header>
 
-        <!-- Search Bar Section -->
+        <!-- Search Bar Section - Always visible -->
         <div id="search-container" class="flex justify-center my-12 w-full">
             <input type="text" id="search-input" placeholder="Search for movies or series..." class="w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
         </div>
 
-        <!-- Main Content Area -->
+        <!-- Main Content Area - Initially Hidden -->
         <div id="content-area" class="hidden">
             <!-- Navigation Tabs -->
             <div class="flex space-x-4 mb-8 border-b border-gray-700">
@@ -66,15 +115,21 @@
 
     </div>
 
-    <!-- Episode Modal -->
-    <div id="episode-modal" class="modal fixed inset-0 z-50 hidden flex items-center justify-center p-4">
-        <div class="modal-content bg-gray-800 text-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto relative">
-            <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
-            <div id="modal-body">
-                <!-- Episode details will be dynamically injected here -->
+    <!-- Video Player Modal -->
+    <div class="video-player-modal fixed inset-0 z-50 hidden flex items-center justify-center p-4" id="videoModal">
+        <div class="player-container w-full max-w-4xl bg-gray-800 text-white">
+            <div class="player-header flex justify-between items-center p-4 border-b border-gray-700">
+                <div class="player-title text-xl font-semibold" id="playerTitle">Now Playing</div>
+                <button class="close-player text-2xl font-bold transition-transform duration-300" onclick="closePlayer()">✕</button>
             </div>
+            <video class="video-player w-full max-h-[70vh]" id="videoPlayer" controls autoplay>
+                Your browser does not support the video tag.
+            </video>
+            <!-- Episode Selector for Series -->
+            <div class="episode-selector p-4 bg-gray-800 max-h-48 overflow-y-auto" id="episodeSelector" style="display: none;"></div>
         </div>
     </div>
+
 
     <!-- JavaScript for fetching data and rendering the UI -->
     <script>
@@ -83,6 +138,7 @@
             const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
 
             // DOM elements
+            const headerContainer = document.getElementById('header-container');
             const searchInput = document.getElementById('search-input');
             const statsContainer = document.getElementById('stats-container');
             const contentArea = document.getElementById('content-area');
@@ -91,20 +147,20 @@
             const mediaGrid = document.getElementById('media-grid');
             const moviesTab = document.getElementById('movies-tab');
             const seriesTab = document.getElementById('series-tab');
-            const episodeModal = document.getElementById('episode-modal');
-            const closeModalBtn = document.getElementById('close-modal-btn');
-            const modalBody = document.getElementById('modal-body');
-
-            // Store the fetched data
+            const videoModal = document.getElementById('videoModal');
+            const videoPlayer = document.getElementById('videoPlayer');
+            const playerTitle = document.getElementById('playerTitle');
+            const episodeSelector = document.getElementById('episodeSelector');
+            
+            // Store the fetched data and current state
             let allMovies = [];
             let allSeries = [];
-            let stats = {};
-
-            // Initial active tab
+            let currentSeries = null;
             let activeTab = 'movies';
 
-            // Function to fetch all data
+            // Function to fetch all data from the API
             const fetchAllData = async () => {
+                loadingMessage.classList.remove('hidden');
                 try {
                     const [moviesResponse, seriesResponse, statsResponse] = await Promise.all([
                         fetch(`${API_BASE_URL}/movies`),
@@ -118,12 +174,13 @@
 
                     allMovies = await moviesResponse.json();
                     allSeries = await seriesResponse.json();
-                    stats = await statsResponse.json();
+                    const stats = await statsResponse.json();
                     updateStats(stats);
-
+                    loadingMessage.classList.add('hidden');
                 } catch (e) {
                     console.error("Failed to fetch data:", e);
                     errorMessage.classList.remove('hidden');
+                    loadingMessage.classList.add('hidden');
                 }
             };
             
@@ -131,27 +188,22 @@
             const handleSearch = async () => {
                 const query = searchInput.value.toLowerCase().trim();
 
-                // Do nothing until at least 3 characters are typed
+                // Hide all content until at least 3 characters are typed
                 if (query.length < 3) {
                     contentArea.classList.add('hidden');
-                    statsContainer.classList.add('hidden');
+                    headerContainer.classList.add('hidden');
                     mediaGrid.innerHTML = '';
                     return;
                 }
 
-                // Show content area and loading message
+                // Show content area and header
                 contentArea.classList.remove('hidden');
-                statsContainer.classList.remove('hidden');
-                loadingMessage.classList.remove('hidden');
-                mediaGrid.innerHTML = '';
-                errorMessage.classList.add('hidden');
-
+                headerContainer.classList.remove('hidden');
+                
                 // If data hasn't been fetched yet, fetch it.
                 if (allMovies.length === 0 && allSeries.length === 0) {
                     await fetchAllData();
                 }
-
-                loadingMessage.classList.add('hidden');
 
                 // Filter the fetched data based on the query
                 const filteredMovies = allMovies.filter(movie => movie.name.toLowerCase().includes(query));
@@ -205,9 +257,11 @@
                     </div>
                 `;
 
-                // Add click event for series to show episodes
+                // Add click event to play video or load series details
                 if (type === 'series') {
-                    card.addEventListener('click', () => showEpisodes(item._id, item.name));
+                    card.addEventListener('click', () => loadSeriesDetails(item._id));
+                } else {
+                    card.addEventListener('click', () => playVideo(item.streamingUrl, item.name, 'movie'));
                 }
 
                 return card;
@@ -234,36 +288,27 @@
                     mediaGrid.innerHTML = emptyMessage;
                 }
             };
-
-            // Function to fetch and display episodes for a series
-            const showEpisodes = async (seriesId, seriesName) => {
-                modalBody.innerHTML = `<p class="text-center text-gray-400">Loading episodes for ${seriesName}...</p>`;
-                episodeModal.classList.remove('hidden');
-
+            
+            // Function to fetch and display episodes for a series, then play the first one
+            const loadSeriesDetails = async (seriesId) => {
                 try {
                     const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
                     if (!response.ok) {
                         throw new Error('Failed to fetch series details.');
                     }
-                    const seriesDetails = await response.json();
+                    currentSeries = await response.json();
                     
-                    const episodesHtml = seriesDetails.seasons.map(season => {
-                        const seasonHtml = season.episodes.map(episode => `
-                            <li class="p-2 border-b border-gray-700 last:border-b-0">${episode.name || 'Untitled Episode'}</li>
-                        `).join('');
-                        return `
-                            <h4 class="text-xl font-bold mt-4 mb-2">Season ${season.seasonNumber}</h4>
-                            <ul class="list-disc list-inside space-y-1">${seasonHtml}</ul>
-                        `;
-                    }).join('');
-
-                    modalBody.innerHTML = `
-                        <h3 class="text-3xl font-bold text-white mb-4">${seriesName} Episodes</h3>
-                        ${episodesHtml}
-                    `;
+                    if (currentSeries.seasons && currentSeries.seasons.length > 0 && 
+                        currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
+                        const firstEpisode = currentSeries.seasons[0].episodes[0];
+                        const episodeTitle = `${currentSeries.name} - S${currentSeries.seasons[0].seasonNumber}E${firstEpisode.episodeNumber}: ${firstEpisode.title}`;
+                        
+                        playVideo(firstEpisode.streamingUrl, episodeTitle, 'series');
+                    } else {
+                        console.error('No episodes available for this series.');
+                    }
                 } catch (e) {
-                    console.error("Error fetching episodes:", e);
-                    modalBody.innerHTML = `<p class="text-center text-red-400">Failed to load episodes.</p>`;
+                    console.error('Error loading series details:', e);
                 }
             };
 
@@ -287,16 +332,90 @@
                 renderContent(filteredMovies, filteredSeries);
             };
 
+            // Function to handle playing the video
+            window.playVideo = (url, title, type) => {
+                playerTitle.textContent = title;
+                videoPlayer.src = url;
+                videoModal.classList.remove('hidden');
+                
+                // Show episode selector for series
+                if (type === 'series' && currentSeries) {
+                    episodeSelector.style.display = 'block';
+                    displayEpisodeSelector();
+                } else {
+                    episodeSelector.style.display = 'none';
+                }
+                
+                videoPlayer.play().catch(e => {
+                    console.error('Error playing video:', e);
+                    // Use a custom message instead of alert
+                });
+            };
+
+            // Function to display the list of episodes
+            window.displayEpisodeSelector = () => {
+                episodeSelector.innerHTML = currentSeries.seasons.map(season => `
+                    <div class="season-group mb-4">
+                        <div class="season-title text-lg font-semibold text-teal-400 mb-2">Season ${season.seasonNumber}</div>
+                        <div class="episode-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            ${season.episodes.map(episode => `
+                                <button class="episode-btn p-2 rounded-lg bg-gray-700 text-left transition-colors duration-200 hover:bg-teal-700" 
+                                        onclick="switchEpisode('${episode.streamingUrl}', '${currentSeries.name}', ${season.seasonNumber}, ${episode.episodeNumber}, '${episode.title.replace(/'/g, "\\'")}')">
+                                    <span class="font-bold">E${episode.episodeNumber}:</span> ${episode.title}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                
+                // Set the active class on the currently playing episode button
+                const currentUrl = videoPlayer.src;
+                document.querySelectorAll('.episode-btn').forEach(btn => {
+                    if (btn.onclick.toString().includes(currentUrl)) {
+                        btn.classList.add('bg-teal-600', 'text-white');
+                    } else {
+                        btn.classList.remove('bg-teal-600', 'text-white');
+                    }
+                });
+            };
+
+            // Function to switch to a new episode
+            window.switchEpisode = (url, seriesName, seasonNumber, episodeNumber, episodeTitle) => {
+                playerTitle.textContent = `${seriesName} - S${seasonNumber}E${episodeNumber}: ${episodeTitle}`;
+                videoPlayer.src = url;
+                videoPlayer.play().catch(e => {
+                    console.error('Error playing video:', e);
+                });
+                
+                // Update active episode button
+                document.querySelectorAll('.episode-btn').forEach(btn => btn.classList.remove('bg-teal-600', 'text-white'));
+                event.target.classList.add('bg-teal-600', 'text-white');
+            };
+
+            // Function to close the video player modal
+            window.closePlayer = () => {
+                videoPlayer.pause();
+                videoPlayer.src = '';
+                videoModal.classList.add('hidden');
+                currentSeries = null;
+            };
+
             // Event listeners
             searchInput.addEventListener('input', handleSearch);
             moviesTab.addEventListener('click', () => switchTab('movies'));
             seriesTab.addEventListener('click', () => switchTab('series'));
-            closeModalBtn.addEventListener('click', () => episodeModal.classList.add('hidden'));
-
+            
             // Close modal when clicking outside
-            episodeModal.addEventListener('click', (event) => {
-                if (event.target === episodeModal) {
-                    episodeModal.classList.add('hidden');
+            videoModal.addEventListener('click', (event) => {
+                if (event.target === videoModal) {
+                    closePlayer();
+                }
+            });
+            
+            // Keyboard shortcut for closing modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !videoModal.classList.contains('hidden')) {
+                    closePlayer();
                 }
             });
         });

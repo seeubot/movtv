@@ -295,6 +295,10 @@
             object-fit: contain; /* Ensure video is not stretched and fits the screen */
             background: #000;
         }
+
+        .video-player.hidden {
+            display: none;
+        }
         
         .episode-selector {
             position: absolute;
@@ -397,6 +401,34 @@
             transform: scale(1.1);
         }
 
+        /* Loading and Error Message for Video Player */
+        .video-message-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            z-index: 5;
+            display: none;
+        }
+
+        .video-message-overlay p {
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .video-message-overlay .spinner {
+            margin: 0;
+        }
+
         @media (max-width: 768px) {
             .welcome-title {
                 font-size: 2.5rem;
@@ -493,6 +525,11 @@
     <!-- Video Player Modal -->
     <div class="video-player-modal" id="videoModal">
         <div class="player-container">
+            <!-- Loading and Error Message Overlay -->
+            <div class="video-message-overlay" id="videoMessage">
+                <div class="spinner"></div>
+                <p id="videoMessageText">Loading video...</p>
+            </div>
             <div class="player-controls-overlay">
                 <div class="player-header">
                     <div class="player-title" id="playerTitle">Now Playing</div>
@@ -573,15 +610,32 @@
             playerContainer.addEventListener('mousemove', showControls);
             playerContainer.addEventListener('mouseleave', hideControls);
 
-            // Handle video player errors
-            document.getElementById('videoPlayer').addEventListener('error', (e) => {
-                console.error('Video playback error:', e);
-                // Instead of an alert, we can show a custom message.
-                // For this example, we'll just log it to the console.
+            // Handle video player events for loading feedback
+            const videoPlayer = document.getElementById('videoPlayer');
+            const videoMessage = document.getElementById('videoMessage');
+            const videoMessageText = document.getElementById('videoMessageText');
+
+            videoPlayer.addEventListener('waiting', () => {
+                videoMessage.style.display = 'flex';
+                videoMessage.querySelector('.spinner').style.display = 'block';
+                videoMessageText.textContent = 'Loading video...';
             });
             
+            videoPlayer.addEventListener('playing', () => {
+                videoMessage.style.display = 'none';
+                videoPlayer.classList.remove('hidden');
+            });
+
+            videoPlayer.addEventListener('error', (e) => {
+                console.error('Video playback error:', e);
+                videoPlayer.classList.add('hidden');
+                videoMessage.style.display = 'flex';
+                videoMessage.querySelector('.spinner').style.display = 'none';
+                videoMessageText.innerHTML = 'Video failed to load. Please check the URL or try again later. <br> URL: ' + videoPlayer.src;
+            });
+
             // Prevent context menu on video
-            document.getElementById('videoPlayer').addEventListener('contextmenu', (e) => {
+            videoPlayer.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
             });
 
@@ -697,7 +751,7 @@
                 resultsContainer.innerHTML = results.map(item => {
                     if (item.type === 'movie') {
                         return `
-                            <div class="content-card" onclick="playVideo('${item.streamingUrl}', '${item.name}', 'movie')">
+                            <div class="content-card" onclick="playVideo('${item.streamingUrl}', '${item.name.replace(/'/g, "\\'")}', 'movie')">
                                 <img class="card-thumbnail" src="${item.thumbnail}" alt="${item.name}" onerror="this.src='https://placehold.co/280x180/4ecdc4/ffffff?text=Movie'">
                                 <div class="card-content">
                                     <h3 class="card-title">${item.name}</h3>
@@ -760,13 +814,19 @@
             const player = document.getElementById('videoPlayer');
             const playerTitle = document.getElementById('playerTitle');
             const episodeSelector = document.getElementById('episodeSelector');
-            
+            const videoMessage = document.getElementById('videoMessage');
+            const videoMessageText = document.getElementById('videoMessageText');
+
+            // Show modal and loading state
+            modal.classList.add('is-visible');
+            videoMessage.style.display = 'flex';
+            videoMessage.querySelector('.spinner').style.display = 'block';
+            videoMessageText.textContent = 'Loading video...';
+            player.classList.add('hidden');
+
             playerTitle.textContent = title;
             player.src = url;
             
-            modal.classList.add('is-visible');
-            player.play();
-
             // Show episode selector for series
             if (type === 'series' && currentSeries) {
                 episodeSelector.style.display = 'block';
@@ -789,7 +849,7 @@
                     <div class="episode-list">
                         ${season.episodes.map(episode => `
                             <button class="episode-btn ${episode.streamingUrl === currentUrl ? 'active' : ''}" 
-                                    onclick="switchEpisode('${episode.streamingUrl}', '${currentSeries.name}', ${season.seasonNumber}, ${episode.episodeNumber}, '${episode.title.replace(/'/g, "\\'")}')">
+                                    onclick="switchEpisode('${episode.streamingUrl}', '${currentSeries.name.replace(/'/g, "\\'")}', ${season.seasonNumber}, ${episode.episodeNumber}, '${episode.title.replace(/'/g, "\\'")}')">
                                 E${episode.episodeNumber}: ${episode.title}
                             </button>
                         `).join('')}
@@ -801,6 +861,14 @@
         function switchEpisode(url, seriesName, seasonNumber, episodeNumber, episodeTitle) {
             const player = document.getElementById('videoPlayer');
             const playerTitle = document.getElementById('playerTitle');
+            const videoMessage = document.getElementById('videoMessage');
+            const videoMessageText = document.getElementById('videoMessageText');
+
+            // Show loading state
+            videoMessage.style.display = 'flex';
+            videoMessage.querySelector('.spinner').style.display = 'block';
+            videoMessageText.textContent = 'Loading video...';
+            player.classList.add('hidden');
             
             player.src = url;
             playerTitle.textContent = `${seriesName} - S${seasonNumber}E${episodeNumber}: ${episodeTitle}`;

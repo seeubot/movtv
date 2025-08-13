@@ -316,7 +316,7 @@
     <div id="videoModal" class="hidden video-ui-container">
         <!-- Video Player Section -->
         <div id="videoPlayerWrapper" class="video-player-wrapper">
-            <button class="absolute top-4 right-4 text-white text-3xl font-bold z-20 p-2 bg-gray-900 rounded-full hover:bg-gray-700 transition-colors" onclick="closePlayer()">✕</button>
+            <button id="closePlayerBtn" class="absolute top-4 right-4 text-white text-3xl font-bold z-20 p-2 bg-gray-900 rounded-full hover:bg-gray-700 transition-colors" data-focusable="true">✕</button>
             
             <!-- Video Info Overlay (hidden by default) -->
             <div id="videoInfoOverlay" class="video-info-overlay">
@@ -328,7 +328,7 @@
             <div id="episodeOverlay" class="episode-overlay">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-xl font-bold">Episodes</h3>
-                    <button class="text-white text-3xl font-bold p-2 hover:bg-gray-700 rounded-full transition-colors" onclick="toggleEpisodeOverlay()">✕</button>
+                    <button id="closeEpisodeOverlayBtn" class="text-white text-3xl font-bold p-2 hover:bg-gray-700 rounded-full transition-colors" data-focusable="true">✕</button>
                 </div>
                 <div id="episodeSelector" class="flex-grow overflow-y-auto">
                     <!-- Episodes will be dynamically injected here -->
@@ -342,7 +342,7 @@
             <div id="videoErrorDialog" class="error-dialog">
                 <h4 class="text-xl font-bold mb-2">Streaming Error</h4>
                 <p>Failed to load the video stream. The server might be down or the URL is invalid.</p>
-                <button id="closeErrorBtn" class="mt-4 py-2 px-4 bg-teal-500 rounded-lg font-semibold hover:bg-teal-600 transition-colors" onclick="hideVideoError()" data-focusable="true">OK</button>
+                <button id="closeErrorBtn" class="mt-4 py-2 px-4 bg-teal-500 rounded-lg font-semibold hover:bg-teal-600 transition-colors" data-focusable="true">OK</button>
             </div>
 
             <video class="w-full h-full video-fit-contain" id="videoPlayer"></video>
@@ -364,10 +364,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
                     </button>
                     <div id="videoFitMenu" class="absolute bottom-full mb-2 right-0 w-32 bg-gray-800 rounded-lg shadow-lg hidden">
-                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700 rounded-t-lg" data-fit="contain">Fit</button>
-                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="cover">Fill</button>
-                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="fill">Stretch</button>
-                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700 rounded-b-lg" data-fit="auto">Auto</button>
+                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700 rounded-t-lg" data-fit="contain" data-focusable="true">Fit</button>
+                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="cover" data-focusable="true">Fill</button>
+                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="fill" data-focusable="true">Stretch</button>
+                        <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700 rounded-b-lg" data-fit="auto" data-focusable="true">Auto</button>
                     </div>
                 </div>
                 <!-- New Episodes button -->
@@ -417,6 +417,7 @@
             const episodesBtn = document.getElementById('episodesBtn');
             const videoFitBtn = document.getElementById('videoFitBtn');
             const videoFitMenu = document.getElementById('videoFitMenu');
+            const closePlayerBtn = document.getElementById('closePlayerBtn');
 
             // Video info and loading elements
             const videoInfoOverlay = document.getElementById('videoInfoOverlay');
@@ -427,9 +428,11 @@
             // Episode list overlay
             const episodeOverlay = document.getElementById('episodeOverlay');
             const episodeSelector = document.getElementById('episodeSelector');
+            const closeEpisodeOverlayBtn = document.getElementById('closeEpisodeOverlayBtn');
             
             // Error dialog
             const videoErrorDialog = document.getElementById('videoErrorDialog');
+            const closeErrorBtn = document.getElementById('closeErrorBtn');
 
             // Store the fetched data and current state
             let allMovies = [];
@@ -811,6 +814,11 @@
                 currentMedia = null;
                 clearTimeout(controlsTimeout);
                 hideVideoError(); // Also hide any error dialog
+                
+                // Exit fullscreen if active
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
             };
             
             // Function to show the video error dialog
@@ -878,6 +886,8 @@
             fullscreenBtn.addEventListener('click', toggleFullscreen);
             episodesBtn.addEventListener('click', toggleEpisodeOverlay);
             videoFitBtn.addEventListener('click', () => videoFitMenu.classList.toggle('hidden'));
+            closePlayerBtn.addEventListener('click', closePlayer);
+            closeEpisodeOverlayBtn.addEventListener('click', toggleEpisodeOverlay);
             
             // Event listeners for the video fit menu options
             document.querySelectorAll('.video-fit-option').forEach(button => {
@@ -887,7 +897,11 @@
                 });
             });
 
+            // Add touch event listeners for mobile/touchscreens
+            videoPlayerWrapper.addEventListener('touchstart', showControls);
+            videoPlayerWrapper.addEventListener('touchend', showControls);
 
+            // Add mouse events for non-touchscreens
             videoPlayerWrapper.addEventListener('mousemove', showControls);
             videoPlayerWrapper.addEventListener('mouseleave', () => {
                 clearTimeout(controlsTimeout);

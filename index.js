@@ -149,7 +149,6 @@ const getMainMenuKeyboard = () => ({
 });
 
 // Helper function to extract IDs safely
-// This function is still useful for general purpose, but we will use a more direct method for the problematic cases.
 const extractId = (data, prefix) => {
   if (data.startsWith(prefix)) {
     return data.substring(prefix.length);
@@ -267,6 +266,7 @@ bot.on('callback_query', async (callbackQuery) => {
   console.log(`🔘 Callback query: ${data}`);
 
   try {
+    // FIX: Reordered the if/else if checks to handle more specific cases first.
     if (data.startsWith('add_new_season_to_series_')) {
       const seriesId = extractId(data, 'add_new_season_to_series_');
       const series = await Series.findById(seriesId);
@@ -281,6 +281,33 @@ bot.on('callback_query', async (callbackQuery) => {
         userStates.set(chatId, 'adding_season_number_for_existing_series');
         await bot.sendMessage(chatId, `📺 Adding to "${series.name}"\n\n🔢 Enter the new season number:`, { reply_markup: { remove_keyboard: true } });
       }
+    } else if (data.startsWith('edit_series_episodes_')) {
+      const seriesId = data.split('_').pop();
+      const series = await Series.findById(seriesId);
+      if (!series) {
+        await bot.sendMessage(chatId, '❌ Series not found. Please try again.', getMainMenuKeyboard());
+        return;
+      }
+      tempData.set(chatId, {
+        type: 'series',
+        seriesId: seriesId,
+        name: series.name,
+        thumbnail: series.thumbnail,
+        seasons: series.seasons,
+      });
+
+      let keyboard = [];
+      if (series.seasons && series.seasons.length > 0) {
+        keyboard = series.seasons.map(s => [
+          { text: `Season ${s.seasonNumber}`, callback_data: `select_season_${seriesId}_${s.seasonNumber}` }
+        ]);
+      }
+      keyboard.push([{ text: '➕ Add New Season', callback_data: `add_new_season_to_series_${seriesId}` }]);
+
+      await bot.sendMessage(chatId, '📺 *Select a season to add episodes to, or add a new season:*', {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard }
+      });
     } else if (data === 'create_new_series') {
       userStates.set(chatId, 'adding_series_name');
       tempData.set(chatId, { type: 'series' });
@@ -325,6 +352,7 @@ bot.on('callback_query', async (callbackQuery) => {
       } else {
         await bot.sendMessage(chatId, '❌ Movie not found.', getMainMenuKeyboard());
       }
+    // FIX: Moved this check to come after the more specific 'edit_series_episodes_' check.
     } else if (data.startsWith('edit_series_')) {
       const seriesId = extractId(data, 'edit_series_');
       const series = await Series.findById(seriesId);
@@ -393,37 +421,6 @@ bot.on('callback_query', async (callbackQuery) => {
             await bot.sendMessage(chatId, '❌ Invalid edit option.', getMainMenuKeyboard());
             break;
         }
-    // FIX: The callback query for editing episodes was passing the wrong value.
-    // The previous code would try to find a series with an ID that included "episodes_".
-    // We now correctly extract just the ObjectId from the data string.
-    } else if (data.startsWith('edit_series_episodes_')) {
-      // Use string splitting to ensure we get a clean ObjectId
-      const seriesId = data.split('_').pop();
-      const series = await Series.findById(seriesId);
-      if (!series) {
-        await bot.sendMessage(chatId, '❌ Series not found. Please try again.', getMainMenuKeyboard());
-        return;
-      }
-      tempData.set(chatId, {
-        type: 'series',
-        seriesId: seriesId,
-        name: series.name,
-        thumbnail: series.thumbnail,
-        seasons: series.seasons,
-      });
-
-      let keyboard = [];
-      if (series.seasons && series.seasons.length > 0) {
-        keyboard = series.seasons.map(s => [
-          { text: `Season ${s.seasonNumber}`, callback_data: `select_season_${seriesId}_${s.seasonNumber}` }
-        ]);
-      }
-      keyboard.push([{ text: '➕ Add New Season', callback_data: `add_new_season_to_series_${seriesId}` }]);
-
-      await bot.sendMessage(chatId, '📺 *Select a season to add episodes to, or add a new season:*', {
-        parse_mode: 'Markdown',
-        reply_markup: { inline_keyboard: keyboard }
-      });
     } else if (data.startsWith('select_season_')) {
         const parts = data.split('_');
         const seriesId = parts[2];

@@ -86,6 +86,7 @@
             align-items: center;
             justify-content: center;
             background: #000;
+            flex-direction: column;
         }
         .video-player-sidebar {
             width: 350px;
@@ -96,9 +97,57 @@
             display: flex;
             flex-direction: column;
         }
-        .episode-list-item.active {
-            background-color: #3f3f46; /* Highlight for active episode */
-            border-left: 3px solid #4ecdc4;
+        .episode-list-item.active,
+        .tab-button.active,
+        .focusable:focus,
+        .video-control-btn:focus,
+        .episode-list-item:focus {
+            outline: 2px solid #4ecdc4;
+            outline-offset: 2px;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.5);
+        }
+
+        /* Custom video controls styling */
+        .custom-video-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            color: #fff;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .video-player-wrapper:hover .custom-video-controls,
+        .video-player-wrapper:focus-within .custom-video-controls {
+            opacity: 1;
+        }
+
+        .seek-bar-container {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .seek-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .seek-bar-filled {
+            height: 100%;
+            background-color: #4ecdc4;
+            border-radius: 4px;
+            width: 0%;
         }
 
         @media (max-width: 1024px) {
@@ -131,15 +180,15 @@
 
         <!-- Search Bar Section - Always visible -->
         <div id="search-container" class="flex justify-center my-12 w-full">
-            <input type="text" id="search-input" placeholder="Search for movies or series..." class="w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+            <input type="text" id="search-input" data-focusable="true" placeholder="Search for movies or series..." class="focusable w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
         </div>
 
         <!-- Main Content Area - Initially Hidden -->
         <div id="content-area" class="hidden">
             <!-- Navigation Tabs -->
             <div class="flex space-x-4 mb-8 border-b border-gray-700">
-                <button id="movies-tab" class="tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
-                <button id="series-tab" class="tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
+                <button id="movies-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
+                <button id="series-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
             </div>
 
             <!-- Loading and Error messages -->
@@ -162,14 +211,35 @@
         <!-- Video Player Section -->
         <div class="video-player-wrapper">
             <button class="absolute top-4 right-4 text-white text-3xl font-bold z-10 p-2 bg-gray-900 rounded-full hover:bg-gray-700 transition-colors" onclick="closePlayer()">✕</button>
-            <video class="w-full h-full" id="videoPlayer" controls autoplay></video>
+            <video class="w-full h-full" id="videoPlayer"></video>
+
+            <!-- Custom Video Controls -->
+            <div class="custom-video-controls">
+                <button id="playPauseBtn" class="video-control-btn text-2xl" data-focusable="true">▶</button>
+                <div class="seek-bar-container">
+                    <div id="seekBar" class="seek-bar" data-focusable="true">
+                        <div id="seekBarFilled" class="seek-bar-filled"></div>
+                    </div>
+                </div>
+                <span id="currentTime">00:00</span>
+                <span>/</span>
+                <span id="duration">00:00</span>
+                <button id="fullscreenBtn" class="video-control-btn text-xl" data-focusable="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-maximize">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+                        <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                        <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+                        <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+                    </svg>
+                </button>
+            </div>
         </div>
 
         <!-- Episode Sidebar Section -->
         <div class="video-player-sidebar" id="episodeSidebar">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-bold">Episodes</h3>
-                <button class="lg:hidden text-lg font-bold" onclick="toggleSidebar()">Close</button>
+                <button class="lg:hidden text-lg font-bold" onclick="closePlayer()">✕</button>
             </div>
             <div id="episodeSelector" class="flex-grow overflow-y-auto">
                 <!-- Episodes will be dynamically injected here -->
@@ -199,12 +269,97 @@
             const episodeSidebar = document.getElementById('episodeSidebar');
             const episodeSelector = document.getElementById('episodeSelector');
             
+            // Custom video player controls
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const seekBar = document.getElementById('seekBar');
+            const seekBarFilled = document.getElementById('seekBarFilled');
+            const currentTimeSpan = document.getElementById('currentTime');
+            const durationSpan = document.getElementById('duration');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+
             // Store the fetched data and current state
             let allMovies = [];
             let allSeries = [];
             let currentSeries = null;
             let activeTab = 'movies';
             let currentPlayingUrl = '';
+
+            // Remote control navigation state
+            let focusableElements = [];
+            let currentFocusIndex = -1;
+            let videoControlsFocused = false;
+
+            // Function to handle remote control navigation
+            const setupRemoteNavigation = () => {
+                // Find all focusable elements on the page
+                focusableElements = Array.from(document.querySelectorAll('[data-focusable="true"]'));
+                const mediaCards = Array.from(document.querySelectorAll('.media-card'));
+                focusableElements = focusableElements.concat(mediaCards);
+                
+                // Set initial focus
+                if (focusableElements.length > 0) {
+                    currentFocusIndex = 0;
+                    focusableElements[currentFocusIndex].focus();
+                }
+
+                document.addEventListener('keydown', (e) => {
+                    if (videoModal.classList.contains('hidden')) {
+                        // Main content navigation
+                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                            e.preventDefault();
+                            if (focusableElements[currentFocusIndex]) {
+                                focusableElements[currentFocusIndex].blur();
+                            }
+                            
+                            let nextIndex = currentFocusIndex;
+                            if (e.key === 'ArrowDown') nextIndex = (currentFocusIndex + 1) % focusableElements.length;
+                            if (e.key === 'ArrowUp') nextIndex = (currentFocusIndex - 1 + focusableElements.length) % focusableElements.length;
+                            
+                            // For left/right, try to find an element on the same "row" or "level"
+                            // This is a simple implementation, a more robust one would involve calculating positions
+                            if (e.key === 'ArrowRight' && currentFocusIndex < focusableElements.length - 1) nextIndex++;
+                            if (e.key === 'ArrowLeft' && currentFocusIndex > 0) nextIndex--;
+                            
+                            currentFocusIndex = nextIndex;
+                            focusableElements[currentFocusIndex].focus();
+                        } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (focusableElements[currentFocusIndex]) {
+                                focusableElements[currentFocusIndex].click();
+                            }
+                        }
+                    } else {
+                        // Video player navigation
+                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                            // Up/Down on the remote should navigate the episode list
+                            const episodeItems = Array.from(episodeSelector.querySelectorAll('.episode-list-item'));
+                            if (episodeItems.length > 0) {
+                                let episodeFocusIndex = episodeItems.findIndex(item => item === document.activeElement);
+                                if (e.key === 'ArrowDown') {
+                                    episodeFocusIndex = (episodeFocusIndex + 1) % episodeItems.length;
+                                } else if (e.key === 'ArrowUp') {
+                                    episodeFocusIndex = (episodeFocusIndex - 1 + episodeItems.length) % episodeItems.length;
+                                }
+                                episodeItems[episodeFocusIndex].focus();
+                            }
+                        } else if (e.key === 'ArrowLeft') {
+                            videoPlayer.currentTime -= 10; // Seek backward 10 seconds
+                        } else if (e.key === 'ArrowRight') {
+                            videoPlayer.currentTime += 10; // Seek forward 10 seconds
+                        } else if (e.key === 'Enter') {
+                            if (document.activeElement.id === 'playPauseBtn') {
+                                playPauseVideo();
+                            } else if (document.activeElement.id === 'fullscreenBtn') {
+                                toggleFullscreen();
+                            } else if (document.activeElement.classList.contains('episode-list-item')) {
+                                document.activeElement.click();
+                            }
+                        } else if (e.key === 'Escape') {
+                            closePlayer();
+                        }
+                    }
+                });
+            };
 
             // Function to fetch all data from the API
             const fetchAllData = async () => {
@@ -290,7 +445,9 @@
             // Function to render a single media card element
             const createMediaCard = (item, type) => {
                 const card = document.createElement('div');
-                card.className = 'media-card relative w-full overflow-hidden bg-gray-800 rounded-2xl shadow-xl cursor-pointer';
+                card.className = 'media-card relative w-full overflow-hidden bg-gray-800 rounded-2xl shadow-xl cursor-pointer focusable';
+                card.setAttribute('tabindex', '0'); // Make div focusable
+                card.setAttribute('data-focusable', 'true');
 
                 const thumbnail = item.thumbnail || 'https://placehold.co/400x600/1f2937/d1d5db?text=No+Image';
                 const seasonsInfo = type === 'series' && item.seasons
@@ -309,7 +466,7 @@
                 if (type === 'series') {
                     card.addEventListener('click', () => loadSeriesDetails(item._id));
                 } else {
-                    card.addEventListener('click', () => playVideo(item.streamingUrl, item.name, 'movie'));
+                    card.addEventListener('click', () => playVideo(item.streamingUrl, 'movie'));
                 }
 
                 return card;
@@ -335,6 +492,9 @@
                 } else {
                     mediaGrid.innerHTML = emptyMessage;
                 }
+                
+                // Re-setup remote navigation for new elements
+                setupRemoteNavigation();
             };
             
             // Function to fetch and display episodes for a series, then play the first one
@@ -383,7 +543,6 @@
                 videoPlayer.src = url;
                 videoModal.classList.remove('hidden');
                 
-                // Show episode selector for series
                 if (type === 'series' && currentSeries) {
                     episodeSidebar.classList.remove('hidden');
                     displayEpisodeSelector();
@@ -411,7 +570,9 @@
                         const button = document.createElement('button');
                         const isCurrent = episode.streamingUrl === currentPlayingUrl;
                         
-                        button.className = `episode-list-item w-full text-left p-3 rounded-lg transition-colors duration-200 hover:bg-gray-700 ${isCurrent ? 'active' : ''}`;
+                        button.className = `episode-list-item w-full text-left p-3 rounded-lg transition-colors duration-200 hover:bg-gray-700 focusable ${isCurrent ? 'active' : ''}`;
+                        button.setAttribute('data-focusable', 'true');
+                        button.setAttribute('tabindex', '0');
                         button.innerHTML = `
                             <div class="flex items-center">
                                 <span class="font-bold mr-2">E${episode.episodeNumber}:</span>
@@ -443,17 +604,58 @@
                 currentPlayingUrl = '';
             };
 
+            // Video player control functions
+            const formatTime = (timeInSeconds) => {
+                const minutes = Math.floor(timeInSeconds / 60);
+                const seconds = Math.floor(timeInSeconds % 60);
+                return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            };
+            
+            const playPauseVideo = () => {
+                if (videoPlayer.paused) {
+                    videoPlayer.play();
+                    playPauseBtn.textContent = '⏸';
+                } else {
+                    videoPlayer.pause();
+                    playPauseBtn.textContent = '▶';
+                }
+            };
+            
+            const toggleFullscreen = () => {
+                if (!document.fullscreenElement) {
+                    videoModal.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            };
+
             // Event listeners
             searchInput.addEventListener('input', handleSearch);
             moviesTab.addEventListener('click', () => switchTab('movies'));
             seriesTab.addEventListener('click', () => switchTab('series'));
             
-            // Keyboard shortcut for closing modal
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && !videoModal.classList.contains('hidden')) {
-                    closePlayer();
-                }
+            // Video player events
+            playPauseBtn.addEventListener('click', playPauseVideo);
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+            videoPlayer.addEventListener('loadedmetadata', () => {
+                durationSpan.textContent = formatTime(videoPlayer.duration);
             });
+
+            videoPlayer.addEventListener('timeupdate', () => {
+                const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+                seekBarFilled.style.width = `${progress}%`;
+                currentTimeSpan.textContent = formatTime(videoPlayer.currentTime);
+            });
+
+            seekBar.addEventListener('click', (e) => {
+                const rect = seekBar.getBoundingClientRect();
+                const seekTime = ((e.clientX - rect.left) / rect.width) * videoPlayer.duration;
+                videoPlayer.currentTime = seekTime;
+            });
+            
+            // Setup remote navigation on initial load
+            setupRemoteNavigation();
         });
     </script>
 </body>

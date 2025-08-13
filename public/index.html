@@ -1,962 +1,734 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamVault - Your Media Library</title>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Movie and Series Player</title>
+    <!-- Font Awesome Icons for controls -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Styles for progress bar and volume -->
     <style>
-        /* General Styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .main-container {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 2rem;
-            min-height: 100vh;
-        }
-
-        /* Search Bar & Welcome Section */
-        .welcome-section {
-            text-align: center;
-            max-width: 800px;
-            margin: auto;
-        }
-
-        .welcome-title {
-            font-size: 3.5rem;
-            font-weight: 900;
-            margin-bottom: 1rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradient 3s ease-in-out infinite;
-        }
-
-        @keyframes gradient {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        .welcome-subtitle {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 3rem;
-            line-height: 1.6;
-        }
-
-        .search-container {
-            position: relative;
-            max-width: 500px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 1rem 3rem 1rem 1.5rem;
-            font-size: 1.1rem;
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50px;
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            outline: none;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .search-input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .search-input:focus {
-            border-color: #4ecdc4;
-            background: rgba(255, 255, 255, 0.1);
-            transform: scale(1.02);
-            box-shadow: 0 0 30px rgba(78, 205, 196, 0.3);
-        }
-
-        .search-icon {
-            position: absolute;
-            right: 1.5rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 1.2rem;
-            pointer-events: none;
-        }
-
-        .search-suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: rgba(0, 0, 0, 0.95);
-            border-radius: 20px;
-            margin-top: 0.5rem;
-            max-height: 300px;
-            overflow-y: auto;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: none;
-            z-index: 100;
-        }
-
-        .suggestion-item {
-            padding: 1rem 1.5rem;
-            cursor: pointer;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .suggestion-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .suggestion-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
-        
-        .content-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .content-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .content-card:hover {
-            transform: translateY(-10px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-            border-color: #4ecdc4;
-        }
-
-        .card-thumbnail {
-            width: 100%;
-            height: 180px;
-            object-fit: cover;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-        }
-
-        .card-content {
-            padding: 1.5rem;
-        }
-
-        .card-title {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            color: #ffffff;
-        }
-
-        .card-type {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            color: white;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        /* --- Video Player Modal Styles (Improved & Full-Screen) --- */
-        .video-player-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.98); /* Almost black backdrop */
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-            backdrop-filter: blur(10px);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-        }
-
-        .video-player-modal.is-visible {
-            opacity: 1;
-            visibility: visible;
-            display: flex; /* Ensure the modal is visible */
-        }
-
-        .player-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            background: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .player-controls-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 80%, rgba(0,0,0,0.5) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            pointer-events: none;
-        }
-
-        .player-container:hover .player-controls-overlay,
-        .player-container.show-controls .player-controls-overlay {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .player-header {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: white;
-            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
-            z-index: 10;
-        }
-
-        .player-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: white;
-        }
-
-        .close-player {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.8);
-            font-size: 1.8rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        .close-player:hover {
-            color: white;
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(90deg);
-        }
-
-        .video-player {
-            width: 100%;
-            height: 100%;
-            object-fit: contain; /* Ensure video is not stretched and fits the screen */
-            background: #000;
-        }
-
-        .video-player.hidden {
-            display: none;
-        }
-        
-        .episode-selector {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            max-height: 35vh;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
-            overflow-y: auto;
-            display: none;
-            padding: 1rem 2rem;
-            z-index: 10;
-        }
-
-        .season-group {
-            margin-bottom: 1rem;
-        }
-
-        .season-title {
-            font-weight: 700;
-            color: #4ecdc4;
-            margin-bottom: 0.5rem;
-            font-size: 1.1rem;
-        }
-
-        .episode-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 0.5rem;
-        }
-
-        .episode-btn {
-            padding: 0.5rem 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: left;
-        }
-
-        .episode-btn:hover {
-            background: rgba(78, 205, 196, 0.2);
-            border-color: #4ecdc4;
-        }
-
-        .episode-btn.active {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            border-color: transparent;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.1);
-            border-top: 3px solid #4ecdc4;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-        }
-        
-        .full-screen-btn {
-            position: absolute;
-            bottom: 2rem;
-            right: 2rem;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-
-        .full-screen-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: scale(1.1);
-        }
-
-        /* Loading and Error Message for Video Player */
-        .video-message-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-align: center;
-            padding: 2rem;
-            z-index: 5;
-            display: none;
-        }
-
-        .video-message-overlay p {
-            margin-top: 1rem;
-            font-size: 1.1rem;
-        }
-
-        .video-message-overlay .spinner {
-            margin: 0;
-        }
-
-        @media (max-width: 768px) {
-            .welcome-title {
-                font-size: 2.5rem;
-            }
-            
-            .content-grid {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 1rem;
-                padding: 1rem;
-            }
-            
-            .player-title {
-                font-size: 1.2rem;
-            }
-            
-            .close-player {
-                font-size: 1.2rem;
-            }
-            
-            .episode-selector {
-                padding: 1rem;
-                max-height: 40vh;
-            }
-
-            .full-screen-btn {
-                width: 40px;
-                height: 40px;
-                font-size: 1.2rem;
-                bottom: 1rem;
-                right: 1rem;
-            }
-        }
-        
-        .landscape-tip {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 1rem;
-            border-radius: 10px;
-            text-align: center;
-            z-index: 20;
-            display: none;
-        }
-
-        @media (orientation: portrait) and (max-width: 768px) {
-            .video-player-modal.is-visible .landscape-tip {
-                display: block;
-            }
-            .video-player {
-                filter: blur(5px);
-            }
-        }
+      body {
+        background-color: #1a202c;
+        font-family: "Inter", sans-serif;
+      }
+      #progress-bar {
+        position: relative;
+        width: 100%;
+        height: 8px;
+        background-color: #4a5568;
+        border-radius: 9999px;
+        cursor: pointer;
+        transition: height 0.2s;
+      }
+      #progress-bar:hover {
+        height: 12px;
+      }
+      #current-progress {
+        position: absolute;
+        left: 0;
+        height: 100%;
+        width: 0;
+        background: #3b82f6;
+        border-radius: 9999px;
+      }
+      #current-progress::after {
+        content: "";
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #ffffff;
+        transition: transform 0.2s;
+        opacity: 0;
+      }
+      #progress-bar:hover #current-progress::after {
+        opacity: 1;
+        transform: translateY(-50%) scale(1.2);
+      }
+      #volume-range {
+        position: relative;
+        width: 100px;
+        height: 5px;
+        -webkit-appearance: none;
+        background-color: #4a5568;
+        border-radius: 9999px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 14px;
+        width: 14px;
+        background-color: #3b82f6;
+        border-radius: 50%;
+        cursor: pointer;
+      }
+      .playback-options button,
+      .settings-content button {
+        @apply p-2 w-full text-center hover:bg-gray-700 transition duration-200;
+      }
+      .hide {
+        display: none;
+      }
+      /* Custom styles for the settings panel */
+      .settings-panel {
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        margin-bottom: 1rem;
+        width: 250px;
+        background-color: #2d3748; /* Dark gray */
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 20;
+        color: #e2e8f0; /* Light gray */
+      }
+      .settings-panel .header {
+        font-weight: bold;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #4a5568;
+      }
+      .settings-panel .content-section {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #4a5568;
+      }
+      .settings-panel .content-section:last-child {
+        border-bottom: none;
+      }
+      .settings-panel .content-section h4 {
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        color: #a0aec0;
+      }
+      .settings-panel .option-list button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.25rem;
+      }
+      .settings-panel .option-list button:hover {
+        background-color: #4a5568;
+      }
+      .settings-panel .option-list button.active {
+        background-color: #3b82f6; /* Blue */
+        color: white;
+      }
+      /* Custom loading spinner */
+      .loader {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
-</head>
-<body>
-    <div class="main-container">
-        <!-- Home Section -->
-        <section id="home" class="section active">
-            <div class="welcome-section">
-                <h1 class="welcome-title">Welcome to StreamVault</h1>
-                <p class="welcome-subtitle">Discover and stream your favorite movies and TV series with our premium media library. High-quality content at your fingertips.</p>
-                
-                <div class="search-container">
-                    <input type="text" class="search-input" id="searchInput" placeholder="Search for movies, series..." autocomplete="off">
-                    <span class="search-icon">🔍</span>
-                    <div class="search-suggestions" id="searchSuggestions"></div>
-                </div>
-            </div>
-            
-            <div id="searchResults" class="content-grid" style="display: none;"></div>
-            
-            <!-- Hidden Sections (for now) - you can add a button to access these later -->
-            <section id="movies" class="section">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading movies...</p>
-                </div>
-                <div id="moviesGrid" class="content-grid"></div>
-            </section>
+  </head>
+  <body class="p-4 md:p-8 flex items-center justify-center min-h-screen text-gray-100">
+    <main id="main-app" class="w-full max-w-4xl bg-gray-800 rounded-xl shadow-2xl overflow-hidden">
+      <!-- Search View -->
+      <div id="search-view" class="p-8 flex flex-col items-center justify-center min-h-screen">
+        <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-6">Find Your Content</h1>
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="hide">
+          <div class="loader"></div>
+          <p class="mt-4 text-center text-lg text-gray-400">Fetching content, please wait...</p>
+        </div>
+        <!-- Search input container -->
+        <div id="search-container" class="w-full max-w-lg relative hide">
+          <div class="relative">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search for a movie or series..."
+              class="w-full p-4 pl-12 rounded-full bg-gray-700 text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500 transition duration-300 shadow-xl"
+            />
+            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+          </div>
+          <!-- Search results container -->
+          <div id="results-container" class="mt-4 bg-gray-700 rounded-lg shadow-xl overflow-hidden hide">
+            <ul id="results-list" class="divide-y divide-gray-600">
+              <!-- Search results will be dynamically inserted here -->
+            </ul>
+          </div>
+        </div>
+      </div>
 
-            <section id="series" class="section">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Loading series...</p>
-                </div>
-                <div id="seriesGrid" class="content-grid"></div>
-            </section>
-        </section>
-    </div>
+      <!-- Video Player View -->
+      <div id="player-view" class="w-full max-w-4xl bg-gray-800 rounded-xl shadow-2xl overflow-hidden hide">
+        <!-- Button to go back to search -->
+        <div class="p-4 bg-gray-700 flex items-center">
+          <button id="back-to-search-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 flex items-center space-x-2">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Search</span>
+          </button>
+        </div>
 
-    <!-- Video Player Modal -->
-    <div class="video-player-modal" id="videoModal">
-        <div class="player-container">
-            <!-- Loading and Error Message Overlay -->
-            <div class="video-message-overlay" id="videoMessage">
-                <div class="spinner"></div>
-                <p id="videoMessageText">Loading video...</p>
+        <!-- Video Player Container -->
+        <div class="relative w-full aspect-video group" id="video-container">
+          <!-- The video element -->
+          <video id="my-video" preload="metadata" class="w-full h-full object-cover">
+            <source src="" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+          <div
+            class="absolute inset-x-0 bottom-0 p-4 md:p-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
+            id="controls"
+          >
+            <!-- Progress Bar and Timer -->
+            <div class="flex items-center space-x-4 mb-4">
+              <div id="progress-bar" class="flex-grow">
+                <div id="current-progress"></div>
+              </div>
+              <div class="text-xs sm:text-sm font-mono flex-shrink-0">
+                <span id="current-time">00:00</span>
+                <span class="text-gray-400"> / </span>
+                <span id="max-duration">00:00</span>
+              </div>
             </div>
-            <div class="player-controls-overlay">
-                <div class="player-header">
-                    <div class="player-title" id="playerTitle">Now Playing</div>
-                    <button class="close-player" onclick="closePlayer()">✕</button>
-                </div>
-                <div class="episode-selector" id="episodeSelector" style="display: none;"></div>
-                <!-- Fullscreen button -->
-                <button class="full-screen-btn" id="fullscreenBtn">
-                    <span id="fullscreenIcon">⛶</span>
+
+            <!-- Main Control Buttons -->
+            <div class="flex justify-between items-center">
+              <!-- Play/Pause, Skip, and Volume Controls -->
+              <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- Skip Backward -->
+                <button id="skip-backward-btn" class="control-btn p-2 rounded-full hover:bg-white/20 transition duration-200">
+                  <i class="fa-solid fa-backward-step text-xl md:text-2xl"></i>
                 </button>
-            </div>
-            <video class="video-player" id="videoPlayer" controls>
-                Your browser does not support the video tag.
-            </video>
-        </div>
-        <div class="landscape-tip">
-            Please rotate your device for the best viewing experience.
-        </div>
-    </div>
+                <!-- Play/Pause Button -->
+                <button id="play-btn" class="control-btn p-2 rounded-full hover:bg-white/20 transition duration-200">
+                  <i class="fa-solid fa-play text-xl md:text-2xl"></i>
+                </button>
+                <button id="pauseButton" class="control-btn hide p-2 rounded-full hover:bg-white/20 transition duration-200">
+                  <i class="fa-solid fa-pause text-xl md:text-2xl"></i>
+                </button>
+                <!-- Skip Forward -->
+                <button id="skip-forward-btn" class="control-btn p-2 rounded-full hover:bg-white/20 transition duration-200">
+                  <i class="fa-solid fa-forward-step text-xl md:text-2xl"></i>
+                </button>
 
-    <script>
-        // Configuration - This has been updated to your new API
-        const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
-        
-        let allMovies = [];
-        let allSeries = [];
-        let currentSeries = null;
-        let mouseTimer;
-
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeApp();
-            setupEventListeners();
-        });
-
-        function initializeApp() {
-            // Load initial data
-            loadMovies();
-            loadSeries();
-        }
-
-        function setupEventListeners() {
-            // Search functionality
-            const searchInput = document.getElementById('searchInput');
-            let searchTimeout;
-
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                const query = e.target.value.trim();
-                
-                if (query.length >= 3) {
-                    searchTimeout = setTimeout(() => performSearch(query), 300);
-                    showSuggestions(query);
-                } else {
-                    hideSuggestions();
-                    document.getElementById('searchResults').style.display = 'none';
-                }
-            });
-
-            searchInput.addEventListener('focus', (e) => {
-                const query = e.target.value.trim();
-                if (query.length >= 3) {
-                    showSuggestions(query);
-                }
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.search-container')) {
-                    hideSuggestions();
-                }
-            });
-
-            // Fullscreen toggle button
-            document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
-
-            // Hide/show controls on mouse movement
-            const playerContainer = document.querySelector('.player-container');
-            playerContainer.addEventListener('mousemove', showControls);
-            playerContainer.addEventListener('mouseleave', hideControls);
-
-            // Handle video player events for loading feedback
-            const videoPlayer = document.getElementById('videoPlayer');
-            const videoMessage = document.getElementById('videoMessage');
-            const videoMessageText = document.getElementById('videoMessageText');
-
-            videoPlayer.addEventListener('waiting', () => {
-                videoMessage.style.display = 'flex';
-                videoMessage.querySelector('.spinner').style.display = 'block';
-                videoMessageText.textContent = 'Loading video...';
-            });
-            
-            videoPlayer.addEventListener('playing', () => {
-                videoMessage.style.display = 'none';
-                videoPlayer.style.display = 'block';
-            });
-
-            videoPlayer.addEventListener('error', (e) => {
-                console.error('Video playback error:', e);
-                videoPlayer.style.display = 'none';
-                videoMessage.style.display = 'flex';
-                videoMessage.querySelector('.spinner').style.display = 'none';
-                videoMessageText.innerHTML = 'Video failed to load. Please check the URL or try again later. <br> URL: ' + videoPlayer.src;
-            });
-
-            // Prevent context menu on video
-            videoPlayer.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-
-            // Handle fullscreen changes to update icon
-            document.addEventListener('fullscreenchange', () => {
-                const icon = document.getElementById('fullscreenIcon');
-                if (document.fullscreenElement) {
-                    icon.textContent = '⛶'; // Exit fullscreen icon
-                } else {
-                    icon.textContent = '⛶'; // Enter fullscreen icon
-                }
-            });
-        }
-        
-        // A simple function to switch between sections - kept for future use
-        function showSection(sectionId) {
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
-            document.getElementById(sectionId).classList.add('active');
-        }
-
-        // Fetching data from the new API endpoint
-        async function loadMovies() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/movies`);
-                allMovies = await response.json();
-                displayContent(allMovies, document.getElementById('moviesGrid'), 'movie');
-            } catch (error) {
-                console.error('Error loading movies:', error);
-            }
-        }
-
-        async function loadSeries() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/series`);
-                allSeries = await response.json();
-                displayContent(allSeries, document.getElementById('seriesGrid'), 'series');
-            } catch (error) => {
-                console.error('Error loading series:', error);
-            }
-        }
-        
-        function displayContent(items, container, type) {
-            if (items.length === 0) {
-                container.innerHTML = '<p>No content found</p>';
-                return;
-            }
-
-            container.innerHTML = items.map(item => {
-                const safeName = item.name.replace(/'/g, "\\'"); // Escape single quotes
-                const onClickAction = type === 'movie' ? `playVideo('${item.streamingUrl}', '${safeName}', 'movie')` : `loadSeriesDetails('${item._id}')`;
-                return `
-                    <div class="content-card" onclick="${onClickAction}">
-                        <img class="card-thumbnail" src="${item.thumbnail}" alt="${item.name}" onerror="this.src='https://placehold.co/280x180/${type === 'movie' ? '4ecdc4' : '96ceb4'}/ffffff?text=${type === 'movie' ? 'Movie' : 'Series'}'">
-                        <div class="card-content">
-                            <h3 class="card-title">${item.name}</h3>
-                            <span class="card-type">${type === 'movie' ? 'Movie' : `TV Series • ${item.seasons?.length || 0} Season${item.seasons?.length !== 1 ? 's' : ''}`}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            // Hide loading spinner
-            if (container.previousElementSibling && container.previousElementSibling.classList.contains('loading')) {
-                container.previousElementSibling.style.display = 'none';
-            }
-        }
-
-        function showSuggestions(query) {
-            const suggestions = document.getElementById('searchSuggestions');
-            const results = searchContent(query).slice(0, 5); // Show top 5 suggestions
-            
-            if (results.length === 0) {
-                suggestions.style.display = 'none';
-                return;
-            }
-
-            suggestions.innerHTML = results.map(item => {
-                const safeName = item.name.replace(/'/g, "\\'");
-                const onClickAction = `selectSuggestion('${safeName}', '${item.type}', '${item.id}')`;
-                return `
-                    <div class="suggestion-item" onclick="${onClickAction}">
-                        <div class="suggestion-icon">${item.type === 'movie' ? '🎬' : '📺'}</div>
-                        <div>
-                            <div>${item.name}</div>
-                            <small style="color: rgba(255,255,255,0.5)">${item.type === 'movie' ? 'Movie' : 'TV Series'}</small>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-            
-            suggestions.style.display = 'block';
-        }
-
-        function hideSuggestions() {
-            document.getElementById('searchSuggestions').style.display = 'none';
-        }
-
-        function searchContent(query) {
-            const movieResults = allMovies.filter(movie => 
-                movie.name.toLowerCase().includes(query.toLowerCase())
-            ).map(movie => ({ ...movie, type: 'movie', id: movie._id }));
-
-            const seriesResults = allSeries.filter(series => 
-                series.name.toLowerCase().includes(query.toLowerCase())
-            ).map(series => ({ ...series, type: 'series', id: series._id }));
-
-            return [...movieResults, ...seriesResults].sort((a, b) => 
-                a.name.toLowerCase().indexOf(query.toLowerCase()) - b.name.toLowerCase().indexOf(query.toLowerCase())
-            );
-        }
-
-        function performSearch(query) {
-            const results = searchContent(query);
-            const resultsContainer = document.getElementById('searchResults');
-            
-            if (results.length === 0) {
-                resultsContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.7)">No results found for "' + query + '"</div>';
-            } else {
-                resultsContainer.innerHTML = results.map(item => {
-                    if (item.type === 'movie') {
-                        const safeName = item.name.replace(/'/g, "\\'");
-                        return `
-                            <div class="content-card" onclick="playVideo('${item.streamingUrl}', '${safeName}', 'movie')">
-                                <img class="card-thumbnail" src="${item.thumbnail}" alt="${item.name}" onerror="this.src='https://placehold.co/280x180/4ecdc4/ffffff?text=Movie'">
-                                <div class="card-content">
-                                    <h3 class="card-title">${item.name}</h3>
-                                    <span class="card-type">Movie</span>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        const safeName = item.name.replace(/'/g, "\\'");
-                        return `
-                            <div class="content-card" onclick="loadSeriesDetails('${item.id}')">
-                                <img class="card-thumbnail" src="${item.thumbnail}" alt="${item.name}" onerror="this.src='https://placehold.co/280x180/96ceb4/ffffff?text=Series'">
-                                <div class="card-content">
-                                    <h3 class="card-title">${item.name}</h3>
-                                    <span class="card-type">TV Series • ${item.seasons?.length || 0} Season${item.seasons?.length !== 1 ? 's' : ''}</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }).join('');
-            }
-            
-            resultsContainer.style.display = 'block';
-        }
-
-        function selectSuggestion(name, type, id) {
-            document.getElementById('searchInput').value = name;
-            hideSuggestions();
-            
-            if (type === 'movie') {
-                const movie = allMovies.find(m => m._id === id);
-                if (movie) {
-                    playVideo(movie.streamingUrl, movie.name, 'movie');
-                }
-            } else {
-                loadSeriesDetails(id);
-            }
-        }
-
-        async function loadSeriesDetails(seriesId) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
-                currentSeries = await response.json();
-                
-                if (currentSeries && currentSeries.seasons && currentSeries.seasons.length > 0 && 
-                    currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
-                    const firstEpisode = currentSeries.seasons[0].episodes[0];
-                    playVideo(firstEpisode.streamingUrl, 
-                             `${currentSeries.name} - S${currentSeries.seasons[0].seasonNumber}E${firstEpisode.episodeNumber}: ${firstEpisode.title}`, 
-                             'series');
-                } else {
-                    console.error('No episodes available for this series.');
-                }
-            } catch (error) {
-                console.error('Error loading series details:', error);
-            }
-        }
-        
-        function playVideo(url, title, type) {
-            const modal = document.getElementById('videoModal');
-            const player = document.getElementById('videoPlayer');
-            const playerTitle = document.getElementById('playerTitle');
-            const episodeSelector = document.getElementById('episodeSelector');
-            const videoMessage = document.getElementById('videoMessage');
-            const videoMessageText = document.getElementById('videoMessageText');
-
-            // Show modal and loading state
-            modal.classList.add('is-visible');
-            videoMessage.style.display = 'flex';
-            videoMessage.querySelector('.spinner').style.display = 'block';
-            videoMessageText.textContent = 'Loading video...';
-            player.style.display = 'none';
-
-            playerTitle.textContent = title;
-            player.src = url;
-            
-            // Show episode selector for series
-            if (type === 'series' && currentSeries) {
-                episodeSelector.style.display = 'block';
-                displayEpisodeSelector();
-            } else {
-                episodeSelector.style.display = 'none';
-            }
-
-            // Enter fullscreen mode
-            enterFullscreen(player);
-        }
-
-        function displayEpisodeSelector() {
-            const selector = document.getElementById('episodeSelector');
-            const currentUrl = document.getElementById('videoPlayer').src;
-            
-            selector.innerHTML = currentSeries.seasons.map(season => `
-                <div class="season-group">
-                    <div class="season-title">Season ${season.seasonNumber}</div>
-                    <div class="episode-list">
-                        ${season.episodes.map(episode => {
-                            const safeTitle = episode.title.replace(/'/g, "\\'");
-                            const safeSeriesName = currentSeries.name.replace(/'/g, "\\'");
-                            return `
-                                <button class="episode-btn ${episode.streamingUrl === currentUrl ? 'active' : ''}" 
-                                        onclick="switchEpisode('${episode.streamingUrl}', '${safeSeriesName}', ${season.seasonNumber}, ${episode.episodeNumber}, '${safeTitle}')">
-                                    E${episode.episodeNumber}: ${episode.title}
-                                </button>
-                            `;
-                        }).join('')}
-                    </div>
+                <!-- Volume Controls -->
+                <div id="volume" class="flex items-center space-x-2">
+                  <span id="high" class="text-lg md:text-xl cursor-pointer hover:text-blue-400 transition duration-200">
+                    <i class="fa-solid fa-volume-high"></i>
+                  </span>
+                  <span id="low" class="text-lg md:text-xl cursor-pointer hide hover:text-blue-400 transition duration-200">
+                    <i class="fa-solid fa-volume-low"></i>
+                  </span>
+                  <span id="mute" class="text-lg md:text-xl cursor-pointer hide hover:text-blue-400 transition duration-200">
+                    <i class="fa-solid fa-volume-xmark"></i>
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="50"
+                    id="volume-range"
+                    oninput="slider()"
+                  />
                 </div>
-            `).join('');
+              </div>
+
+              <!-- Playback Speed, Settings, and Fullscreen -->
+              <div class="flex items-center space-x-2 sm:space-x-4">
+                <!-- Playback Speed Dropdown -->
+                <div class="relative playback">
+                  <button
+                    id="playback-speed-btn"
+                    class="bg-gray-700/50 hover:bg-gray-700 text-sm font-medium py-1 px-3 rounded-lg transition duration-200"
+                  >
+                    1x
+                  </button>
+                  <div
+                    class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-900 rounded-lg shadow-xl overflow-hidden z-10 hide playback-options"
+                  >
+                    <button onclick="setPlayback(0.5)">0.5x</button>
+                    <button onclick="setPlayback(1.0)">1x</button>
+                    <button onclick="setPlayback(1.5)">1.5x</button>
+                    <button onclick="setPlayback(2.0)">2x</button>
+                  </div>
+                </div>
+
+                <!-- Settings Button and Panel -->
+                <div class="relative settings">
+                  <button id="settings-btn" class="p-2 rounded-full hover:bg-white/20 transition duration-200">
+                    <i class="fa-solid fa-gear text-xl md:text-2xl"></i>
+                  </button>
+                  <div id="settings-panel" class="settings-panel hide">
+                    <div class="content-section">
+                      <h4>Quality</h4>
+                      <div id="quality-options" class="option-list">
+                        <!-- Quality options will be dynamically added here -->
+                      </div>
+                    </div>
+                    <div class="content-section">
+                      <h4>Audio Tracks</h4>
+                      <div id="audio-tracks" class="option-list">
+                        <!-- Audio tracks will be dynamically populated -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Fullscreen Button -->
+                <div id="size-screen">
+                  <button id="screen-expand" class="p-2 rounded-full hover:bg-white/20 transition duration-200">
+                    <i class="fa-solid fa-expand text-xl md:text-2xl"></i>
+                  </button>
+                  <button id="screen-compress" class="p-2 rounded-full hover:bg-white/20 transition duration-200 hide">
+                    <i class="fa-solid fa-compress text-xl md:text-2xl"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- JavaScript for the video player logic -->
+    <script>
+      // ================================================================
+      // Global Variables and Constants
+      // ================================================================
+      const API_URL = "https://future-ester-seeutech-645c6129.koyeb.app/api";
+      let allContent = []; // Stores movies and series fetched from the API
+
+      // ================================================================
+      // DOM Element References
+      // ================================================================
+      const mainApp = document.getElementById("main-app");
+      const searchView = document.getElementById("search-view");
+      const playerView = document.getElementById("player-view");
+      const searchInput = document.getElementById("search-input");
+      const searchContainer = document.getElementById("search-container");
+      const resultsContainer = document.getElementById("results-container");
+      const resultsList = document.getElementById("results-list");
+      const backToSearchBtn = document.getElementById("back-to-search-btn");
+      const loadingIndicator = document.getElementById("loading-indicator");
+      
+      const videoContainer = document.querySelector("#video-container");
+      const myVideo = document.getElementById("my-video");
+      const controls = document.getElementById("controls");
+      const playButton = document.getElementById("play-btn");
+      const pauseButton = document.getElementById("pauseButton");
+      const skipBackwardBtn = document.getElementById("skip-backward-btn");
+      const skipForwardBtn = document.getElementById("skip-forward-btn");
+      const volumeRange = document.getElementById("volume-range");
+      const highVolumeIcon = document.getElementById("high");
+      const lowVolumeIcon = document.getElementById("low");
+      const muteVolumeIcon = document.getElementById("mute");
+      const screenCompress = document.getElementById("screen-compress");
+      const screenExpand = document.getElementById("screen-expand");
+      const currentProgress = document.getElementById("current-progress");
+      const currentTimeRef = document.getElementById("current-time");
+      const maxDurationRef = document.getElementById("max-duration");
+      const progressBar = document.getElementById("progress-bar");
+      const playbackSpeedButton = document.getElementById("playback-speed-btn");
+      const playbackContainer = document.querySelector(".playback");
+      const playbackSpeedOptions = document.querySelector(".playback-options");
+      const settingsBtn = document.getElementById("settings-btn");
+      const settingsPanel = document.getElementById("settings-panel");
+      const qualityOptions = document.getElementById("quality-options");
+      const audioTracksList = document.getElementById("audio-tracks");
+
+      // Placeholder for dynamic quality URLs
+      const availableQualities = [
+        { label: "1080p", url: "https://dl.dropbox.com/s/l90y72zm97ayzhx/my%20video.mp4?raw=1" },
+        { label: "720p", url: "https://dl.dropbox.com/s/l90y72zm97ayzhx/my%20video.mp4?raw=1" },
+        { label: "480p", url: "https://dl.dropbox.com/s/l90y72zm97ayzhx/my%20video.mp4?raw=1" },
+      ];
+
+      // Object to handle different event types for mouse and touch
+      const events = {
+        mouse: { click: "click" },
+        touch: { click: "touchstart" },
+      };
+      let deviceType = "";
+      
+      // ================================================================
+      // API Fetching Logic
+      // ================================================================
+      async function fetchAllContent() {
+        showLoadingIndicator();
+        try {
+          const moviesResponse = await fetch(`${API_URL}/movies`);
+          const seriesResponse = await fetch(`${API_URL}/series`);
+
+          const movies = await moviesResponse.json();
+          const series = await seriesResponse.json();
+
+          // Combine movies and series into a single array
+          allContent = [...movies, ...series];
+          console.log("Fetched content:", allContent);
+          hideLoadingIndicator();
+          searchContainer.classList.remove("hide"); // Show search bar after fetching
+        } catch (error) {
+          console.error("Failed to fetch data:", error);
+          // Hide loading and show an error message instead
+          hideLoadingIndicator();
+          searchContainer.innerHTML = '<p class="text-red-400 text-center">Failed to load content. Please try again later.</p>';
         }
+      }
 
-        function switchEpisode(url, seriesName, seasonNumber, episodeNumber, episodeTitle) {
-            const player = document.getElementById('videoPlayer');
-            const playerTitle = document.getElementById('playerTitle');
-            const videoMessage = document.getElementById('videoMessage');
-            const videoMessageText = document.getElementById('videoMessageText');
+      function showLoadingIndicator() {
+        loadingIndicator.classList.remove("hide");
+        searchContainer.classList.add("hide");
+      }
 
-            // Show loading state
-            videoMessage.style.display = 'flex';
-            videoMessage.querySelector('.spinner').style.display = 'block';
-            videoMessageText.textContent = 'Loading video...';
-            player.style.display = 'none';
+      function hideLoadingIndicator() {
+        loadingIndicator.classList.add("hide");
+      }
+
+      // ================================================================
+      // Search Functionality
+      // ================================================================
+
+      // Function to render search results
+      const renderSearchResults = (results) => {
+        resultsList.innerHTML = ""; // Clear previous results
+        if (results.length > 0) {
+          resultsContainer.classList.remove("hide");
+          results.forEach((item) => {
+            const li = document.createElement("li");
+            li.className = "p-4 cursor-pointer hover:bg-gray-600 transition duration-200";
+            li.textContent = item.title;
+            li.addEventListener("click", () => {
+              playVideoFromSearch(item.streamingUrl);
+            });
+            resultsList.appendChild(li);
+          });
+        } else {
+          resultsContainer.classList.add("hide");
+        }
+      };
+
+      // Function to filter data from the fetched content
+      const searchContent = (query) => {
+        if (query.length >= 3) {
+          const filteredResults = allContent.filter((item) =>
+            item.title.toLowerCase().includes(query.toLowerCase())
+          );
+          renderSearchResults(filteredResults);
+        } else {
+          resultsContainer.classList.add("hide");
+        }
+      };
+
+      // Event listener for search input
+      searchInput.addEventListener("input", (e) => {
+        const query = e.target.value.trim();
+        searchContent(query);
+      });
+
+      // ================================================================
+      // View Switching Logic
+      // ================================================================
+      const showSearchView = () => {
+        playerView.classList.add("hide");
+        searchView.classList.remove("hide");
+        searchInput.value = ""; // Clear search input
+        resultsContainer.classList.add("hide"); // Hide results
+        myVideo.pause(); // Pause video if playing
+      };
+
+      const showPlayerView = () => {
+        searchView.classList.add("hide");
+        playerView.classList.remove("hide");
+      };
+
+      // Go back to search button listener
+      backToSearchBtn.addEventListener("click", showSearchView);
+
+      // Function to load and play a video from a search result
+      const playVideoFromSearch = (url) => {
+        myVideo.src = url;
+        myVideo.load();
+        showPlayerView();
+        myVideo.onloadedmetadata = () => {
+          maxDurationRef.innerText = timeFormatter(myVideo.duration);
+          currentTimeRef.innerText = "00:00";
+          currentProgress.style.width = "0%";
+          playVideo();
+          // Re-populate settings for new video
+          populateQualityOptions();
+          populateAudioTracks();
+        };
+      };
+
+      // ================================================================
+      // Video Player Functionality (re-used from your provided code)
+      // ================================================================
+
+      // Detect if the device is a touch device
+      const isTouchDevice = () => {
+        try {
+          document.createEvent("TouchEvent");
+          deviceType = "touch";
+          return true;
+        } catch (e) {
+          deviceType = "mouse";
+          return false;
+        }
+      };
+      
+      // Play/Pause functionality
+      const playVideo = () => {
+        myVideo.play();
+        pauseButton.classList.remove("hide");
+        playButton.classList.add("hide");
+      };
+      const pauseVideo = () => {
+        myVideo.pause();
+        pauseButton.classList.add("hide");
+        playButton.classList.remove("hide");
+      };
+      playButton.addEventListener("click", playVideo);
+      pauseButton.addEventListener("click", pauseVideo);
+      myVideo.addEventListener("click", () => {
+        if (myVideo.paused) {
+          playVideo();
+        } else {
+          pauseVideo();
+        }
+      });
+      
+      // Skip functionality
+      skipBackwardBtn.addEventListener("click", () => {
+        myVideo.currentTime = Math.max(0, myVideo.currentTime - 10);
+      });
+      skipForwardBtn.addEventListener("click", () => {
+        myVideo.currentTime = Math.min(myVideo.duration, myVideo.currentTime + 10);
+      });
+
+      // Show/hide playback speed options
+      playbackContainer.addEventListener("click", () => {
+        playbackSpeedOptions.classList.toggle("hide");
+      });
+
+      // Hide menus when clicking outside
+      window.addEventListener("click", (e) => {
+        if (!playbackContainer.contains(e.target)) {
+          playbackSpeedOptions.classList.add("hide");
+        }
+        if (!settingsBtn.contains(e.target) && !settingsPanel.contains(e.target)) {
+          settingsPanel.classList.add("hide");
+        }
+      });
+
+      // Set playback speed
+      const setPlayback = (value) => {
+        playbackSpeedButton.innerText = value + "x";
+        myVideo.playbackRate = value;
+      };
+
+      // Mute/Unmute functionality
+      const muter = () => {
+        myVideo.muted = true;
+        muteVolumeIcon.classList.remove("hide");
+        highVolumeIcon.classList.add("hide");
+        lowVolumeIcon.classList.add("hide");
+        volumeRange.value = 0;
+        updateVolumeSlider();
+      };
+      highVolumeIcon.addEventListener("click", muter);
+      lowVolumeIcon.addEventListener("click", muter);
+      muteVolumeIcon.addEventListener("click", () => {
+        myVideo.muted = false;
+        myVideo.volume = 0.5; // Default volume after unmuting
+        volumeRange.value = 50;
+        updateVolumeSlider();
+        highVolumeIcon.classList.remove("hide");
+        lowVolumeIcon.classList.add("hide");
+        muteVolumeIcon.classList.add("hide");
+      });
+
+      // Update volume based on slider
+      volumeRange.addEventListener("input", () => {
+        let volumeValue = volumeRange.value / 100;
+        myVideo.volume = volumeValue;
+        myVideo.muted = false;
+        updateVolumeIcons(volumeValue);
+        updateVolumeSlider();
+      });
+
+      const updateVolumeIcons = (volumeValue) => {
+        if (volumeValue === 0) {
+          muteVolumeIcon.classList.remove("hide");
+          highVolumeIcon.classList.add("hide");
+          lowVolumeIcon.classList.add("hide");
+        } else if (volumeValue < 0.5) {
+          lowVolumeIcon.classList.remove("hide");
+          highVolumeIcon.classList.add("hide");
+          muteVolumeIcon.classList.add("hide");
+        } else {
+          highVolumeIcon.classList.remove("hide");
+          lowVolumeIcon.classList.add("hide");
+          muteVolumeIcon.classList.add("hide");
+        }
+      };
+
+      const updateVolumeSlider = () => {
+        const valPercent = (volumeRange.value / volumeRange.max) * 100;
+        volumeRange.style.background = `linear-gradient(to right, #3b82f6 ${valPercent}%, #4a5568 ${valPercent})
+`;
+      };
+
+      // Fullscreen functionality
+      screenExpand.addEventListener("click", () => {
+        screenCompress.classList.remove("hide");
+        screenExpand.classList.add("hide");
+        videoContainer.requestFullscreen().catch((err) => {
+          console.error("Error attempting to enable full-screen mode:", err);
+        });
+      });
+
+      const normalScreen = () => {
+        screenCompress.classList.add("hide");
+        screenExpand.classList.remove("hide");
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+      };
+      screenCompress.addEventListener("click", normalScreen);
+      // Exit fullscreen if user presses escape
+      document.addEventListener("fullscreenchange", () => {
+        if (!document.fullscreenElement) {
+          normalScreen();
+        }
+      });
+
+      // Format time
+      const timeFormatter = (timeInput) => {
+        let minute = Math.floor(timeInput / 60);
+        minute = minute < 10 ? "0" + minute : minute;
+        let second = Math.floor(timeInput % 60);
+        second = second < 10 ? "0" + second : second;
+        return `${minute}:${second}`;
+      };
+
+      // Update progress bar
+      myVideo.addEventListener("timeupdate", () => {
+        currentTimeRef.innerText = timeFormatter(myVideo.currentTime);
+        const progress = (myVideo.currentTime / myVideo.duration) * 100;
+        currentProgress.style.width = progress + "%";
+      });
+
+      // Seek video when clicking on progress bar
+      isTouchDevice();
+      progressBar.addEventListener(events[deviceType].click, (event) => {
+        let coordStart = progressBar.getBoundingClientRect().left;
+        let coordEnd = !isTouchDevice() ? event.clientX : event.touches[0].clientX;
+        let progress = (coordEnd - coordStart) / progressBar.offsetWidth;
+        myVideo.currentTime = progress * myVideo.duration;
+        playVideo();
+      });
+
+      // Handle video metadata loading and setup
+      const setupVideo = () => {
+        myVideo.onloadedmetadata = () => {
+          maxDurationRef.innerText = timeFormatter(myVideo.duration);
+          currentTimeRef.innerText = "00:00";
+          currentProgress.style.width = "0%";
+          myVideo.pause();
+          pauseVideo();
+          // Re-populate settings for new video
+          populateQualityOptions();
+          populateAudioTracks();
+        };
+      };
+
+      // Settings Panel Functionality
+      settingsBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // Prevent the window click listener from immediately closing it
+        settingsPanel.classList.toggle("hide");
+      });
+
+      // Handle Quality Selection
+      const populateQualityOptions = () => {
+        qualityOptions.innerHTML = ""; // Clear existing buttons
+        availableQualities.forEach((quality, index) => {
+          const button = document.createElement("button");
+          button.textContent = quality.label;
+          button.dataset.quality = quality.label;
+          button.classList.add("quality-btn");
+          if (index === 0) {
+            // Set the first option as active by default
+            button.classList.add("active");
+          }
+          button.addEventListener("click", () => {
+            // Remove active class from all buttons and add to the clicked one
+            document.querySelectorAll(".quality-btn").forEach((btn) => btn.classList.remove("active"));
+            button.classList.add("active");
             
-            player.src = url;
-            playerTitle.textContent = `${seriesName} - S${seasonNumber}E${episodeNumber}: ${episodeTitle}`;
-            
-            // Update active episode button
-            document.querySelectorAll('.episode-btn').forEach(btn => btn.classList.remove('active'));
-            // This event.target is part of the button click, which is not available in the selectSuggestion logic
-            // We need a more robust way to mark the active button, but for now we'll assume the click is the source.
-            if (event && event.target) {
-                 event.target.classList.add('active');
+            // This is where you would actually swap the video source in a real app
+            const newQualityUrl = quality.url;
+            if (newQualityUrl !== myVideo.src) {
+              const wasPlaying = !myVideo.paused;
+              const currentTime = myVideo.currentTime;
+              myVideo.src = newQualityUrl;
+              myVideo.load();
+              myVideo.currentTime = currentTime;
+              if (wasPlaying) {
+                myVideo.play();
+              }
             }
+          });
+          qualityOptions.appendChild(button);
+        });
+      };
 
-            player.play();
-        }
-
-        function closePlayer() {
-            const modal = document.getElementById('videoModal');
-            const player = document.getElementById('videoPlayer');
-            
-            player.pause();
-            player.src = '';
-            modal.classList.remove('is-visible');
-            currentSeries = null;
-            exitFullscreen();
-        }
-
-        function enterFullscreen(element) {
-            if (element.requestFullscreen) {
-                element.requestFullscreen();
-            } else if (element.mozRequestFullScreen) { // Firefox
-                element.mozRequestFullScreen();
-            } else if (element.webkitRequestFullscreen) { // Chrome, Safari and Opera
-                element.webkitRequestFullscreen();
-            } else if (element.msRequestFullscreen) { // IE/Edge
-                element.msRequestFullscreen();
+      // Handle Audio Track Selection
+      const populateAudioTracks = () => {
+        audioTracksList.innerHTML = ""; // Clear existing tracks
+        const audioTracks = myVideo.audioTracks;
+        if (audioTracks && audioTracks.length > 0) {
+          for (let i = 0; i < audioTracks.length; i++) {
+            const track = audioTracks[i];
+            const button = document.createElement("button");
+            button.textContent = track.label || `Track ${i + 1}`;
+            button.dataset.index = i;
+            button.classList.add("audio-track-btn");
+            if (track.enabled) {
+              button.classList.add("active");
             }
+            button.addEventListener("click", () => {
+              // Set the selected track as enabled
+              for (let j = 0; j < audioTracks.length; j++) {
+                audioTracks[j].enabled = j === i;
+              }
+              // Update UI to show active track
+              document.querySelectorAll(".audio-track-btn").forEach((btn) => btn.classList.remove("active"));
+              button.classList.add("active");
+            });
+            audioTracksList.appendChild(button);
+          }
+        } else {
+          audioTracksList.innerHTML = '<p class="text-xs text-gray-400 p-2">No alternate audio tracks found.</p>';
         }
-        
-        function exitFullscreen() {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.mozCancelFullScreen) { // Firefox
-                document.mozCancelFullScreen();
-            } else if (document.webkitExitFullscreen) { // Chrome, Safari and Opera
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) { // IE/Edge
-                document.msExitFullscreen();
-            }
-        }
-        
-        function toggleFullscreen() {
-            if (document.fullscreenElement) {
-                exitFullscreen();
-            } else {
-                enterFullscreen(document.getElementById('videoPlayer'));
-            }
-        }
-        
-        function showControls() {
-            const playerContainer = document.querySelector('.player-container');
-            playerContainer.classList.add('show-controls');
-            clearTimeout(mouseTimer);
-            mouseTimer = setTimeout(() => {
-                playerContainer.classList.remove('show-controls');
-            }, 3000);
-        }
+      };
 
-        function hideControls() {
-            const playerContainer = document.querySelector('.player-container');
-            clearTimeout(mouseTimer);
-            playerContainer.classList.remove('show-controls');
-        }
+      // Initialize on window load
+      window.onload = () => {
+        setupVideo();
+        updateVolumeSlider();
+        showSearchView(); // Start with the search view
+        fetchAllContent(); // Fetch content from the API on load
+      };
     </script>
-</body>
+  </body>
 </html>
-

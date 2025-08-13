@@ -13,10 +13,27 @@
             background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
             color: #ffffff;
             min-height: 100vh;
-            overflow-x: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
+        }
+
+        /* Centering the main content container */
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            padding: 1rem;
+        }
+
+        .search-input-container {
+            width: 100%;
+            max-width: 7xl;
+            margin-bottom: 3rem;
+            display: flex;
+            justify-content: center;
         }
 
         /* Custom scrollbar for the episode selector */
@@ -247,21 +264,21 @@
 </head>
 <body class="bg-gray-900 text-gray-200 min-h-screen p-4">
 
-    <!-- Header Section - Initially Hidden -->
-    <header id="header-container" class="hidden flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8 w-full max-w-7xl mx-auto">
-        <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
-        <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0">
-            <!-- Stats will be dynamically injected here by JavaScript -->
-        </div>
-    </header>
-
-    <!-- Search Bar Section - Always visible -->
-    <div id="search-container" class="flex justify-center my-12 w-full max-w-7xl mx-auto">
+    <!-- Search Bar Section - Always visible, now centered vertically and horizontally -->
+    <div id="search-container" class="main-container">
         <input type="text" id="search-input" data-focusable="true" placeholder="Search for movies or series..." class="focusable w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
     </div>
 
     <!-- Main Content Area - Initially Hidden -->
-    <div id="content-area" class="hidden w-full max-w-7xl mx-auto">
+    <div id="content-area" class="hidden w-full max-w-7xl mx-auto flex-grow">
+        <!-- Header Section - Initially Hidden -->
+        <header id="header-container" class="hidden flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8 w-full">
+            <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
+            <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0">
+                <!-- Stats will be dynamically injected here by JavaScript -->
+            </div>
+        </header>
+
         <!-- Navigation Tabs -->
         <div class="flex space-x-4 mb-8 border-b border-gray-700">
             <button id="movies-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
@@ -311,7 +328,7 @@
             <div id="videoErrorDialog" class="error-dialog">
                 <h4 class="text-xl font-bold mb-2">Streaming Error</h4>
                 <p>Failed to load the video stream. The server might be down or the URL is invalid.</p>
-                <button class="mt-4 py-2 px-4 bg-teal-500 rounded-lg font-semibold hover:bg-teal-600 transition-colors" onclick="hideVideoError()">OK</button>
+                <button id="closeErrorBtn" class="mt-4 py-2 px-4 bg-teal-500 rounded-lg font-semibold hover:bg-teal-600 transition-colors" onclick="hideVideoError()" data-focusable="true">OK</button>
             </div>
 
             <video class="w-full h-full" id="videoPlayer"></video>
@@ -516,9 +533,11 @@
 
                 // Hide all content until at least 3 characters are typed
                 if (query.length < 3) {
+                    // Hide the main content area and show the search container
                     contentArea.classList.add('hidden');
                     headerContainer.classList.add('hidden');
                     mediaGrid.innerHTML = '';
+                    // The main-container is already displayed, so no need to change it
                     return;
                 }
 
@@ -668,6 +687,11 @@
 
             // Function to handle playing the video
             window.playVideo = (mediaItem, type = 'movie') => {
+                if (!mediaItem || !mediaItem.streamingUrl) {
+                    showVideoError();
+                    return;
+                }
+                
                 videoPlayer.src = mediaItem.streamingUrl;
                 currentMedia = mediaItem; // Store the current media item
                 videoModal.classList.remove('hidden');
@@ -679,7 +703,10 @@
                     episodesBtn.classList.add('hidden');
                 }
                 
-                videoPlayer.play().catch(e => {
+                // Play the video and handle promise rejection
+                videoPlayer.play().then(() => {
+                    hideVideoError();
+                }).catch(e => {
                     console.error('Error playing video:', e);
                     showVideoError();
                 });
@@ -727,8 +754,14 @@
 
             // Function to switch to a new episode
             window.switchEpisode = (mediaItem) => {
+                if (!mediaItem || !mediaItem.streamingUrl) {
+                    showVideoError();
+                    return;
+                }
                 videoPlayer.src = mediaItem.streamingUrl;
-                videoPlayer.play().catch(e => {
+                videoPlayer.play().then(() => {
+                    hideVideoError();
+                }).catch(e => {
                     console.error('Error playing video:', e);
                     showVideoError();
                 });
@@ -750,6 +783,10 @@
             // Function to show the video error dialog
             window.showVideoError = () => {
                 videoErrorDialog.classList.add('visible');
+                // Ensure other overlays are hidden
+                videoLoadingSpinner.classList.remove('visible');
+                videoInfoOverlay.classList.remove('visible');
+                videoPlayer.pause();
             };
             
             // Function to hide the video error dialog
@@ -766,7 +803,10 @@
             
             const playPauseVideo = () => {
                 if (videoPlayer.paused) {
-                    videoPlayer.play();
+                    videoPlayer.play().catch(e => {
+                        console.error('Error resuming video:', e);
+                        showVideoError();
+                    });
                 } else {
                     videoPlayer.pause();
                 }
@@ -797,7 +837,6 @@
             playPauseBtn.addEventListener('click', playPauseVideo);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
             episodesBtn.addEventListener('click', toggleEpisodeOverlay);
-            videoPlayer.addEventListener('error', showVideoError);
 
             videoPlayerWrapper.addEventListener('mousemove', showControls);
             videoPlayerWrapper.addEventListener('mouseleave', () => {
@@ -827,12 +866,13 @@
                 playPauseBtn.textContent = '⏸';
                 videoInfoOverlay.classList.remove('visible');
                 videoLoadingSpinner.classList.remove('visible');
+                hideVideoError(); // Hide error on successful playback
             });
             
             videoPlayer.addEventListener('pause', () => {
                 playPauseBtn.textContent = '▶';
                 // Show the info overlay on pause, but only if the video is not at the end
-                if (videoPlayer.currentTime < videoPlayer.duration) {
+                if (videoPlayer.currentTime < videoPlayer.duration && !videoErrorDialog.classList.contains('visible')) {
                     videoInfoOverlay.classList.add('visible');
                     // Update the overlay with current media info
                     if (currentMedia) {

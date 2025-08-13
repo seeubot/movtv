@@ -351,7 +351,7 @@ bot.on('callback_query', async (callbackQuery) => {
               inline_keyboard: [
                 [{ text: '✍️ Edit Name', callback_data: `edit_field_series_name` }],
                 [{ text: '📸 Edit Thumbnail URL', callback_data: `edit_field_series_thumbnail` }],
-                [{ text: '➕ Add/Edit Episodes', callback_data: `edit_series_episodes` }],
+                [{ text: '➕ Add/Edit Episodes', callback_data: `edit_series_episodes_${series._id}` }],
                 [{ text: '❌ Cancel', callback_data: 'cancel' }]
               ]
             }
@@ -408,19 +408,22 @@ bot.on('callback_query', async (callbackQuery) => {
             await bot.sendMessage(chatId, '❌ Invalid edit option.', getMainMenuKeyboard());
             break;
         }
-    } else if (data === 'edit_series_episodes') {
-      const userData = tempData.get(chatId);
-      if (!userData || userData.type !== 'series' || !userData.seriesId) {
-          await bot.sendMessage(chatId, '❌ No series selected for editing. Please try again.', getMainMenuKeyboard());
-          return;
-      }
-      
-      const series = await Series.findById(userData.seriesId);
+    } else if (data.startsWith('edit_series_episodes_')) {
+      const seriesId = data.replace('edit_series_episodes_', '');
+      const series = await Series.findById(seriesId);
       if (!series) {
         await bot.sendMessage(chatId, '❌ Series not found. Please try again.', getMainMenuKeyboard());
         return;
       }
       
+      tempData.set(chatId, {
+        type: 'series',
+        seriesId: seriesId,
+        name: series.name,
+        thumbnail: series.thumbnail,
+        seasons: series.seasons,
+      });
+
       let keyboard = [];
       if (series.seasons && series.seasons.length > 0) {
         keyboard = series.seasons.map(s => [

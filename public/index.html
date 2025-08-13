@@ -217,26 +217,7 @@
             color: rgba(255, 255, 255, 0.5);
         }
 
-        .search-results-header {
-            text-align: center;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.02);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
 
-        .search-results-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .search-results-count {
-            color: rgba(255, 255, 255, 0.6);
-        }
 
         .clear-search {
             display: inline-block;
@@ -615,7 +596,27 @@
             setupEventListeners();
         });
 
+        // Debug API connectivity
+        async function testAPIConnection() {
+            console.log('Testing API connection...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/stats`);
+                console.log('API test response status:', response.status);
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('API test successful:', data);
+                } else {
+                    console.error('API test failed:', response.status, response.statusText);
+                }
+            } catch (error) {
+                console.error('API connection error:', error);
+            }
+        }
+
         function initializeApp() {
+            // Test API connection first
+            testAPIConnection();
+            
             // Load initial data
             loadMovies();
             loadSeries();
@@ -727,23 +728,61 @@
 
         async function loadMovies() {
             try {
-                const response = await fetch(`${API_BASE_URL}/movies`);
-                allMovies = await response.json();
+                console.log('Loading movies from:', `${API_BASE_URL}/movies`);
+                const response = await fetch(`${API_BASE_URL}/movies`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Movies response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Movies data received:', data);
+                allMovies = Array.isArray(data) ? data : [];
                 displayMovies(allMovies);
             } catch (error) {
                 console.error('Error loading movies:', error);
-                document.getElementById('moviesGrid').innerHTML = '<div class="no-results"><div class="no-results-icon">⚠️</div><p>Error loading movies. Please try again later.</p></div>';
+                const grid = document.getElementById('moviesGrid');
+                const loading = grid.previousElementSibling;
+                if (loading) loading.style.display = 'none';
+                grid.innerHTML = `<div class="no-results"><div class="no-results-icon">⚠️</div><p>Error loading movies: ${error.message}</p><p><small>Check console for details</small></p></div>`;
             }
         }
 
         async function loadSeries() {
             try {
-                const response = await fetch(`${API_BASE_URL}/series`);
-                allSeries = await response.json();
+                console.log('Loading series from:', `${API_BASE_URL}/series`);
+                const response = await fetch(`${API_BASE_URL}/series`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                console.log('Series response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Series data received:', data);
+                allSeries = Array.isArray(data) ? data : [];
                 displaySeries(allSeries);
             } catch (error) {
                 console.error('Error loading series:', error);
-                document.getElementById('seriesGrid').innerHTML = '<div class="no-results"><div class="no-results-icon">⚠️</div><p>Error loading series. Please try again later.</p></div>';
+                const grid = document.getElementById('seriesGrid');
+                const loading = grid.previousElementSibling;
+                if (loading) loading.style.display = 'none';
+                grid.innerHTML = `<div class="no-results"><div class="no-results-icon">⚠️</div><p>Error loading series: ${error.message}</p><p><small>Check console for details</small></p></div>`;
             }
         }
 
@@ -848,23 +887,40 @@
             searchResults = searchContent(query);
             const resultsContainer = document.getElementById('searchResults');
             
-            // Create search results header
-            const resultsCount = searchResults.length;
-            const headerHtml = `
-                <div class="search-results-header">
-                    <div class="search-results-title">Search Results</div>
-                    <div class="search-results-count">
-                        Found ${resultsCount} result${resultsCount !== 1 ? 's' : ''} for "${escapeHtml(query)}"
-                    </div>
-                    <div class="clear-search" onclick="clearSearch()">Clear Search</div>
-                </div>
-            `;
-            
-            if (resultsCount === 0) {
-                resultsContainer.innerHTML = headerHtml + `
+            if (searchResults.length === 0) {
+                resultsContainer.innerHTML = `
                     <div class="no-results">
                         <div class="no-results-icon">🔍</div>
                         <p>No results found for "${escapeHtml(query)}"</p>
+                        <small>Try searching with different keywords or check your spelling</small>
+                        <div class="clear-search" onclick="clearSearch()" style="margin-top: 1rem; display: inline-block;">Clear Search</div>
+                    </div>
+                `;
+            } else {
+                const resultsGrid = searchResults.map(item => {
+                    if (item.type === 'movie') {
+                        return createMovieCard(item);
+                    } else {
+                        return createSeriesCard(item);
+                    }
+                }).join('');
+                
+                resultsContainer.innerHTML = `
+                    <div style="text-align: center; padding: 2rem; background: rgba(255, 255, 255, 0.02); border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                        <div style="font-size: 1.8rem; font-weight: 700; margin-bottom: 0.5rem; background: linear-gradient(45deg, #ff6b6b, #4ecdc4); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                            Search Results
+                        </div>
+                        <div style="color: rgba(255, 255, 255, 0.6);">
+                            Found ${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${escapeHtml(query)}"
+                        </div>
+                        <div class="clear-search" onclick="clearSearch()" style="margin-top: 1rem; display: inline-block;">Clear Search</div>
+                    </div>
+                    <div class="content-grid">${resultsGrid}</div>
+                `;
+            }
+            
+            resultsContainer.style.display = 'block';
+        }
                         <small>Try searching with different keywords or check your spelling</small>
                     </div>
                 `;

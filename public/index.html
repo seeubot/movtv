@@ -41,22 +41,21 @@
 
     <script>
         // The base URL for your API server.
-        // IMPORTANT: Verify that your backend is running on this port (1024 by default).
-        const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
+        const API_BASE_URL = 'http://localhost:1024/api';
 
         // --- STATE MANAGEMENT ---
         let content = [];
         let selectedContent = null;
+        let selectedSeries = null;
         let searchQuery = '';
         let isLoading = false;
         let error = null;
-        let view = 'home'; // 'home' or 'player'
+        let view = 'home'; // 'home', 'series', or 'player'
 
         // --- DOM ELEMENTS ---
         const appContainer = document.getElementById('app-container');
 
         // --- HELPER FUNCTIONS ---
-
         // Function to create an SVG icon from a string.
         function createIcon(svgString, classes) {
             const tempDiv = document.createElement('div');
@@ -75,8 +74,7 @@
             loader: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>',
             x: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
         };
-
-        // Renders a loading spinner.
+        
         function renderLoading() {
             appContainer.innerHTML = '';
             const loadingDiv = document.createElement('div');
@@ -86,7 +84,6 @@
             appContainer.appendChild(loadingDiv);
         }
 
-        // Renders an error message.
         function renderError(message) {
             appContainer.innerHTML = '';
             const errorDiv = document.createElement('div');
@@ -99,35 +96,21 @@
         }
 
         // --- API & DATA FETCHING ---
-        async function checkServerStatus() {
-            try {
-                const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`);
-                return response.ok;
-            } catch (err) {
-                return false;
-            }
-        }
-
-        async function fetchContent(query = '') {
-            isLoading = true;
-            error = null;
-            render();
-
-            const isServerUp = await checkServerStatus();
-            if (!isServerUp) {
-                error = 'Could not connect to the API server. Please make sure it is running.';
-                isLoading = false;
+        async function fetchContent(query) {
+            if (!query) {
+                content = [];
                 render();
                 return;
             }
 
+            isLoading = true;
+            error = null;
+            render();
+
             try {
-                const movieUrl = `${API_BASE_URL}/movies${query ? `?search=${encodeURIComponent(query)}` : ''}`;
-                const seriesUrl = `${API_BASE_URL}/series${query ? `?search=${encodeURIComponent(query)}` : ''}`;
-                
                 const [moviesResponse, seriesResponse] = await Promise.all([
-                    fetch(movieUrl),
-                    fetch(seriesUrl),
+                    fetch(`${API_BASE_URL}/movies?search=${encodeURIComponent(query)}`),
+                    fetch(`${API_BASE_URL}/series?search=${encodeURIComponent(query)}`),
                 ]);
 
                 if (!moviesResponse.ok || !seriesResponse.ok) {
@@ -137,21 +120,9 @@
                 const moviesData = await moviesResponse.json();
                 const seriesData = await seriesResponse.json();
 
-                const seriesWithEpisodes = seriesData.flatMap(s =>
-                    s.seasons.flatMap(season =>
-                        season.episodes.map(episode => ({
-                            ...episode,
-                            seriesName: s.name,
-                            thumbnail: episode.thumbnail || s.thumbnail,
-                            title: `${s.name} - S${season.seasonNumber}E${episode.episodeNumber}: ${episode.title}`,
-                            type: 'series'
-                        }))
-                    )
-                );
-
                 const combinedContent = [
                     ...moviesData.map(m => ({ ...m, type: 'movie' })),
-                    ...seriesWithEpisodes
+                    ...seriesData.map(s => ({ ...s, type: 'series' }))
                 ];
                 
                 content = combinedContent;
@@ -166,23 +137,46 @@
                 render();
             }
         }
+        
+        async function fetchSeriesDetails(seriesId) {
+            isLoading = true;
+            error = null;
+            render();
+            try {
+                const response = await fetch(`${API_BASE_URL}/series/${seriesId}`);
+                if (!response.ok) {
+                    throw new Error('Failed to fetch series details.');
+                }
+                const seriesData = await response.json();
+                selectedSeries = seriesData;
+                view = 'series';
+            } catch (err) {
+                console.error('API fetch error:', err);
+                error = 'Failed to load series details.';
+            } finally {
+                isLoading = false;
+                render();
+            }
+        }
 
         // --- RENDERING FUNCTIONS ---
-
         function renderHomePage() {
             appContainer.innerHTML = `
-                <div class="w-full max-w-2xl mx-auto mt-10">
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            ${icons.search}
+                <div class="flex flex-col items-center justify-center min-h-[50vh] text-center">
+                    <h2 class="text-3xl font-bold text-gray-200 mb-6">Your Media Library</h2>
+                    <div class="w-full max-w-2xl">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                ${icons.search}
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search for movies or series..."
+                                value="${searchQuery}"
+                                id="search-input"
+                                class="w-full pl-10 pr-4 py-3 rounded-full bg-zinc-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            />
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Search for movies or series..."
-                            value="${searchQuery}"
-                            id="search-input"
-                            class="w-full pl-10 pr-4 py-3 rounded-full bg-zinc-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        />
                     </div>
                 </div>
                 <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-6" id="content-grid">
@@ -195,9 +189,9 @@
                 const card = document.createElement('div');
                 card.className = "group cursor-pointer rounded-lg overflow-hidden shadow-lg transform hover:scale-105 transition-all duration-300 relative";
                 card.dataset.id = item._id;
+                card.dataset.type = item.type;
 
-                const uniqueId = item._id || crypto.randomUUID();
-                const titleText = item.title || item.name;
+                const titleText = item.name;
                 const thumbnailUrl = item.thumbnail;
 
                 card.innerHTML = `
@@ -232,6 +226,72 @@
             });
         }
 
+        function renderSeriesPage() {
+            if (!selectedSeries) {
+                view = 'home';
+                render();
+                return;
+            }
+
+            appContainer.innerHTML = `
+                <div class="p-4 sm:p-8">
+                    <button id="back-to-home-button" class="mb-4 py-2 px-4 rounded-full bg-zinc-700 text-white hover:bg-violet-600 transition-colors flex items-center gap-2">
+                        ${icons.home}
+                        Back to Search
+                    </button>
+                    <div class="flex flex-col md:flex-row gap-8">
+                        <div class="flex-shrink-0 w-full md:w-64">
+                            <img src="${selectedSeries.thumbnail}" alt="${selectedSeries.name}" class="rounded-lg shadow-lg w-full" onerror="this.onerror=null;this.src='https://placehold.co/600x900/1f2937/d1d5db?text=No+Image';">
+                        </div>
+                        <div class="flex-grow">
+                            <h2 class="text-4xl font-bold text-white mb-4">${selectedSeries.name}</h2>
+                            <h3 class="text-2xl font-semibold text-violet-400 mb-4">Seasons & Episodes</h3>
+                            <div id="seasons-container" class="space-y-4">
+                                <!-- Seasons will be injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const seasonsContainer = document.getElementById('seasons-container');
+            selectedSeries.seasons.sort((a,b) => a.seasonNumber - b.seasonNumber).forEach(season => {
+                const seasonDiv = document.createElement('div');
+                seasonDiv.className = 'bg-zinc-800 rounded-lg p-4 shadow';
+                seasonDiv.innerHTML = `<h4 class="text-xl font-bold text-gray-100 mb-2">Season ${season.seasonNumber}</h4>`;
+                
+                const episodesList = document.createElement('div');
+                episodesList.className = 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2';
+
+                season.episodes.sort((a,b) => a.episodeNumber - b.episodeNumber).forEach(episode => {
+                    const episodeDiv = document.createElement('div');
+                    episodeDiv.className = 'flex items-center gap-2 p-3 bg-zinc-700 rounded-lg hover:bg-violet-600 cursor-pointer transition-colors';
+                    episodeDiv.dataset.type = 'episode';
+                    episodeDiv.dataset.id = episode._id;
+                    episodeDiv.dataset.streamingUrl = episode.streamingUrl;
+                    episodeDiv.dataset.title = `${selectedSeries.name} - S${season.seasonNumber}E${episode.episodeNumber}`;
+
+                    episodeDiv.innerHTML = `
+                        <div class="flex-shrink-0 text-violet-300">
+                            ${icons.play}
+                        </div>
+                        <div class="flex-grow">
+                            <p class="font-semibold text-gray-200 truncate">E${episode.episodeNumber}: ${episode.title}</p>
+                        </div>
+                    `;
+                    episodesList.appendChild(episodeDiv);
+                });
+                seasonDiv.appendChild(episodesList);
+                seasonsContainer.appendChild(seasonDiv);
+            });
+
+            document.getElementById('back-to-home-button').addEventListener('click', () => {
+                selectedSeries = null;
+                view = 'home';
+                render();
+            });
+        }
+
         function renderPlayerPage() {
             if (!selectedContent) {
                 view = 'home';
@@ -246,17 +306,14 @@
                 <div class="p-4 sm:p-8 flex flex-col items-center">
                     <button id="back-button" class="self-start mb-4 py-2 px-4 rounded-full bg-zinc-700 text-white hover:bg-violet-600 transition-colors flex items-center gap-2">
                         ${icons.home}
-                        Back to Home
+                        Back to ${selectedContent.type === 'movie' ? 'Home' : 'Series'}
                     </button>
                     <div class="w-full max-w-4xl rounded-lg overflow-hidden shadow-2xl">
                         <div class="aspect-w-16 aspect-h-9" style="position: relative; padding-bottom: 56.25%;">
-                            <iframe
-                                src="${selectedContent.streamingUrl}"
-                                frameborder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowfullscreen
-                                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
-                            ></iframe>
+                            <video controls autoplay class="absolute inset-0 w-full h-full object-cover rounded-lg">
+                                <source src="${selectedContent.streamingUrl}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
                         </div>
                     </div>
                     <div class="mt-6 text-center">
@@ -268,7 +325,7 @@
 
             // Add event listener for the back button
             document.getElementById('back-button').addEventListener('click', () => {
-                view = 'home';
+                view = selectedContent.type === 'movie' ? 'home' : 'series';
                 selectedContent = null;
                 render();
             });
@@ -281,32 +338,51 @@
             } else if (error) {
                 renderError(error);
             } else {
-                if (view === 'home') {
-                    renderHomePage();
-                } else if (view === 'player') {
-                    renderPlayerPage();
+                switch(view) {
+                    case 'home':
+                        renderHomePage();
+                        break;
+                    case 'series':
+                        renderSeriesPage();
+                        break;
+                    case 'player':
+                        renderPlayerPage();
+                        break;
                 }
             }
         }
 
         // --- EVENT LISTENERS ---
-
         // Listen for clicks on the content grid
         appContainer.addEventListener('click', (e) => {
             const card = e.target.closest('[data-id]');
-            if (card) {
-                const id = card.dataset.id;
+            if (!card) return;
+
+            const type = card.dataset.type;
+            const id = card.dataset.id;
+            
+            if (type === 'movie') {
                 selectedContent = content.find(item => item._id === id);
                 if (selectedContent) {
                     view = 'player';
                     render();
                 }
+            } else if (type === 'series') {
+                fetchSeriesDetails(id);
+            } else if (type === 'episode') {
+                selectedContent = {
+                    title: card.dataset.title,
+                    streamingUrl: card.dataset.streamingUrl,
+                    type: 'series'
+                };
+                view = 'player';
+                render();
             }
         });
 
         // Initial load
         window.onload = () => {
-            fetchContent();
+            render();
         };
     </script>
 </body>

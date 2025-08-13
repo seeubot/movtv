@@ -136,34 +136,8 @@
             transition: opacity 0.3s ease-in-out;
             z-index: 100; /* Ensure controls are above other overlays */
         }
-        
-        /* CSS for the close button to be synced with controls */
-        #closePlayerBtn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            text-align: center;
-            font-size: 1.875rem; /* text-3xl */
-            line-height: 2.25rem;
-            font-weight: 700; /* font-bold */
-            color: #ffffff; /* text-white */
-            z-index: 20;
-            padding: 0.5rem; /* p-2 */
-            background-color: rgb(17 24 39 / var(--tw-bg-opacity)); /* bg-gray-900 */
-            border-radius: 9999px; /* rounded-full */
-            transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 300ms;
-            opacity: 0; /* Initially hidden */
-        }
-        #closePlayerBtn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: rotate(90deg);
-        }
 
-        /* Class to show both controls and close button */
-        .show-controls .custom-video-controls,
-        .show-controls #closePlayerBtn {
+        .show-controls .custom-video-controls {
             opacity: 1;
         }
 

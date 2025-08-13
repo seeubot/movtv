@@ -17,7 +17,8 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const MONGODB_URI = process.env.MONGODB_URI;
 const PORT = process.env.PORT || 1024;
 const USE_WEBHOOK = process.env.USE_WEBHOOK === 'true';
-const KOYEB_URL = process.env.FRONTEND_URL;
+// FIX: Use the provided Koyeb URL for the frontend.
+const KOYEB_URL = 'https://future-ester-seeutech-645c6129.koyeb.app';
 const WEBHOOK_PATH = `/bot${BOT_TOKEN}`;
 
 if (!BOT_TOKEN) {
@@ -96,8 +97,28 @@ const Series = mongoose.model('Series', seriesSchema);
 
 const app = express();
 
+// FIX: Update CORS to explicitly allow the Koyeb frontend URL.
+// The wildcard '*' can sometimes be problematic with credentials,
+// so it's best to be explicit about the origins.
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+  'http://localhost:8080',
+  'http://127.0.0.1:8080',
+  KOYEB_URL // Add the Koyeb frontend URL
+];
+
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:8080', 'http://127.0.0.1:8080', '*'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified Origin.`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -847,4 +868,3 @@ process.on('SIGINT', async () => {
   }
   process.exit(0);
 });
-

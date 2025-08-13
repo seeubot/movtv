@@ -211,7 +211,7 @@ bot.on('message', async (msg) => {
       } else {
         userStates.set(chatId, 'adding_series_name');
         tempData.set(chatId, { type: 'series' });
-        await bot.sendMessage(chatId, '📺 Enter the series name:', { reply_markup: { remove_keyboard: true } });
+        await bot.sendMessage(chatId, '📺 Enter the new series name:', { reply_markup: { remove_keyboard: true } });
       }
     } else if (text === '✍️ Edit/Delete Movies') {
       const movies = await Movie.find().sort({ addedAt: -1 }).limit(10);

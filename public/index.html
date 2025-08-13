@@ -124,8 +124,7 @@
             transition: opacity 0.3s ease-in-out;
         }
 
-        .video-player-wrapper:hover .custom-video-controls,
-        .video-player-wrapper:focus-within .custom-video-controls {
+        .show-controls .custom-video-controls {
             opacity: 1;
         }
 
@@ -148,6 +147,49 @@
             background-color: #4ecdc4;
             border-radius: 4px;
             width: 0%;
+        }
+
+        /* Video info overlay on pause */
+        .video-info-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none; /* Initially hidden */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            text-align: center;
+            z-index: 20;
+            padding: 1rem;
+        }
+
+        .video-info-overlay.visible {
+            display: flex;
+        }
+
+        /* Loading spinner animation */
+        .loading-spinner {
+            border: 6px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 6px solid #4ecdc4;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            z-index: 30;
+            display: none; /* Initially hidden */
+        }
+        .loading-spinner.visible {
+            display: block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 1024px) {
@@ -209,12 +251,22 @@
     <!-- Video Player Modal -->
     <div id="videoModal" class="hidden video-ui-container">
         <!-- Video Player Section -->
-        <div class="video-player-wrapper">
+        <div id="videoPlayerWrapper" class="video-player-wrapper">
             <button class="absolute top-4 right-4 text-white text-3xl font-bold z-10 p-2 bg-gray-900 rounded-full hover:bg-gray-700 transition-colors" onclick="closePlayer()">✕</button>
+            
+            <!-- Video Info Overlay (hidden by default) -->
+            <div id="videoInfoOverlay" class="video-info-overlay">
+                <img id="videoInfoThumbnail" src="" alt="Thumbnail" class="w-64 h-96 object-cover rounded-xl shadow-lg mb-4">
+                <h3 id="videoInfoTitle" class="text-3xl font-bold text-white"></h3>
+            </div>
+
+            <!-- Loading Spinner (hidden by default) -->
+            <div id="videoLoadingSpinner" class="loading-spinner"></div>
+
             <video class="w-full h-full" id="videoPlayer"></video>
 
             <!-- Custom Video Controls -->
-            <div class="custom-video-controls">
+            <div id="videoControls" class="custom-video-controls">
                 <button id="playPauseBtn" class="video-control-btn text-2xl" data-focusable="true">▶</button>
                 <div class="seek-bar-container">
                     <div id="seekBar" class="seek-bar" data-focusable="true">
@@ -266,6 +318,7 @@
             const seriesTab = document.getElementById('series-tab');
             const videoModal = document.getElementById('videoModal');
             const videoPlayer = document.getElementById('videoPlayer');
+            const videoPlayerWrapper = document.getElementById('videoPlayerWrapper');
             const episodeSidebar = document.getElementById('episodeSidebar');
             const episodeSelector = document.getElementById('episodeSelector');
             
@@ -277,12 +330,20 @@
             const durationSpan = document.getElementById('duration');
             const fullscreenBtn = document.getElementById('fullscreenBtn');
 
+            // Video info and loading elements
+            const videoInfoOverlay = document.getElementById('videoInfoOverlay');
+            const videoInfoThumbnail = document.getElementById('videoInfoThumbnail');
+            const videoInfoTitle = document.getElementById('videoInfoTitle');
+            const videoLoadingSpinner = document.getElementById('videoLoadingSpinner');
+
             // Store the fetched data and current state
             let allMovies = [];
             let allSeries = [];
             let currentSeries = null;
             let activeTab = 'movies';
             let currentPlayingUrl = '';
+            let currentMedia = null;
+            let controlsTimeout = null;
 
             // Remote control navigation state
             let focusableElements = [];
@@ -466,7 +527,7 @@
                 if (type === 'series') {
                     card.addEventListener('click', () => loadSeriesDetails(item._id));
                 } else {
-                    card.addEventListener('click', () => playVideo(item.streamingUrl, 'movie'));
+                    card.addEventListener('click', () => playVideo(item, 'movie'));
                 }
 
                 return card;
@@ -505,11 +566,12 @@
                         throw new Error('Failed to fetch series details.');
                     }
                     currentSeries = await response.json();
+                    currentMedia = currentSeries;
                     
                     if (currentSeries.seasons && currentSeries.seasons.length > 0 && 
                         currentSeries.seasons[0].episodes && currentSeries.seasons[0].episodes.length > 0) {
                         const firstEpisode = currentSeries.seasons[0].episodes[0];
-                        playVideo(firstEpisode.streamingUrl, 'series');
+                        playVideo(firstEpisode, 'series');
                     } else {
                         console.error('No episodes available for this series.');
                     }
@@ -539,13 +601,14 @@
             };
 
             // Function to handle playing the video
-            window.playVideo = (url, type) => {
-                videoPlayer.src = url;
+            window.playVideo = (mediaItem, type) => {
+                videoPlayer.src = mediaItem.streamingUrl;
+                currentMedia = mediaItem; // Store the current media item
                 videoModal.classList.remove('hidden');
                 
                 if (type === 'series' && currentSeries) {
                     episodeSidebar.classList.remove('hidden');
-                    displayEpisodeSelector();
+                    displayEpisodeSelector(mediaItem.streamingUrl);
                 } else {
                     episodeSidebar.classList.add('hidden');
                 }
@@ -553,12 +616,10 @@
                 videoPlayer.play().catch(e => {
                     console.error('Error playing video:', e);
                 });
-
-                currentPlayingUrl = url;
             };
 
             // Function to display the list of episodes in the sidebar
-            window.displayEpisodeSelector = () => {
+            window.displayEpisodeSelector = (currentUrl) => {
                 episodeSelector.innerHTML = ''; // Clear previous content
                 currentSeries.seasons.forEach(season => {
                     const seasonTitle = document.createElement('h4');
@@ -568,9 +629,9 @@
 
                     season.episodes.forEach(episode => {
                         const button = document.createElement('button');
-                        const isCurrent = episode.streamingUrl === currentPlayingUrl;
+                        const isCurrent = episode.streamingUrl === currentUrl;
                         
-                        button.className = `episode-list-item w-full text-left p-3 rounded-lg transition-colors duration-200 hover:bg-gray-700 focusable ${isCurrent ? 'active' : ''}`;
+                        button.className = `episode-list-item w-full text-left p-3 rounded-lg transition-colors duration-200 hover:bg-gray-700 focusable ${isCurrent ? 'active bg-gray-700' : ''}`;
                         button.setAttribute('data-focusable', 'true');
                         button.setAttribute('tabindex', '0');
                         button.innerHTML = `
@@ -579,7 +640,10 @@
                                 <span class="truncate">${episode.title}</span>
                             </div>
                         `;
-                        button.onclick = () => switchEpisode(episode.streamingUrl);
+                        button.onclick = () => {
+                            currentMedia = episode;
+                            switchEpisode(episode.streamingUrl);
+                        }
                         episodeSelector.appendChild(button);
                     });
                 });
@@ -591,8 +655,7 @@
                 videoPlayer.play().catch(e => {
                     console.error('Error playing video:', e);
                 });
-                currentPlayingUrl = url;
-                displayEpisodeSelector(); // Re-render to highlight the new episode
+                displayEpisodeSelector(url); // Re-render to highlight the new episode
             };
 
             // Function to close the video player modal
@@ -601,7 +664,8 @@
                 videoPlayer.src = '';
                 videoModal.classList.add('hidden');
                 currentSeries = null;
-                currentPlayingUrl = '';
+                currentMedia = null;
+                clearTimeout(controlsTimeout);
             };
 
             // Video player control functions
@@ -614,11 +678,17 @@
             const playPauseVideo = () => {
                 if (videoPlayer.paused) {
                     videoPlayer.play();
-                    playPauseBtn.textContent = '⏸';
                 } else {
                     videoPlayer.pause();
-                    playPauseBtn.textContent = '▶';
                 }
+            };
+
+            const showControls = () => {
+                videoPlayerWrapper.classList.add('show-controls');
+                clearTimeout(controlsTimeout);
+                controlsTimeout = setTimeout(() => {
+                    videoPlayerWrapper.classList.remove('show-controls');
+                }, 3000);
             };
             
             const toggleFullscreen = () => {
@@ -638,6 +708,14 @@
             playPauseBtn.addEventListener('click', playPauseVideo);
             fullscreenBtn.addEventListener('click', toggleFullscreen);
 
+            videoPlayerWrapper.addEventListener('mousemove', showControls);
+            videoPlayerWrapper.addEventListener('mouseleave', () => {
+                clearTimeout(controlsTimeout);
+                controlsTimeout = setTimeout(() => {
+                    videoPlayerWrapper.classList.remove('show-controls');
+                }, 1000); // Give a little buffer before hiding
+            });
+            
             videoPlayer.addEventListener('loadedmetadata', () => {
                 durationSpan.textContent = formatTime(videoPlayer.duration);
             });
@@ -654,6 +732,32 @@
                 videoPlayer.currentTime = seekTime;
             });
             
+            videoPlayer.addEventListener('play', () => {
+                playPauseBtn.textContent = '⏸';
+                videoInfoOverlay.classList.remove('visible');
+            });
+            
+            videoPlayer.addEventListener('pause', () => {
+                playPauseBtn.textContent = '▶';
+                // Show the info overlay on pause, but only if the video is not at the end
+                if (videoPlayer.currentTime < videoPlayer.duration) {
+                    videoInfoOverlay.classList.add('visible');
+                    // Update the overlay with current media info
+                    if (currentMedia) {
+                        videoInfoThumbnail.src = currentMedia.thumbnail || 'https://placehold.co/400x600/1f2937/d1d5db?text=No+Image';
+                        videoInfoTitle.textContent = currentMedia.name || currentMedia.title;
+                    }
+                }
+            });
+
+            videoPlayer.addEventListener('waiting', () => {
+                videoLoadingSpinner.classList.add('visible');
+            });
+
+            videoPlayer.addEventListener('playing', () => {
+                videoLoadingSpinner.classList.remove('visible');
+            });
+
             // Setup remote navigation on initial load
             setupRemoteNavigation();
         });

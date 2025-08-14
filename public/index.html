@@ -123,60 +123,6 @@
         }
         .episode-card:hover, .episode-card:focus { transform: scale(1.02); box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15); border: 2px solid var(--primary); outline: none; }
 
-        /* --- Video Player Overlay & Controls --- */
-        .player-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--player-bg); display: none; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 1000;
-        }
-        .player-wrapper { width: 95%; max-width: 1200px; position: relative; }
-        #video-player { width: 100%; border-radius: 8px; background-color: black; }
-        .video-controls {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            padding: 1rem; background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
-            color: white; display: flex; flex-direction: column; opacity: 1;
-            transition: opacity 0.3s;
-        }
-        .video-controls.hidden { opacity: 0; pointer-events: none; }
-        .controls-top { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0.5rem 0; }
-        .controls-top .back-button { color: white; margin: 0; padding: 0; font-size: 2rem; }
-        .controls-top .back-button:hover, .controls-top .back-button:focus { color: var(--primary); }
-        .controls-top .title { font-size: 1.2rem; }
-        .controls-top .quality-selector {
-            position: relative;
-            cursor: pointer;
-        }
-        .quality-selector button {
-            background: rgba(255, 255, 255, 0.2);
-            color: white; border: none; padding: 0.5rem; border-radius: 4px;
-        }
-        .quality-options {
-            position: absolute; right: 0; bottom: 100%;
-            background: rgba(0, 0, 0, 0.8); border-radius: 8px; padding: 0.5rem;
-            display: none; flex-direction: column; gap: 0.25rem;
-        }
-        .quality-options.active { display: flex; }
-        .quality-options button { width: 100%; text-align: left; background: none; }
-        .quality-options button:focus { outline: 2px solid var(--primary); }
-
-        .controls-middle { display: flex; align-items: center; justify-content: center; gap: 1.5rem; padding: 1rem 0; }
-        .controls-middle button {
-            background: none; border: none; color: white; font-size: 2rem; cursor: pointer;
-        }
-        .controls-middle button:hover, .controls-middle button:focus { color: var(--primary); outline: none; }
-        
-        .controls-bottom { display: flex; align-items: center; width: 100%; gap: 1rem; }
-        .progress-bar {
-            flex-grow: 1; height: 8px; border-radius: 4px; cursor: pointer;
-            -webkit-appearance: none; background: #555; overflow: hidden;
-        }
-        .progress-bar::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 15px; height: 15px;
-            background: var(--primary); border-radius: 50%;
-            box-shadow: -100vw 0 0 100vw var(--primary);
-        }
-        .time-display { font-size: 0.9rem; color: var(--light); }
-
         @media (max-width: 768px) {
             .media-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
             .player-wrapper { width: 95%; }
@@ -186,8 +132,6 @@
             body { padding-top: 5rem; }
             .hero { height: 100%; }
             .search-bar { margin-right: auto; }
-            .video-controls { padding: 0.5rem; }
-            .controls-middle button { font-size: 1.5rem; }
         }
     </style>
 </head>
@@ -226,49 +170,13 @@
         </section>
     </div>
 
-    <!-- Episode View (hidden initially) -->
-    <div class="container" id="episodes-section">
+    <!-- Episode View (h<div class="container" d="episodes-section">
         <button id="episodes-back-button" class="back-button">&larr; Back to Series</button>
         <h2 class="section-title" id="series-episodes-title"></h2>
         <div class="media-grid" id="episodes-grid">
             <!-- Episode cards will be loaded here -->
         </div>
     </div>
-
-    <!-- Video Player Overlay -->
-    <div class="player-container" id="player-container">
-        <div class="player-wrapper">
-            <video id="video-player" playsinline></video>
-            <div class="video-controls" id="video-controls">
-                <div class="controls-top">
-                    <button id="player-back-button" class="back-button">&larr;</button>
-                    <div class="title" id="player-title"></div>
-                    <div class="quality-selector">
-                        <button id="quality-btn">1080p</button>
-                        <div class="quality-options" id="quality-options">
-                            <button data-quality="1080p">1080p</button>
-                            <button data-quality="720p">720p</button>
-                            <button data-quality="480p">480p</button>
-                            <button data-quality="360p">360p</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="controls-middle">
-                    <button id="rewind-btn">&#x23EA;</button>
-                    <button id="play-pause-btn">&#9658;</button>
-                    <button id="forward-btn">&#x23E9;</button>
-                </div>
-                <div class="controls-bottom">
-                    <span class="time-display" id="current-time">0:00</span>
-                    <input type="range" class="progress-bar" id="progress-bar" min="0" max="100" value="0">
-                    <span class="time-display" id="duration">0:00</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Script tag for HLS.js for video streaming -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
     <script>
         const API_BASE_URL = window.location.origin.includes('koyeb')
@@ -285,25 +193,9 @@
         const episodesGrid = document.getElementById('episodes-grid');
         const seriesEpisodesTitle = document.getElementById('series-episodes-title');
         const episodesBackButton = document.getElementById('episodes-back-button');
-
-        const playerContainer = document.getElementById('player-container');
-        const videoPlayer = document.getElementById('video-player');
-        const videoControls = document.getElementById('video-controls');
-        const playerTitle = document.getElementById('player-title');
-        const closePlayer = document.getElementById('player-back-button'); // Now the back button closes the player
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
         const navLinks = document.querySelectorAll('.nav-link');
-
-        // Custom Player Controls
-        const playPauseBtn = document.getElementById('play-pause-btn');
-        const rewindBtn = document.getElementById('rewind-btn');
-        const forwardBtn = document.getElementById('forward-btn');
-        const progressBar = document.getElementById('progress-bar');
-        const currentTimeEl = document.getElementById('current-time');
-        const durationEl = document.getElementById('duration');
-        const qualityBtn = document.getElementById('quality-btn');
-        const qualityOptions = document.getElementById('quality-options');
 
         const sections = {
             movies: document.getElementById('movies-section'),
@@ -311,11 +203,9 @@
         };
         let currentSection = 'movies';
 
-        // --- Core Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             searchInput.focus();
 
-            // Navigation handler
             navLinks.forEach(link => {
                 link.addEventListener('click', e => {
                     e.preventDefault();
@@ -323,62 +213,21 @@
                 });
             });
 
-            // Search functionality
             searchInput.addEventListener('keyup', () => performSearch());
             searchButton.addEventListener('click', () => performSearch(true));
             episodesBackButton.addEventListener('click', () => showMainContent());
 
-            // --- Video Player Events ---
-            videoPlayer.addEventListener('timeupdate', updateProgressBar);
-            videoPlayer.addEventListener('loadedmetadata', setDuration);
-            videoPlayer.addEventListener('play', () => playPauseBtn.innerHTML = '&#10074;&#10074;');
-            videoPlayer.addEventListener('pause', () => playPauseBtn.innerHTML = '&#9658;');
-            videoPlayer.addEventListener('ended', () => {
-                playPauseBtn.innerHTML = '&#9658;';
-                videoPlayer.currentTime = 0;
-            });
-
-            playPauseBtn.addEventListener('click', () => videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause());
-            rewindBtn.addEventListener('click', () => videoPlayer.currentTime -= 10);
-            forwardBtn.addEventListener('click', () => videoPlayer.currentTime += 10);
-            
-            progressBar.addEventListener('input', () => {
-                const seekTime = videoPlayer.duration * (progressBar.value / 100);
-                videoPlayer.currentTime = seekTime;
-            });
-
-            closePlayer.addEventListener('click', () => {
-                playerContainer.style.display = 'none';
-                videoPlayer.pause();
-                videoPlayer.src = '';
-                episodesSection.style.display = 'block';
-            });
-            
-            // Placeholder quality selector functionality
-            qualityBtn.addEventListener('click', () => qualityOptions.classList.toggle('active'));
-            qualityOptions.querySelectorAll('button').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    qualityBtn.textContent = btn.textContent;
-                    qualityOptions.classList.remove('active');
-                    // In a real app, this would change the video source
-                });
-            });
-
             // --- TV Remote Control Navigation ---
             document.addEventListener('keydown', e => {
                 const focusedElement = document.activeElement;
-                // Handle Enter key for selection
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' || e.key === ' ') {
                     if (focusedElement && (focusedElement.classList.contains('media-card') || focusedElement.classList.contains('episode-card'))) {
                         focusedElement.click();
                         e.preventDefault();
                     }
                 }
-                // Handle Escape key for "back" action
-                if (e.key === 'Escape') {
-                    if (playerContainer.style.display === 'flex') {
-                        closePlayer.click();
-                    } else if (episodesSection.style.display === 'block') {
+                if (e.key === 'Escape' || e.key === 'Backspace') {
+                    if (episodesSection.style.display === 'block') {
                         episodesBackButton.click();
                     }
                 }
@@ -413,7 +262,7 @@
         function showMainContent() {
             mainContent.style.display = 'block';
             episodesSection.style.display = 'none';
-            performSearch(true); // Refresh content
+            performSearch(true);
         }
 
         async function loadMovies(searchTerm) {
@@ -427,7 +276,8 @@
                     moviesGrid.innerHTML = '';
                     data.forEach(movie => addMediaCard(moviesGrid, movie, 'movie'));
                 }
-            } catch {
+            } catch (e) {
+                console.error("Error loading movies:", e);
                 moviesGrid.innerHTML = '<div class="loading">Error loading movies</div>';
             }
         }
@@ -443,7 +293,8 @@
                     seriesGrid.innerHTML = '';
                     data.forEach(series => addMediaCard(seriesGrid, series, 'series'));
                 }
-            } catch {
+            } catch (e) {
+                console.error("Error loading series:", e);
                 seriesGrid.innerHTML = '<div class="loading">Error loading series</div>';
             }
         }
@@ -462,7 +313,8 @@
                     episodesGrid.innerHTML = '';
                     data.forEach(episode => addEpisodeCard(episodesGrid, episode));
                 }
-            } catch {
+            } catch (e) {
+                console.error("Error loading episodes:", e);
                 episodesGrid.innerHTML = '<div class="loading">Error loading episodes</div>';
             }
         }
@@ -498,45 +350,28 @@
             container.appendChild(card);
         }
 
-        // --- Video Player Helper Functions ---
-        async function playMedia(media) {
-            playerTitle.textContent = media.title || media.name;
-            const extension = media.streamingUrl.split('.').pop().toLowerCase();
+        function playMedia(media) {
+            // This is the key part for Sketchware
+            // Instead of playing the video in the web view, we need to send a message
+            // to the native Android app to start the video player.
+            const mediaUrl = media.streamingUrl;
             
-            if (extension === 'm3u8' || extension === 'ts') {
-                if (Hls.isSupported()) {
-                    const hls = new Hls();
-                    hls.loadSource(media.streamingUrl);
-                    hls.attachMedia(videoPlayer);
-                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                    videoPlayer.src = media.streamingUrl;
-                } else {
-                    alert('HLS streaming not supported on this device.');
-                    return;
-                }
-            } else {
-                videoPlayer.src = media.streamingUrl;
-            }
-            
-            playerContainer.style.display = 'flex';
-            videoPlayer.play().catch(e => console.error('Playback error:', e));
-        }
+            // Log the URL so you can see it in your Sketchware logs
+            console.log("Playing video with URL:", mediaUrl);
 
-        function updateProgressBar() {
-            const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
-            progressBar.value = progress;
-            currentTimeEl.textContent = formatTime(videoPlayer.currentTime);
-        }
+            // This line is a placeholder. You'll need to use a Sketchware block
+            // to call a JavaScript function that then passes the URL to your native code.
+            // Example:
+            // if (typeof Android != 'undefined' && Android.showVideoPlayer) {
+            //     Android.showVideoPlayer(mediaUrl);
+            // } else {
+            //     alert("Native video player not available. Please check your Sketchware setup.");
+            // }
 
-        function setDuration() {
-            durationEl.textContent = formatTime(videoPlayer.duration);
-        }
-
-        function formatTime(time) {
-            const minutes = Math.floor(time / 60);
-            const seconds = Math.floor(time % 60);
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            // For now, let's just alert the URL to confirm it's working
+            alert(`Ready to play: ${media.title || media.name}\nURL: ${mediaUrl}`);
         }
     </script>
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-// This file contains the main logic for the Telegram bot and Express API with APK generation.
+// This file contains the main logic for the Telegram bot and Express API.
 
 require('dotenv').config();
 
@@ -8,11 +8,6 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-
-// NEW: APK Generation dependencies
-const archiver = require('archiver');
-const fsExtra = require('fs-extra');
-const { v4: uuidv4 } = require('uuid');
 
 // ================================================================
 // CONFIGURATION
@@ -162,14 +157,12 @@ bot.on('webhook_error', (error) => {
   console.error('❌ Telegram webhook error:', error);
 });
 
-// UPDATED: Main menu with APK generation option
 const getMainMenuKeyboard = () => ({
   reply_markup: {
     keyboard: [
       ['🎬 Add Movie', '📺 Add Series'],
       ['✍️ Edit/Delete Movies', '🗑️ Edit/Delete Series'],
-      ['🌐 Frontend URL', '📱 Generate APK'],
-      ['📊 Library Stats']
+      ['🌐 Frontend URL', '📊 Library Stats']
     ],
     resize_keyboard: true,
     one_time_keyboard: false
@@ -196,11 +189,10 @@ bot.on('message', async (msg) => {
       userStates.delete(chatId);
       tempData.delete(chatId);
       await bot.sendMessage(chatId,
-        '🎭 *Welcome to MovTV Manager Bot!*\n\n' +
+        '🎭 *Welcome to Media Manager Bot!*\n\n' +
         '🎬 Add and manage your movies\n' +
         '📺 Create and organize TV series\n' +
-        '🌐 Access your media library via web frontend\n' +
-        '📱 Generate Android APK for mobile access\n\n' +
+        '🌐 Access your media library via web frontend\n\n' +
         'Choose an option below:',
         { ...getMainMenuKeyboard(), parse_mode: 'Markdown' }
       );
@@ -219,7 +211,7 @@ bot.on('message', async (msg) => {
       } else {
         userStates.set(chatId, 'adding_series_name');
         tempData.set(chatId, { type: 'series' });
-        await bot.sendMessage(chatId, '📺 Enter the new series name:', { reply_markup: { remove_keyboard: true } });
+        await bot.sendMessage(chatId, '📺 Enter the series name:', { reply_markup: { remove_keyboard: true } });
       }
     } else if (text === '✍️ Edit/Delete Movies') {
       const movies = await Movie.find().sort({ addedAt: -1 }).limit(10);
@@ -256,25 +248,6 @@ bot.on('message', async (msg) => {
         `📱 *API Server:* ${frontendUrl}/api\n\n` +
         '🎬 Open the frontend URL to watch your movies and series!\n\n' +
         '✨ Your media library awaits!',
-        { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
-      );
-    } else if (text === '📱 Generate APK') {
-      const apkUrl = `${KOYEB_URL}/apk-generator.html`;
-      await bot.sendMessage(chatId,
-        '📱 *APK Generator*\n\n' +
-        '🔗 Create your custom Android app:\n' +
-        apkUrl + '\n\n' +
-        '✨ Build a native Android app for your MovTV library!\n\n' +
-        '📋 *Features:*\n' +
-        '• Native WebView interface\n' +
-        '• Internet connectivity check\n' +
-        '• Loading progress indicator\n' +
-        '• Back button navigation\n' +
-        '• Offline error handling\n\n' +
-        '🛠️ *Build Options:*\n' +
-        '• Sketchware (recommended)\n' +
-        '• Android Studio\n' +
-        '• Online APK builders',
         { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
       );
     } else if (text === '📊 Library Stats') {
@@ -810,815 +783,6 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// ================================================================
-// APK GENERATION ENDPOINTS
-// ================================================================
-
-// Generate APK endpoint
-app.post('/api/generate-apk', async (req, res) => {
-  const { appName = 'MovTV', packageName = 'com.movtv.app', appIcon = null } = req.body;
-  const generationId = uuidv4();
-  
-  console.log(`🔨 Starting APK generation for: ${appName}`);
-  
-  try {
-    // Validate input
-    if (!appName || appName.trim().length === 0) {
-      return res.status(400).json({ error: 'App name is required' });
-    }
-    
-    if (!packageName || !packageName.match(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/)) {
-      return res.status(400).json({ error: 'Invalid package name format' });
-    }
-    
-    // Create temporary directory for this generation
-    const tempDir = path.join(__dirname, 'temp-apk', generationId);
-    await fsExtra.ensureDir(tempDir);
-    
-    // Generate Android project structure
-    await generateAndroidProject(tempDir, appName, packageName, appIcon);
-    
-    // Create APK package (ZIP format for download)
-    const apkFileName = `${appName.replace(/[^a-zA-Z0-9]/g, '')}_v${Date.now()}.zip`;
-    const apkPath = path.join(__dirname, 'public', 'apks', apkFileName);
-    await fsExtra.ensureDir(path.dirname(apkPath));
-    
-    await createAPKPackage(tempDir, apkPath);
-    
-    // Clean up temporary files
-    await fsExtra.remove(tempDir);
-    
-    // Log generation success
-    console.log(`✅ APK generated successfully: ${apkFileName}`);
-    
-    res.json({
-      success: true,
-      generationId,
-      appName,
-      packageName,
-      fileName: apkFileName,
-      downloadUrl: `${KOYEB_URL}/apks/${apkFileName}`,
-      size: (await fsExtra.stat(apkPath)).size,
-      createdAt: new Date().toISOString(),
-      instructions: {
-        install: [
-          '1. Download the ZIP file',
-          '2. Extract the contents',
-          '3. Install Android Studio or use online APK builders',
-          '4. Import the project and build APK',
-          '5. Or use the provided Sketchware import file'
-        ]
-      }
-    });
-    
-  } catch (error) {
-    console.error('❌ APK generation failed:', error);
-    
-    // Clean up on error
-    try {
-      const tempDir = path.join(__dirname, 'temp-apk', generationId);
-      await fsExtra.remove(tempDir);
-    } catch (cleanupError) {
-      console.error('❌ Cleanup error:', cleanupError);
-    }
-    
-    res.status(500).json({ 
-      error: 'APK generation failed', 
-      details: error.message,
-      generationId 
-    });
-  }
-});
-
-// Get APK generation status
-app.get('/api/apk-status/:generationId', async (req, res) => {
-  const { generationId } = req.params;
-  const tempDir = path.join(__dirname, 'temp-apk', generationId);
-  
-  try {
-    const exists = await fsExtra.pathExists(tempDir);
-    res.json({
-      generationId,
-      status: exists ? 'processing' : 'completed',
-      message: exists ? 'APK generation in progress' : 'Generation completed or not found'
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to check status' });
-  }
-});
-
-// List generated APKs
-app.get('/api/generated-apks', async (req, res) => {
-  try {
-    const apkDir = path.join(__dirname, 'public', 'apks');
-    await fsExtra.ensureDir(apkDir);
-    
-    const files = await fsExtra.readdir(apkDir);
-    const apkFiles = files.filter(file => file.endsWith('.zip'));
-    
-    const apkList = await Promise.all(
-      apkFiles.map(async (file) => {
-        const filePath = path.join(apkDir, file);
-        const stats = await fsExtra.stat(filePath);
-        return {
-          fileName: file,
-          downloadUrl: `${KOYEB_URL}/apks/${file}`,
-          size: stats.size,
-          createdAt: stats.birthtime,
-          modifiedAt: stats.mtime
-        };
-      })
-    );
-    
-    res.json({
-      success: true,
-      count: apkList.length,
-      apks: apkList.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    });
-    
-  } catch (error) {
-    console.error('❌ Error listing APKs:', error);
-    res.status(500).json({ error: 'Failed to list APKs' });
-  }
-});
-
-// Delete generated APK
-app.delete('/api/generated-apks/:fileName', async (req, res) => {
-  try {
-    const { fileName } = req.params;
-    const filePath = path.join(__dirname, 'public', 'apks', fileName);
-    
-    if (!fileName.endsWith('.zip')) {
-      return res.status(400).json({ error: 'Invalid file name' });
-    }
-    
-    await fsExtra.remove(filePath);
-    res.json({ success: true, message: 'APK deleted successfully' });
-    
-  } catch (error) {
-    console.error('❌ Error deleting APK:', error);
-    res.status(500).json({ error: 'Failed to delete APK' });
-  }
-});
-
-// Serve APK files
-app.use('/apks', express.static(path.join(__dirname, 'public', 'apks')));
-
-// ================================================================
-// APK GENERATION HELPER FUNCTIONS
-// ================================================================
-
-async function generateAndroidProject(tempDir, appName, packageName, appIcon) {
-  console.log(`📁 Generating Android project structure...`);
-  
-  // Create directory structure
-  const srcDir = path.join(tempDir, 'src', 'main');
-  const javaDir = path.join(srcDir, 'java', ...packageName.split('.'));
-  const resDir = path.join(srcDir, 'res');
-  const assetsDir = path.join(srcDir, 'assets');
-  
-  await fsExtra.ensureDir(javaDir);
-  await fsExtra.ensureDir(path.join(resDir, 'layout'));
-  await fsExtra.ensureDir(path.join(resDir, 'values'));
-  await fsExtra.ensureDir(path.join(resDir, 'mipmap-hdpi'));
-  await fsExtra.ensureDir(path.join(resDir, 'drawable'));
-  await fsExtra.ensureDir(assetsDir);
-  
-  // Generate AndroidManifest.xml
-  const manifestContent = `<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="${packageName}"
-    android:versionCode="1"
-    android:versionName="1.0">
-    
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    
-    <application
-        android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
-        android:label="${appName}"
-        android:theme="@style/AppTheme"
-        android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="true">
-        
-        <activity 
-            android:name=".MainActivity"
-            android:exported="true"
-            android:screenOrientation="portrait"
-            android:configChanges="orientation|screenSize|keyboardHidden">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-            
-    </application>
-</manifest>`;
-
-  await fsExtra.writeFile(path.join(srcDir, 'AndroidManifest.xml'), manifestContent);
-  
-  // Generate MainActivity.java
-  const mainActivityContent = `package ${packageName};
-
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Bundle;
-import android.view.View;
-import android.webkit.WebChromeClient;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
-import android.widget.ProgressBar;
-import android.widget.Toast;
-
-public class MainActivity extends Activity {
-    private WebView webView;
-    private ProgressBar progressBar;
-    private static final String URL = "${KOYEB_URL}";
-    
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        
-        webView = findViewById(R.id.webview);
-        progressBar = findViewById(R.id.progressBar);
-        
-        setupWebView();
-        
-        if (isNetworkAvailable()) {
-            loadWebsite();
-        } else {
-            showNoInternetDialog();
-        }
-    }
-    
-    private void setupWebView() {
-        WebSettings webSettings = webView.getSettings();
-        webSettings.setJavaScriptEnabled(true);
-        webSettings.setDomStorageEnabled(true);
-        webSettings.setLoadWithOverviewMode(true);
-        webSettings.setUseWideViewPort(true);
-        webSettings.setBuiltInZoomControls(false);
-        webSettings.setDisplayZoomControls(false);
-        webSettings.setSupportZoom(false);
-        webSettings.setDefaultTextEncodingName("utf-8");
-        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        webSettings.setAllowFileAccess(true);
-        webSettings.setAllowContentAccess(true);
-        
-        // Enable mixed content for HTTPS sites with HTTP resources
-        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                progressBar.setVisibility(View.GONE);
-            }
-            
-            @Override
-            public void onReceivedError(WebView view, int errorCode, 
-                    String description, String failingUrl) {
-                super.onReceivedError(view, errorCode, description, failingUrl);
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(MainActivity.this, "Network Error: " + description, 
-                    Toast.LENGTH_LONG).show();
-                showRetryDialog();
-            }
-        });
-        
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public void onProgressChanged(WebView view, int progress) {
-                if (progress == 100) {
-                    progressBar.setVisibility(View.GONE);
-                } else {
-                    progressBar.setVisibility(View.VISIBLE);
-                    progressBar.setProgress(progress);
-                }
-            }
-        });
-    }
-    
-    private void loadWebsite() {
-        progressBar.setVisibility(View.VISIBLE);
-        webView.loadUrl(URL);
-    }
-    
-    private boolean isNetworkAvailable() {
-        ConnectivityManager connectivityManager = 
-            (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
-    }
-    
-    private void showNoInternetDialog() {
-        new AlertDialog.Builder(this)
-            .setTitle("No Internet Connection")
-            .setMessage("${appName} requires an internet connection to work. Please check your connection and try again.")
-            .setPositiveButton("Retry", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    if (isNetworkAvailable()) {
-                        loadWebsite();
-                    } else {
-                        showNoInternetDialog();
-                    }
-                }
-            })
-            .setNegativeButton("Exit", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    finish();
-                }
-            })
-            .setCancelable(false)
-            .show();
-    }
-    
-    private void showRetryDialog() {
-        new AlertDialog.Builder(this)
-            .setTitle("Connection Error")
-            .setMessage("Unable to load ${appName}. Would you like to retry?")
-            .setPositiveButton("Retry", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    loadWebsite();
-                }
-            })
-            .setNegativeButton("Exit", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    finish();
-                }
-            })
-            .show();
-    }
-    
-    @Override
-    public void onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            new AlertDialog.Builder(this)
-                .setTitle("Exit ${appName}")
-                .setMessage("Are you sure you want to exit?")
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        MainActivity.super.onBackPressed();
-                    }
-                })
-                .setNegativeButton("No", null)
-                .show();
-        }
-    }
-    
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (webView != null) {
-            webView.onResume();
-        }
-    }
-    
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (webView != null) {
-            webView.onPause();
-        }
-    }
-}`;
-
-  await fsExtra.writeFile(path.join(javaDir, 'MainActivity.java'), mainActivityContent);
-  
-  // Generate layout file
-  const layoutContent = `<?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@android:color/white">
-
-    <WebView
-        android:id="@+id/webview"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <ProgressBar
-        android:id="@+id/progressBar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:layout_alignParentTop="true"
-        android:progressDrawable="@drawable/progress_bar"
-        android:visibility="gone"
-        android:max="100" />
-
-</RelativeLayout>`;
-
-  await fsExtra.writeFile(path.join(resDir, 'layout', 'activity_main.xml'), layoutContent);
-  
-  // Generate styles.xml
-  const stylesContent = `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <style name="AppTheme" parent="android:Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">@android:color/white</item>
-        <item name="android:colorPrimary">@color/colorPrimary</item>
-        <item name="android:colorAccent">@color/colorAccent</item>
-    </style>
-</resources>`;
-
-  await fsExtra.writeFile(path.join(resDir, 'values', 'styles.xml'), stylesContent);
-  
-  // Generate strings.xml
-  const stringsContent = `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">${appName}</string>
-</resources>`;
-
-  await fsExtra.writeFile(path.join(resDir, 'values', 'strings.xml'), stringsContent);
-  
-  // Generate colors.xml
-  const colorsContent = `<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="colorPrimary">#667eea</color>
-    <color name="colorPrimaryDark">#5a6fd8</color>
-    <color name="colorAccent">#764ba2</color>
-    <color name="progressColor">#4facfe</color>
-</resources>`;
-
-  await fsExtra.writeFile(path.join(resDir, 'values', 'colors.xml'), colorsContent);
-  
-  // Generate progress bar drawable
-  const progressBarContent = `<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@android:id/background">
-        <shape>
-            <solid android:color="#E0E0E0"/>
-            <corners android:radius="3dp"/>
-        </shape>
-    </item>
-    <item android:id="@android:id/progress">
-        <clip>
-            <shape>
-                <solid android:color="@color/progressColor"/>
-                <corners android:radius="3dp"/>
-            </shape>
-        </clip>
-    </item>
-</layer-list>`;
-
-  await fsExtra.writeFile(path.join(resDir, 'drawable', 'progress_bar.xml'), progressBarContent);
-  
-  // Generate build.gradle
-  const gradleContent = `apply plugin: 'com.android.application'
-
-android {
-    compileSdkVersion 33
-    buildToolsVersion "33.0.0"
-    
-    defaultConfig {
-        applicationId "${packageName}"
-        minSdkVersion 21
-        targetSdkVersion 33
-        versionCode 1
-        versionName "1.0"
-        
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-    }
-    
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-    
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-}
-
-dependencies {
-    implementation 'com.android.support:appcompat-v7:28.0.0'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'com.android.support.test:runner:1.0.2'
-    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
-}`;
-
-  await fsExtra.writeFile(path.join(tempDir, 'build.gradle'), gradleContent);
-  
-  // Generate proguard rules
-  const proguardContent = `# Add project specific ProGuard rules here.
--keep class android.webkit.** { *; }
--dontwarn android.webkit.**
--keepclassmembers class * {
-    @android.webkit.JavascriptInterface <methods>;
-}`;
-
-  await fsExtra.writeFile(path.join(tempDir, 'proguard-rules.pro'), proguardContent);
-  
-  // Generate Sketchware config
-  const sketchwareConfig = {
-    projectName: appName,
-    packageName: packageName,
-    webviewUrl: KOYEB_URL,
-    appDescription: `${appName} - Movie and TV Series Manager`,
-    targetSdk: 33,
-    minSdk: 21,
-    permissions: ['INTERNET', 'ACCESS_NETWORK_STATE', 'ACCESS_WIFI_STATE'],
-    features: [
-      'WebView with JavaScript enabled',
-      'Internet connectivity check',
-      'Loading progress indicator', 
-      'Back button navigation',
-      'Error handling and retry',
-      'Exit confirmation dialog'
-    ],
-    instructions: [
-      '1. Open Sketchware on your Android device',
-      '2. Create new project with package name: ' + packageName,
-      '3. Add WebView component and set these properties:',
-      '   - URL: ' + KOYEB_URL,
-      '   - Enable JavaScript: true',
-      '   - Enable DOM Storage: true',
-      '4. Add ProgressBar for loading indication',
-      '5. Add internet permission in AndroidManifest',
-      '6. Implement back button handling',
-      '7. Build APK and install on device'
-    ]
-  };
-  
-  await fsExtra.writeFile(path.join(tempDir, 'sketchware_config.json'), JSON.stringify(sketchwareConfig, null, 2));
-  
-  // Generate comprehensive README
-  const readmeContent = `# ${appName} - Android App Package
-
-**Generated on:** ${new Date().toLocaleString()}
-**Target URL:** ${KOYEB_URL}
-
-## 📱 Project Information
-
-- **App Name:** ${appName}
-- **Package Name:** ${packageName}
-- **Target SDK:** 33 (Android 13)
-- **Minimum SDK:** 21 (Android 5.0)
-- **App Type:** WebView-based native Android app
-
-## 🚀 Building Instructions
-
-### Option 1: Sketchware (Recommended for Beginners)
-
-1. **Download Sketchware** from Google Play Store
-2. **Create New Project:**
-   - Project Name: ${appName}
-   - Package Name: \`${packageName}\`
-   - App Name: ${appName}
-
-3. **Add Components:**
-   - Add WebView component (fill screen)
-   - Add ProgressBar (horizontal, at top)
-
-4. **Configure WebView:**
-   - Set URL: \`${KOYEB_URL}\`
-   - Enable JavaScript: ✅
-   - Enable DOM Storage: ✅
-
-5. **Add Permissions:**
-   - INTERNET
-   - ACCESS_NETWORK_STATE
-   - ACCESS_WIFI_STATE
-
-6. **Build APK** directly in Sketchware
-
-### Option 2: Android Studio (Professional)
-
-1. **Import Project:**
-   - Open Android Studio
-   - Import this extracted project folder
-   - Wait for Gradle sync
-
-2. **Build APK:**
-   - Go to Build > Build Bundle(s)/APK(s) > Build APK(s)
-   - Wait for build completion
-   - APK will be in \`app/build/outputs/apk/\`
-
-### Option 3: Online APK Builders
-
-1. **Upload Project:** 
-   - Visit online builders like:
-     - BuildAPKOnline.com
-     - ApkOnline.com
-     - AndroidAPKsFree.com
-
-2. **Upload this ZIP file**
-3. **Configure build settings**
-4. **Download generated APK**
-
-## 📋 Features Included
-
-✅ **Native WebView Interface** - Loads your MovTV web app
-✅ **Internet Connectivity Check** - Detects network status
-✅ **Loading Progress Indicator** - Shows loading progress
-✅ **Back Button Navigation** - Proper navigation handling
-✅ **Error Handling** - Network error recovery
-✅ **Exit Confirmation** - Prevents accidental exits
-✅ **Responsive Design** - Works on all screen sizes
-✅ **Offline Detection** - Handles connection issues
-
-## 🔧 Technical Details
-
-### Permissions Required:
-- **INTERNET** - Access to internet for loading content
-- **ACCESS_NETWORK_STATE** - Check network connectivity
-- **ACCESS_WIFI_STATE** - Monitor WiFi status
-- **WRITE_EXTERNAL_STORAGE** - For caching (optional)
-
-### Supported Android Versions:
-- **Minimum:** Android 5.0 (API 21)
-- **Target:** Android 13 (API 33)
-- **Tested:** Android 6.0+ (API 23+)
-
-### WebView Settings:
-- JavaScript: Enabled
-- DOM Storage: Enabled
-- Mixed Content: Allowed
-- Cache Mode: Default
-- User Agent: Default WebView
-
-## 📱 Installation Guide
-
-### For End Users:
-
-1. **Download APK** from the generated package
-2. **Enable Unknown Sources:**
-   - Go to Settings > Security
-   - Enable "Install from Unknown Sources"
-   - Or allow installation for specific browser
-
-3. **Install APK:**
-   - Tap on downloaded APK file
-   - Follow installation prompts
-   - Grant required permissions
-
-4. **Launch App:**
-   - Find ${appName} in app drawer
-   - Tap to launch
-   - App will load your MovTV library
-
-## 🔍 Troubleshooting
-
-### Common Issues:
-
-**❌ App won't install:**
-- Enable "Install from Unknown Sources"
-- Check available storage space
-- Try redownloading APK
-
-**❌ White screen on launch:**
-- Check internet connection
-- Verify URL is accessible: ${KOYEB_URL}
-- Clear app data and restart
-
-**❌ App crashes on startup:**
-- Update Android System WebView
-- Clear app cache
-- Restart device
-
-**❌ Can't connect to server:**
-- Check WiFi/mobile data
-- Try opening URL in browser
-- Contact server administrator
-
-### Debug Information:
-- **Server URL:** ${KOYEB_URL}
-- **Generated:** ${new Date().toISOString()}
-- **Package:** ${packageName}
-- **Version:** 1.0 (Build 1)
-
-## 🌐 Server Requirements
-
-Your MovTV server should be:
-- ✅ Accessible via HTTPS
-- ✅ Responsive web design
-- ✅ Mobile-friendly interface
-- ✅ CORS enabled for mobile access
-
-## 📞 Support
-
-For technical support:
-- **Backend Server:** ${KOYEB_URL}
-- **API Endpoint:** ${KOYEB_URL}/api
-- **Health Check:** ${KOYEB_URL}/health
-
-## 🔄 Updates
-
-To update your app:
-1. Generate new APK with same package name
-2. Install over existing app (data preserved)
-3. Or uninstall old version first (data lost)
-
-## 📄 License
-
-This APK package is generated for personal use with your MovTV server.
-Ensure you have proper rights to all media content accessed through the app.
-
----
-
-**Enjoy your MovTV mobile experience! 🎬📱**
-`;
-
-  await fsExtra.writeFile(path.join(tempDir, 'README.md'), readmeContent);
-  
-  console.log(`✅ Android project structure generated successfully`);
-}
-
-async function createAPKPackage(sourceDir, outputPath) {
-  console.log(`📦 Creating APK package...`);
-  
-  return new Promise((resolve, reject) => {
-    const output = fsExtra.createWriteStream(outputPath);
-    const archive = archiver('zip', {
-      zlib: { level: 9 } // Maximum compression
-    });
-    
-    output.on('close', () => {
-      console.log(`✅ APK package created: ${formatBytes(archive.pointer())}`);
-      resolve();
-    });
-    
-    archive.on('error', (err) => {
-      console.error('❌ Archive error:', err);
-      reject(err);
-    });
-    
-    archive.pipe(output);
-    archive.directory(sourceDir, false);
-    archive.finalize();
-  });
-}
-
-// Utility function to format bytes
-function formatBytes(bytes, decimals = 2) {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-// Cleanup old APK files (run every hour)
-setInterval(async () => {
-  try {
-    const apkDir = path.join(__dirname, 'public', 'apks');
-    await fsExtra.ensureDir(apkDir);
-    const files = await fsExtra.readdir(apkDir);
-    const now = Date.now();
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-    
-    for (const file of files) {
-      if (!file.endsWith('.zip')) continue;
-      
-      const filePath = path.join(apkDir, file);
-      const stats = await fsExtra.stat(filePath);
-      
-      if (now - stats.birthtimeMs > maxAge) {
-        await fsExtra.remove(filePath);
-        console.log(`🗑️ Cleaned up old APK: ${file}`);
-      }
-    }
-  } catch (error) {
-    console.error('❌ APK cleanup error:', error);
-  }
-}, 60 * 60 * 1000); // Run every hour
-
-// Create required directories on startup
-(async () => {
-  try {
-    await fsExtra.ensureDir(path.join(__dirname, 'public', 'apks'));
-    await fsExtra.ensureDir(path.join(__dirname, 'temp-apk'));
-    console.log('✅ APK directories ensured');
-  } catch (error) {
-    console.error('❌ Error creating APK directories:', error);
-  }
-})();
-
-// ================================================================
-// MAIN APP ROUTES
-// ================================================================
-
 app.get('/', (req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   fs.readFile(indexPath, 'utf8', (err, data) => {
@@ -1637,60 +801,33 @@ app.get('/', (req, res) => {
 
 app.get('/api', (req, res) => {
   res.json({
-    name: 'MovTV Manager API',
+    name: 'Media Manager API',
     version: '1.0.0',
     status: 'running',
-    features: ['Movies', 'TV Series', 'APK Generation'],
     endpoints: {
       movies: '/api/movies',
       series: '/api/series',
       seriesById: '/api/series/:id',
       stats: '/api/stats',
-      health: '/health',
-      generateApk: '/api/generate-apk',
-      listApks: '/api/generated-apks',
-      apkStatus: '/api/apk-status/:generationId'
+      health: '/health'
     },
-    message: 'Frontend is available at the root URL /',
-    apkGenerator: 'Available at /apk-generator.html'
+    message: 'Frontend is available at the root URL /'
   });
 });
 
-// Error handling middleware
 app.use((error, req, res, next) => {
-  console.error('❌ Server error:', error);
-  res.status(500).json({ 
-    error: 'Internal server error', 
-    details: error.message,
-    timestamp: new Date().toISOString()
-  });
+  console.error('Server error:', error);
+  res.status(500).json({ error: 'Internal server error', details: error.message });
 });
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    error: 'Not Found',
-    message: 'The requested resource was not found',
-    path: req.path,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// ================================================================
-// SERVER STARTUP
-// ================================================================
 
 app.listen(PORT, '0.0.0.0', async () => {
-  console.log('\n🚀 ===== MovTV Manager Server Started =====');
-  console.log(`📅 Started at: ${new Date().toLocaleString()}`);
-  console.log(`🌐 Server running on port: ${PORT}`);
-  console.log(`📱 API Base URL: ${KOYEB_URL ? `${KOYEB_URL}/api` : `http://localhost:${PORT}/api`}`);
-  console.log(`🤖 Bot mode: ${USE_WEBHOOK ? 'Webhook' : 'Polling'}`);
-  console.log(`📦 APK Generator: ${KOYEB_URL}/apk-generator.html`);
+  console.log('🚀 Media Manager API Server running on port', PORT);
+  console.log('🌐 API Base URL:', KOYEB_URL ? `${KOYEB_URL}/api` : `http://localhost:${PORT}/api`);
+  console.log('🤖 Bot mode:', USE_WEBHOOK ? 'Webhook' : 'Polling');
 
   if (USE_WEBHOOK && KOYEB_URL) {
     const webhookUrl = `${KOYEB_URL}${WEBHOOK_PATH}`;
-    console.log(`\n🔗 Setting Telegram webhook to: ${webhookUrl}`);
+    console.log(`Setting Telegram webhook to: ${webhookUrl}`);
     try {
       await bot.setWebHook(webhookUrl);
       console.log('✅ Webhook set successfully!');
@@ -1699,50 +836,21 @@ app.listen(PORT, '0.0.0.0', async () => {
     }
   }
 
-  console.log('\n📋 Available endpoints:');
-  console.log('   📊 GET  /health         - Health check');
-  console.log('   🎬 GET  /api/movies     - Get all movies');
-  console.log('   📺 GET  /api/series     - Get all series');
-  console.log('   🔍 GET  /api/series/:id - Get series details');
-  console.log('   📈 GET  /api/stats      - Get library statistics');
-  console.log('   📱 POST /api/generate-apk - Generate APK package');
-  console.log('   📂 GET  /api/generated-apks - List generated APKs');
-  console.log('   🗑️  DEL  /api/generated-apks/:fileName - Delete APK');
-  console.log('   📥 GET  /apks/*         - Download APK files');
-  
-  console.log('\n🎯 Quick Links:');
-  console.log(`   🌐 Frontend: ${KOYEB_URL || `http://localhost:${PORT}`}`);
-  console.log(`   📱 APK Generator: ${KOYEB_URL}/apk-generator.html`);
-  console.log(`   📊 API Info: ${KOYEB_URL}/api`);
-  
-  console.log('\n✅ MovTV Manager is ready! 🎬📺📱\n');
+  console.log('📋 Available endpoints:');
+  console.log('   • GET  /api/movies     - Get all movies');
+  console.log('   • GET  /api/series     - Get all series');
+  console.log('   • GET  /api/series/:id - Get series details');
+  console.log('   • GET  /api/stats      - Get library statistics');
+  console.log('   • GET  /health         - Health check');
+  console.log('✅ Server ready! Connect your frontend to this API.');
 });
 
-// ================================================================
-// GRACEFUL SHUTDOWN HANDLERS
-// ================================================================
-
 process.on('SIGTERM', async () => {
-  console.log('\n🛑 SIGTERM received, shutting down gracefully...');
+  console.log('🛑 SIGTERM received, shutting down gracefully');
   try {
-    if (!USE_WEBHOOK && bot) {
-      bot.stopPolling();
-      console.log('✅ Bot polling stopped');
-    }
-    
+    if (!USE_WEBHOOK) bot.stopPolling();
     await mongoose.connection.close();
-    console.log('✅ MongoDB connection closed');
-    
-    // Clean up temporary APK files
-    try {
-      const tempDir = path.join(__dirname, 'temp-apk');
-      await fsExtra.remove(tempDir);
-      console.log('✅ Temporary APK files cleaned up');
-    } catch (cleanupError) {
-      console.log('⚠️  Temp cleanup skipped:', cleanupError.message);
-    }
-    
-    console.log('✅ MovTV Manager shutdown complete');
+    console.log('✅ Shutdown complete');
   } catch (error) {
     console.error('❌ Error during shutdown:', error);
   }
@@ -1750,41 +858,13 @@ process.on('SIGTERM', async () => {
 });
 
 process.on('SIGINT', async () => {
-  console.log('\n🛑 SIGINT received, shutting down gracefully...');
+  console.log('🛑 SIGINT received, shutting down gracefully');
   try {
-    if (!USE_WEBHOOK && bot) {
-      bot.stopPolling();
-      console.log('✅ Bot polling stopped');
-    }
-    
+    if (!USE_WEBHOOK) bot.stopPolling();
     await mongoose.connection.close();
-    console.log('✅ MongoDB connection closed');
-    
-    // Clean up temporary APK files
-    try {
-      const tempDir = path.join(__dirname, 'temp-apk');
-      await fsExtra.remove(tempDir);
-      console.log('✅ Temporary APK files cleaned up');
-    } catch (cleanupError) {
-      console.log('⚠️  Temp cleanup skipped:', cleanupError.message);
-    }
-    
-    console.log('✅ MovTV Manager shutdown complete');
+    console.log('✅ Shutdown complete');
   } catch (error) {
     console.error('❌ Error during shutdown:', error);
   }
   process.exit(0);
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  console.error('Stack:', error.stack);
-  process.exit(1);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
 });

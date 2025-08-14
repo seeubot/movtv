@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APK Generator - Media Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .apk-generator {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #8b4513;
+        }
+
+        .status-box {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .status-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .apk-list {
+            margin-top: 30px;
+        }
+
+        .apk-item {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .apk-info {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .apk-info h4 {
+            color: #495057;
+            margin-bottom: 5px;
+        }
+
+        .apk-info p {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .apk-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .instructions h4 {
+            color: #856404;
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            color: #856404;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .apk-generator {
+                padding: 20px;
+            }
+
+            .apk-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .apk-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 APK Generator</h1>
+            <p>Generate Android APK for your Media Manager app</p>
+        </div>
+
+        <div class="content">
+            <!-- APK Generation Form -->
+            <div class="apk-generator">
+                <h3>🔨 Generate New APK</h3>
+                <p style="margin-bottom: 20px; color: #6c757d;">
+                    Create a custom Android app that loads your Media Manager in a WebView
+                </p>
+
+                <div class="form-group">
+                    <label for="appName">📝 App Name</label>
+                    <input type="text" id="appName" placeholder="Enter app name" value="Media Manager">
+                </div>
+
+                <div class="form-group">
+                    <label for="packageName">📦 Package Name</label>
+                    <input type="text" id="packageName" placeholder="com.yourcompany.appname" value="com.mediamanager.app">
+                    <small style="color: #6c757d; display: block; margin-top: 5px;">
+                        Use reverse domain notation (e.g., com.company.appname)
+                    </small>
+                </div>
+
+                <button class="btn" onclick="generateAPK()" id="generateBtn">
+                    🚀 Generate APK Package
+                </button>
+
+                <button class="btn btn-secondary" onclick="loadAPKList()">
+                    📋 Refresh APK List
+                </button>
+
+                <!-- Progress Bar -->
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <!-- Status Box -->
+                <div class="status-box" id="statusBox"></div>
+
+                <!-- Instructions -->
+                <div class="instructions">
+                    <h4>📋 How to Build Your APK:</h4>
+                    <ol>
+                        <li><strong>Download</strong> the generated ZIP package</li>
+                        <li><strong>Extract</strong> the contents to a folder</li>
+                        <li><strong>Option 1:</strong> Import into Android Studio and build</li>
+                        <li><strong>Option 2:</strong> Use Sketchware (recommended for beginners):
+                            <ul style="margin-top: 8px;">
+                                <li>Create new project with the provided package name</li>
+                                <li>Add WebView component and set URL to your Media Manager</li>
+                                <li>Enable JavaScript in WebView settings</li>
+                                <li>Build APK directly in Sketchware</li>
+                            </ul>
+                        </li>
+                        <li><strong>Option 3:</strong> Use online APK builders like BuildAPKOnline.com</li>
+                        <li><strong>Install</strong> the generated APK on your Android device</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Generated APKs List -->
+            <div class="apk-list">
+                <h3>📂 Generated APKs</h3>
+                <p style="margin-bottom: 20px; color: #6c757d;">
+                    Your previously generated APK packages (auto-deleted after 24 hours)
+                </p>
+                <div id="apkListContainer">
+                    <div class="status-box status-info" style="display: block;">
+                        <p>🔄 Loading APK list...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
+
+        // Generate APK function
+        async function generateAPK() {
+            const appName = document.getElementById('appName').value.trim();
+            const packageName = document.getElementById('packageName').value.trim();
+            const generateBtn = document.getElementById('generateBtn');
+            const statusBox = document.getElementById('statusBox');
+            const progressBar = document.getElementById('progressBar');
+            const progressFill = document.getElementById('progressFill');
+
+            // Validation
+            if (!appName) {
+                showStatus('error', '❌ Please enter an app name');
+                return;
+            }
+
+            if (!packageName || !packageName.match(/^[a-z][a-z0-9_]*(\.[a-z0-9_]+)*$/)) {
+                showStatus('error', '❌ Please enter a valid package name (e.g., com.company.appname)');
+                return;
+            }
+
+            // Start generation
+            generateBtn.disabled = true;
+            generateBtn.textContent = '⏳ Generating...';
+            showStatus('info', '🔨 Starting APK generation...');
+            showProgress(0);
+
+            try {
+                // Simulate progress updates
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 20;
+                    if (progress > 90) progress = 90;
+                    updateProgress(progress);
+                }, 500);
+
+                const response = await fetch(`${API_BASE_URL}/generate-apk`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appName,
+                        packageName
+                    })
+                });
+
+                clearInterval(progressInterval);
+                updateProgress(100);
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showStatus('success', `
+                        ✅ APK package generated successfully!<br>
+                        <strong>File:</strong> ${result.fileName}<br>
+                        <strong>Size:</strong> ${formatFileSize(result.size)}<br>
+                        <strong>Generated:</strong> ${new Date(result.createdAt).toLocaleString()}<br><br>
+                        <a href="${result.downloadUrl}" class="btn" download style="display: inline-block; text-decoration: none; margin-top: 10px;">
+                            📥 Download APK Package
+                        </a>
+                    `);
+
+                    // Refresh the APK list
+                    setTimeout(() => {
+                        loadAPKList();
+                    }, 1000);
+
+                } else {
+                    throw new Error(result.error || 'Generation failed');
+                }
+
+            } catch (error) {
+                console.error('APK generation error:', error);
+                showStatus('error', `❌ Generation failed: ${error.message}`);
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🚀 Generate APK Package';
+                hideProgress();
+            }
+        }
+
+        // Load APK list
+        async function loadAPKList() {
+            const container = document.getElementById('apkListContainer');
+            
+            try {
+                container.innerHTML = '<div class="status-box status-info" style="display: block;"><p>🔄 Loading APK list...</p></div>';
+
+                const response = await fetch(`${API_BASE_URL}/generated-apks`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    if (result.apks.length === 0) {
+                        container.innerHTML = `
+                            <div class="status-box status-info" style="display: block;">
+                                <p>📂 No APKs generated yet. Create your first APK above!</p>
+                            </div>
+                        `;
+                    } else {
+                        let html = '';
+                        result.apks.forEach(apk => {
+                            html += `
+                                <div class="apk-item">
+                                    <div class="apk-info">
+                                        <h4>📱 ${apk.fileName}</h4>
+                                        <p>
+                                            💾 Size: ${formatFileSize(apk.size)} | 
+                                            📅 Created: ${new Date(apk.createdAt).toLocaleString()}
+                                        </p>
+                                    </div>
+                                    <div class="apk-actions">
+                                        <a href="${apk.downloadUrl}" class="btn" download>
+                                            📥 Download
+                                        </a>
+                                        <button class="btn btn-secondary" onclick="deleteAPK('${apk.fileName}')">
+                                            🗑️ Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        container.innerHTML = html;
+                    }
+                } else {
+                    throw new Error(result.error || 'Failed to load APK list');
+                }
+
+            } catch (error) {
+                console.error('APK list loading error:', error);
+                container.innerHTML = `
+                    <div class="status-box status-error" style="display: block;">
+                        <p>❌ Failed to load APK list: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Delete APK
+        async function deleteAPK(fileName) {
+            if (!confirm(`Are you sure you want to delete ${fileName}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/generated-apks/${fileName}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showStatus('success', `✅ ${fileName} deleted successfully`);
+                    loadAPKList(); // Refresh the list
+                } else {
+                    throw new Error(result.error || 'Delete failed');
+                }
+
+            } catch (error) {
+                console.error('APK deletion error:', error);
+                showStatus('error', `❌ Failed to delete APK: ${error.message}`);
+            }
+        }
+
+        // Utility functions
+        function showStatus(type, message) {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box status-${type}`;
+            statusBox.innerHTML = message;
+            statusBox.style.display = 'block';
+
+            // Auto-hide success messages after 10 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusBox.style.display = 'none';
+                }, 10000);
+            }
+        }
+
+        function showProgress(percentage) {
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.display = 'block';
+            updateProgress(percentage);
+        }
+
+        function updateProgress(percentage) {
+            const progressFill = document.getElementById('progressFill');
+            progressFill.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
+        }
+
+        function hideProgress() {
+            setTimeout(() => {
+                const progressBar = document.getElementById('progressBar');
+                progressBar.style.display = 'none';
+                updateProgress(0);
+            }, 1000);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Load APK list on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAPKList();
+            
+            // Auto-refresh APK list every 30 seconds
+            setInterval(loadAPKList, 30000);
+        });
+
+        // Handle Enter key in form fields
+        document.getElementById('appName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') generateAPK();
+        });
+
+        document.getElementById('packageName').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') generateAPK();
+        });
+    </script>
+</body>
+</html>

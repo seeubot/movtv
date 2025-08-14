@@ -10,7 +10,6 @@
             --secondary: #3f37c9;
             --dark: #1b263b;
             --light: #f8f9fa;
-            --success: #4cc9f0;
             --danger: #f72585;
             --player-bg: rgba(0, 0, 0, 0.9);
         }
@@ -123,15 +122,54 @@
         }
         .episode-card:hover, .episode-card:focus { transform: scale(1.02); box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15); border: 2px solid var(--primary); outline: none; }
 
+        /* --- Custom Player UI (for WebView) --- */
+        .player-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--player-bg);
+            display: none;
+            justify-content: center; align-items: center; z-index: 1000;
+        }
+        .player-controls {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 1rem; background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
+            color: white; display: flex; flex-direction: column; opacity: 1;
+            transition: opacity 0.3s;
+        }
+        .controls-top { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0.5rem 0; }
+        .controls-top .back-button { color: white; margin: 0; padding: 0; font-size: 2rem; }
+        .controls-top .back-button:hover, .controls-top .back-button:focus { color: var(--primary); }
+        .controls-top .title { font-size: 1.2rem; }
+        .controls-top .options { display: flex; gap: 0.5rem; }
+        .controls-top button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white; border: none; padding: 0.5rem; border-radius: 4px;
+            cursor: pointer;
+        }
+        .controls-top button:hover, .controls-top button:focus {
+            background: var(--primary); outline: none;
+        }
+        .controls-middle { display: flex; align-items: center; justify-content: center; gap: 1.5rem; padding: 1rem 0; }
+        .controls-middle button {
+            background: none; border: none; color: white; font-size: 2rem; cursor: pointer;
+        }
+        .controls-middle button:hover, .controls-middle button:focus { color: var(--primary); outline: none; }
+        
+        .controls-bottom { display: flex; align-items: center; width: 100%; gap: 1rem; }
+        .progress-bar {
+            flex-grow: 1; height: 8px; border-radius: 4px; cursor: pointer;
+            -webkit-appearance: none; background: #555; overflow: hidden;
+        }
+        .progress-bar::-webkit-slider-thumb {
+            -webkit-appearance: none; width: 15px; height: 15px;
+            background: var(--primary); border-radius: 50%;
+            box-shadow: -100vw 0 0 100vw var(--primary);
+        }
+        .time-display { font-size: 0.9rem; color: var(--light); }
+
         @media (max-width: 768px) {
             .media-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-            .player-wrapper { width: 95%; }
-            header { flex-direction: column; padding: 1rem; }
-            nav ul { margin-top: 1rem; }
-            nav ul li { margin: 0 1rem; }
-            body { padding-top: 5rem; }
-            .hero { height: 100%; }
             .search-bar { margin-right: auto; }
+            .controls-middle button { font-size: 1.5rem; }
         }
     </style>
 </head>
@@ -140,8 +178,7 @@
         <div class="logo">Media<span>Manager</span></div>
         <nav>
             <ul>
-                <li><a href="#" class="nav-link" data-section="movies">Movies</a></li>
-                <li><a href="#" class="nav-link" data-section="series">TV Series</a></li>
+                <li><a href="#" class="nav-link" data-section="all">All Content</a></li>
             </ul>
         </nav>
     </header>
@@ -149,32 +186,56 @@
     <!-- Initial Search View -->
     <div class="hero">
         <div class="search-bar">
-            <input type="text" id="search-input" placeholder="Search movies or series..." autofocus>
+            <input type="text" id="search-input" placeholder="Search for content..." autofocus>
             <button id="search-button">Search</button>
         </div>
     </div>
 
     <!-- Main Content View (hidden initially) -->
     <div class="container" id="main-content">
-        <section id="movies-section">
-            <h2 class="section-title">Movies</h2>
-            <div class="media-grid" id="movies-grid">
+        <section id="all-content-section">
+            <h2 class="section-title">All Content</h2>
+            <div class="media-grid" id="all-content-grid">
                 <div class="loading">Search for content to get started.</div>
-            </div>
-        </section>
-        <section id="series-section" style="display: none;">
-            <h2 class="section-title">TV Series</h2>
-            <div class="media-grid" id="series-grid">
-                <!-- Content will be loaded here -->
             </div>
         </section>
     </div>
 
-    <!-- Episode View (h<div class="container" d="episodes-section">
-        <button id="episodes-back-button" class="back-button">&larr; Back to Series</button>
+    <!-- Episode View (hidden initially) -->
+    <div class="container" id="episodes-section">
+        <button id="episodes-back-button" class="back-button">&larr; Back</button>
         <h2 class="section-title" id="series-episodes-title"></h2>
         <div class="media-grid" id="episodes-grid">
             <!-- Episode cards will be loaded here -->
+        </div>
+    </div>
+
+    <!-- This is a placeholder for your native video player UI.
+         The HTML will interact with this via JavaScript bridge calls.
+         We are only showing the controls, not the video itself. -->
+    <div class="player-overlay" id="player-overlay">
+        <!-- The user's native ExoPlayer would be visible here, behind this overlay -->
+        <div class="player-controls" id="player-controls">
+            <div class="controls-top">
+                <button id="player-back-button" class="back-button">&larr;</button>
+                <div class="title" id="player-title"></div>
+                <div class="options">
+                    <button id="episodes-btn">Episodes</button>
+                    <button id="ratio-fit-btn">Fit</button>
+                    <button id="ratio-crop-btn">Crop</button>
+                    <button id="ratio-fill-btn">Fill</button>
+                </div>
+            </div>
+            <div class="controls-middle">
+                <button id="rewind-btn">&#x23EA;</button>
+                <button id="play-pause-btn">&#9658;</button>
+                <button id="forward-btn">&#x23E9;</button>
+            </div>
+            <div class="controls-bottom">
+                <span class="time-display" id="current-time">0:00</span>
+                <input type="range" class="progress-bar" id="progress-bar" min="0" max="100" value="0">
+                <span class="time-display" id="duration">0:00</span>
+            </div>
         </div>
     </div>
 
@@ -182,13 +243,25 @@
         const API_BASE_URL = window.location.origin.includes('koyeb')
             ? `${window.location.origin}/api`
             : 'https://future-ester-seeutech-645c6129.koyeb.app/api';
+        
+        // This is a placeholder for your native Android JavaScript interface.
+        // In Sketchware, you will set this up by using the `addJavascriptInterface` block.
+        // For example, in Sketchware, you would create a Java class named 'Android'
+        // with methods like `playVideo(String url)` and `setScreenRatio(String ratio)`.
+        const Android = {
+            playVideo: (url, title) => console.log(`[Native Call] Play video: ${url}, Title: ${title}`),
+            togglePlayPause: () => console.log(`[Native Call] Toggle play/pause`),
+            seekTo: (time) => console.log(`[Native Call] Seek to: ${time}s`),
+            setScreenRatio: (ratio) => console.log(`[Native Call] Set screen ratio: ${ratio}`),
+            showEpisodeList: () => console.log(`[Native Call] Show native episode list`),
+            closePlayer: () => console.log(`[Native Call] Close native player`)
+        };
 
         // DOM Elements
         const appHeader = document.getElementById('app-header');
         const heroSection = document.querySelector('.hero');
         const mainContent = document.getElementById('main-content');
-        const moviesGrid = document.getElementById('movies-grid');
-        const seriesGrid = document.getElementById('series-grid');
+        const allContentGrid = document.getElementById('all-content-grid');
         const episodesSection = document.getElementById('episodes-section');
         const episodesGrid = document.getElementById('episodes-grid');
         const seriesEpisodesTitle = document.getElementById('series-episodes-title');
@@ -196,26 +269,58 @@
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
         const navLinks = document.querySelectorAll('.nav-link');
-
-        const sections = {
-            movies: document.getElementById('movies-section'),
-            series: document.getElementById('series-section')
-        };
-        let currentSection = 'movies';
-
+        
+        const playerOverlay = document.getElementById('player-overlay');
+        const playerControls = document.getElementById('player-controls');
+        const playerTitle = document.getElementById('player-title');
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const rewindBtn = document.getElementById('rewind-btn');
+        const forwardBtn = document.getElementById('forward-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const currentTimeEl = document.getElementById('current-time');
+        const durationEl = document.getElementById('duration');
+        const playerBackButton = document.getElementById('player-back-button');
+        const episodesButton = document.getElementById('episodes-btn');
+        const ratioFitBtn = document.getElementById('ratio-fit-btn');
+        const ratioCropBtn = document.getElementById('ratio-crop-btn');
+        const ratioFillBtn = document.getElementById('ratio-fill-btn');
+        
+        // --- Core Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             searchInput.focus();
 
             navLinks.forEach(link => {
                 link.addEventListener('click', e => {
                     e.preventDefault();
-                    showSection(link.dataset.section);
+                    showSection('all');
                 });
             });
 
             searchInput.addEventListener('keyup', () => performSearch());
             searchButton.addEventListener('click', () => performSearch(true));
             episodesBackButton.addEventListener('click', () => showMainContent());
+
+            // --- Player UI Event Listeners ---
+            playPauseBtn.addEventListener('click', () => Android.togglePlayPause());
+            rewindBtn.addEventListener('click', () => Android.seekTo(-10));
+            forwardBtn.addEventListener('click', () => Android.seekTo(10));
+            playerBackButton.addEventListener('click', () => {
+                playerOverlay.style.display = 'none';
+                Android.closePlayer();
+            });
+
+            episodesButton.addEventListener('click', () => {
+                // Here, we can either display the episodes list in the WebView
+                // or tell the native app to show a native episode list.
+                // Let's assume we'll show the episodes list in the WebView.
+                playerOverlay.style.display = 'none';
+                showEpisodeList();
+            });
+            
+            // Screen ratio controls
+            ratioFitBtn.addEventListener('click', () => Android.setScreenRatio('fit'));
+            ratioCropBtn.addEventListener('click', () => Android.setScreenRatio('crop'));
+            ratioFillBtn.addEventListener('click', () => Android.setScreenRatio('fill'));
 
             // --- TV Remote Control Navigation ---
             document.addEventListener('keydown', e => {
@@ -241,7 +346,7 @@
                 heroSection.style.display = 'none';
                 appHeader.style.display = 'flex';
                 mainContent.style.display = 'block';
-                currentSection === 'movies' ? loadMovies(term) : loadSeries(term);
+                loadContent(term);
             } else if (term.length === 0 && !isManualSearch) {
                 heroSection.style.display = 'flex';
                 appHeader.style.display = 'none';
@@ -251,52 +356,35 @@
         }
 
         // --- UI & Data Loading Functions ---
-        function showSection(section) {
-            Object.values(sections).forEach(sec => sec.style.display = 'none');
-            sections[section].style.display = 'block';
-            currentSection = section;
-            navLinks.forEach(link => link.style.color = link.dataset.section === section ? '#4361ee' : 'white');
-            performSearch(true);
-        }
+        async function loadContent(searchTerm) {
+            try {
+                allContentGrid.innerHTML = '<div class="loading">Loading content...</div>';
+                const [moviesRes, seriesRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/movies?search=${encodeURIComponent(searchTerm)}`),
+                    fetch(`${API_BASE_URL}/series?search=${encodeURIComponent(searchTerm)}`)
+                ]);
+                const movies = await moviesRes.json();
+                const series = await seriesRes.json();
+                
+                const combinedContent = [...movies, ...series].sort((a, b) => a.name.localeCompare(b.name));
 
+                if (combinedContent.length === 0) {
+                    allContentGrid.innerHTML = '<div class="loading">No content found</div>';
+                } else {
+                    allContentGrid.innerHTML = '';
+                    combinedContent.forEach(item => addMediaCard(allContentGrid, item, item.type));
+                }
+            } catch (e) {
+                console.error("Error loading content:", e);
+                allContentGrid.innerHTML = '<div class="loading">Error loading content</div>';
+            }
+        }
+        
         function showMainContent() {
             mainContent.style.display = 'block';
             episodesSection.style.display = 'none';
-            performSearch(true);
-        }
-
-        async function loadMovies(searchTerm) {
-            try {
-                moviesGrid.innerHTML = '<div class="loading">Loading movies...</div>';
-                const res = await fetch(`${API_BASE_URL}/movies?search=${encodeURIComponent(searchTerm)}`);
-                const data = await res.json();
-                if (data.length === 0) {
-                    moviesGrid.innerHTML = '<div class="loading">No movies found</div>';
-                } else {
-                    moviesGrid.innerHTML = '';
-                    data.forEach(movie => addMediaCard(moviesGrid, movie, 'movie'));
-                }
-            } catch (e) {
-                console.error("Error loading movies:", e);
-                moviesGrid.innerHTML = '<div class="loading">Error loading movies</div>';
-            }
-        }
-
-        async function loadSeries(searchTerm) {
-            try {
-                seriesGrid.innerHTML = '<div class="loading">Loading TV series...</div>';
-                const res = await fetch(`${API_BASE_URL}/series?search=${encodeURIComponent(searchTerm)}`);
-                const data = await res.json();
-                if (data.length === 0) {
-                    seriesGrid.innerHTML = '<div class="loading">No series found</div>';
-                } else {
-                    seriesGrid.innerHTML = '';
-                    data.forEach(series => addMediaCard(seriesGrid, series, 'series'));
-                }
-            } catch (e) {
-                console.error("Error loading series:", e);
-                seriesGrid.innerHTML = '<div class="loading">Error loading series</div>';
-            }
+            playerOverlay.style.display = 'none';
+            // Android.closePlayer(); // Optional: Close player if open
         }
 
         async function loadEpisodes(seriesId, seriesName) {
@@ -351,25 +439,23 @@
         }
 
         function playMedia(media) {
-            // This is the key part for Sketchware
-            // Instead of playing the video in the web view, we need to send a message
-            // to the native Android app to start the video player.
+            // This is the key part that interfaces with your native Android app.
+            // When a user clicks to play, we tell the native app to start the ExoPlayer.
             const mediaUrl = media.streamingUrl;
             
-            // Log the URL so you can see it in your Sketchware logs
-            console.log("Playing video with URL:", mediaUrl);
+            // First, show the web player controls overlay
+            playerOverlay.style.display = 'flex';
+            playerTitle.textContent = media.title || media.name;
 
-            // This line is a placeholder. You'll need to use a Sketchware block
-            // to call a JavaScript function that then passes the URL to your native code.
-            // Example:
-            // if (typeof Android != 'undefined' && Android.showVideoPlayer) {
-            //     Android.showVideoPlayer(mediaUrl);
-            // } else {
-            //     alert("Native video player not available. Please check your Sketchware setup.");
-            // }
-
-            // For now, let's just alert the URL to confirm it's working
-            alert(`Ready to play: ${media.title || media.name}\nURL: ${mediaUrl}`);
+            // Then, call the native function to start the video.
+            // You will need to implement `playVideo` in your Sketchware blocks.
+            // This function takes the video URL as a parameter.
+            if (typeof Android != 'undefined' && Android.playVideo) {
+                Android.playVideo(mediaUrl, media.title || media.name);
+            } else {
+                console.error("Android JavaScript interface not found.");
+                alert("Native video player not available. Please check your Sketchware setup.");
+            }
         }
     </script>
 </body>

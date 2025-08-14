@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Media Manager</title>
+  <link href="https://vjs.zencdn.net/7.17.0/video-js.css" rel="stylesheet" />
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -80,6 +81,11 @@
       font-size: 14px;
       color: #aaa;
     }
+
+    .video-js {
+      width: 100%;
+      height: auto;
+    }
   </style>
 </head>
 <body>
@@ -101,11 +107,19 @@
       </div>
     </section>
   </main>
+  <div id="video-player" class="video-js vjs-default-skin" controls>
+    <video class="video-js__player" controls preload="auto" width="640" height="264">
+      <source src="" type="video/mp4">
+    </video>
+  </div>
+  <script src="https://vjs.zencdn.net/7.17.0/video.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       const searchInput = document.getElementById('search');
       const movieList = document.getElementById('movie-list');
       const seriesList = document.getElementById('series-list');
+      const videoPlayer = document.getElementById('video-player');
+      const videoJsPlayer = videojs(videoPlayer);
 
       searchInput.addEventListener('input', debounce(searchContent, 300));
 
@@ -185,8 +199,8 @@
       }
 
       function playMovie(url) {
-        // Implement video player logic here
-        console.log('Playing movie:', url);
+        videoJsPlayer.src({ src: url, type: 'video/mp4' });
+        videoJsPlayer.play();
       }
 
       function playSeries(id) {

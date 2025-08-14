@@ -1,255 +1,185 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>StreamVault - Your Media Library</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .main-container {display:flex;flex-direction:column;justify-content:center;align-items:center;flex-grow:1;padding:1rem;}
-    .episode-selector::-webkit-scrollbar {width:8px;}
-    .episode-selector::-webkit-scrollbar-track {background: #1f2937;}
-    .episode-selector::-webkit-scrollbar-thumb {background-color:#4ecdc4;border-radius:20px;border:2px solid #1f2937;}
-    .episode-selector { scrollbar-width: thin; scrollbar-color:#4ecdc4 #1f2937; }
-    .media-card { transition: transform 0.3s, box-shadow 0.3s; }
-    .media-card:hover { transform: scale(1.05); box-shadow:0 10px 20px rgba(0,0,0,0.2);}
-    .search-input:focus { border-color:#4ecdc4; background:rgba(255,255,255,0.1); transform:scale(1.02); box-shadow:0 0 30px rgba(78,205,196,0.3);}
-    .video-ui-container { position:fixed; top:0; left:0; width:100%; height:100%; display:flex; background:#000; z-index:50;}
-    .video-player-wrapper {flex-grow:1; position:relative; display:flex; align-items:center; justify-content:center; background:#000; flex-direction:column;}
-    .episode-list-item.active, .tab-button.active, .focusable:focus, .video-control-btn:focus, .episode-list-item:focus { outline:2px solid #4ecdc4; outline-offset:2px; box-shadow:0 0 10px rgba(78,205,196,0.5);}
-    .custom-video-controls {position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(5px);padding:1rem;display:flex;align-items:center;gap:1rem;color:#fff;opacity:0;transition:opacity 0.3s ease-in-out;z-index:100;}
-    .show-controls .custom-video-controls {opacity:1;}
-    .seek-bar-container {flex-grow:1; position:relative;}
-    .seek-bar {width:100%;height:8px;background:rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;}
-    .seek-bar-filled {height:100%;background-color:#4ecdc4;border-radius:4px;width:0%;}
-    .video-info-overlay {position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);text-align:center;z-index:20;padding:1rem;}
-    .video-info-overlay.visible {display:flex;}
-    .error-dialog {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background-color:#2d3748;color:#fff;padding:2rem;border-radius:0.75rem;box-shadow:0 10px 20px rgba(0,0,0,0.3);z-index:200;display:none;text-align:center;}
-    .error-dialog.visible {display:block;}
-    .episode-overlay {position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);backdrop-filter:blur(10px);z-index:150;display:none;flex-direction:column;padding:2rem;}
-    .episode-overlay.visible {display:flex;}
-    .loading-spinner {border:6px solid rgba(255,255,255,0.3);border-radius:50%;border-top:6px solid #4ecdc4;width:60px;height:60px;animation:spin 1s linear infinite;position:absolute;z-index:30;top:50%;left:50%;margin-top:-30px;margin-left:-30px;display:none;}
-    .loading-spinner.visible {display:block;}
-    @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
-    @media (max-width:1024px){.video-ui-container{flex-direction:column;}.video-player-wrapper{width:100%;height:50%;}.video-player-sidebar{width:100%;height:50%;}}
-    .video-fit-fill {object-fit:fill;}
-    .video-fit-contain {object-fit:contain;}
-    .video-fit-cover {object-fit:cover;}
-    .video-fit-auto {object-fit:auto;}
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StreamVault - Media Library</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* ========== BASE STYLES ========== */
+body {font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%); color: #fff; min-height: 100vh; display: flex; flex-direction: column;}
+.main-container {display:flex;flex-direction:column;justify-content:center;align-items:center;flex-grow:1;padding:1rem;}
+.media-card {transition:transform .3s,box-shadow .3s;}
+.media-card:hover {transform:scale(1.05);box-shadow:0 10px 20px rgba(0,0,0,0.2);}
+.video-ui-container {position:fixed;top:0;left:0;width:100%;height:100%;display:flex;background:#000;z-index:50;}
+.video-player-wrapper {flex-grow:1;position:relative;display:flex;align-items:center;justify-content:center;background:#000;flex-direction:column;}
+.custom-video-controls {position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);padding:1rem;display:flex;align-items:center;gap:1rem;color:#fff;opacity:0;transition:opacity .3s;z-index:100;}
+.show-controls .custom-video-controls {opacity:1;}
+.seek-bar {width:100%;height:8px;background:rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;}
+.seek-bar-filled {height:100%;background-color:#4ecdc4;border-radius:4px;width:0%;}
+.video-info-overlay, .episode-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,0.8);backdrop-filter:blur(5px);z-index:20;color:#fff;text-align:center;}
+.video-info-overlay.visible, .episode-overlay.visible {display:flex;}
+.error-dialog {position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background-color:#2d3748;color:#fff;padding:2rem;border-radius:.75rem;box-shadow:0 10px 20px rgba(0,0,0,0.3);z-index:200;display:none;}
+.error-dialog.visible {display:block;}
+.loading-spinner {border:6px solid rgba(255,255,255,0.3);border-radius:50%;border-top:6px solid #4ecdc4;width:60px;height:60px;animation:spin 1s linear infinite;position:absolute;z-index:30;top:50%;left:50%;margin-top:-30px;margin-left:-30px;display:none;}
+.loading-spinner.visible {display:block;}
+@keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+.video-fit-fill{object-fit:fill;} .video-fit-contain{object-fit:contain;} .video-fit-cover{object-fit:cover;} .video-fit-auto{object-fit:auto;}
+</style>
 </head>
-<body class="bg-gray-900 text-gray-200 min-h-screen p-4">
+<body class="bg-gray-900 text-gray-200">
 
-  <!-- Search -->
-  <div id="search-container" class="main-container">
-    <input type="text" id="search-input" data-focusable="true" placeholder="Search for movies or series..."
-      class="focusable w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500">
+<!-- Search -->
+<div id="search-container" class="main-container">
+  <input type="text" id="search-input" placeholder="Search for movies or series..." class="w-full max-w-xl p-4 text-xl rounded-full bg-gray-800 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-500">
+</div>
+
+<!-- Main content -->
+<div id="content-area" class="hidden w-full max-w-7xl mx-auto flex-grow">
+  <header id="header-container" class="hidden flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8 w-full">
+    <h1 class="text-4xl font-extrabold">Media Manager</h1>
+    <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0"></div>
+  </header>
+  <div class="flex space-x-4 mb-8 border-b border-gray-700">
+    <button id="movies-tab" class="py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
+    <button id="series-tab" class="py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
   </div>
-
-  <!-- Content -->
-  <div id="content-area" class="hidden w-full max-w-7xl mx-auto flex-grow">
-    <header id="header-container" class="hidden flex flex-col md:flex-row items-center justify-between pb-8 border-b border-gray-700 mb-8 w-full">
-      <h1 class="text-4xl font-extrabold text-white">Media Manager</h1>
-      <div id="stats-container" class="flex items-center space-x-4 mt-4 md:mt-0"></div>
-    </header>
-    <div class="flex space-x-4 mb-8 border-b border-gray-700">
-      <button id="movies-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-white border-b-2 border-teal-400">Movies</button>
-      <button id="series-tab" data-focusable="true" class="focusable tab-button py-2 px-4 text-lg font-medium text-gray-400 hover:text-gray-200">Series</button>
-    </div>
-    <div id="loading-message" class="flex items-center justify-center py-12">
-      <p class="text-xl font-medium">Loading data...</p>
-    </div>
-    <div id="error-message" class="hidden text-center text-red-400 p-4 text-xl">
-      <p>Failed to fetch data from the API. Please check if the backend is running.</p>
-    </div>
-    <div id="media-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+  <div id="loading-message" class="flex items-center justify-center py-12">
+    <p class="text-xl font-medium">Loading data...</p>
   </div>
+  <div id="error-message" class="hidden text-center text-red-400 p-4 text-xl">Failed to fetch data from the API.</div>
+  <div id="media-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
+</div>
 
-  <!-- Player -->
-  <div id="videoModal" class="hidden video-ui-container">
-    <div id="videoPlayerWrapper" class="video-player-wrapper">
-      <button id="closePlayerBtn" class="absolute top-4 right-4 text-white text-3xl font-bold z-20 p-2 bg-gray-900 rounded-full">✕</button>
-      <div id="videoInfoOverlay" class="video-info-overlay">
-        <img id="videoInfoThumbnail" src="" alt="Thumbnail" class="w-64 h-96 object-cover rounded-xl shadow-lg mb-4">
-        <h3 id="videoInfoTitle" class="text-3xl font-bold text-white"></h3>
+<!-- Video Player Modal -->
+<div id="videoModal" class="hidden video-ui-container">
+  <div id="videoPlayerWrapper" class="video-player-wrapper">
+    <button id="closePlayerBtn" class="absolute top-4 right-4 text-white text-3xl font-bold z-20 p-2 bg-gray-900 rounded-full">✕</button>
+    <!-- Overlays -->
+    <div id="videoInfoOverlay" class="video-info-overlay">
+      <img id="videoInfoThumbnail" src="" class="w-64 object-cover rounded-xl shadow-lg mb-4" />
+      <h3 id="videoInfoTitle" class="text-3xl font-bold"></h3>
+    </div>
+    <div id="episodeOverlay" class="episode-overlay">
+      <div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold">Episodes</h3><button id="closeEpisodeOverlayBtn" class="text-white text-3xl font-bold p-2">✕</button></div>
+      <div id="episodeSelector" class="flex-grow overflow-y-auto"></div>
+    </div>
+    <!-- Loading/Error -->
+    <div id="videoLoadingSpinner" class="loading-spinner"></div>
+    <div id="videoErrorDialog" class="error-dialog">
+      <h4 class="text-xl font-bold mb-2">Streaming Error</h4>
+      <p>Failed to load the video stream.</p>
+      <button id="closeErrorBtn" class="mt-4 py-2 px-4 bg-teal-500 rounded-lg">OK</button>
+    </div>
+    <!-- Video Element -->
+    <video id="videoPlayer" class="w-full h-full video-fit-contain" controlslist="nodownload"></video>
+    <!-- Controls -->
+    <div id="videoControls" class="custom-video-controls">
+      <button id="playPauseBtn" title="Play/Pause">▶</button>
+      <div class="seek-bar-container" style="flex:1">
+        <div id="seekBar" class="seek-bar"><div id="seekBarFilled" class="seek-bar-filled"></div></div>
       </div>
-      <div id="episodeOverlay" class="episode-overlay">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-bold">Episodes</h3>
-          <button id="closeEpisodeOverlayBtn" class="text-white text-3xl font-bold p-2 hover:bg-gray-700 rounded-full transition-colors" data-focusable="true">✕</button>
+      <span id="currentTime">00:00</span> / <span id="duration">00:00</span>
+      <div class="relative">
+        <button id="videoFitBtn" title="Video Fit">🎞</button>
+        <div id="videoFitMenu" class="absolute bottom-full mb-2 right-0 w-32 bg-gray-800 rounded-lg shadow-lg hidden">
+          <button class="video-fit-option w-full px-4 py-2 hover:bg-gray-700" data-fit="contain">Fit</button>
+          <button class="video-fit-option w-full px-4 py-2 hover:bg-gray-700" data-fit="cover">Fill</button>
+          <button class="video-fit-option w-full px-4 py-2 hover:bg-gray-700" data-fit="fill">Stretch</button>
+          <button class="video-fit-option w-full px-4 py-2 hover:bg-gray-700" data-fit="auto">Auto</button>
         </div>
-        <div id="episodeSelector" class="flex-grow overflow-y-auto"></div>
       </div>
-      <div id="videoLoadingSpinner" class="loading-spinner"></div>
-      <div id="videoErrorDialog" class="error-dialog">
-        <h4 class="text-xl font-bold mb-2">Streaming Error</h4>
-        <p>Failed to load the video stream. The server might be down or the URL is invalid.</p>
-        <button id="closeErrorBtn" class="mt-4 py-2 px-4 bg-teal-500 rounded-lg font-semibold hover:bg-teal-600">OK</button>
-      </div>
-
-      <video class="w-full h-full video-fit-contain" id="videoPlayer"></video>
-      <div id="videoControls" class="custom-video-controls">
-        <button id="playPauseBtn" class="video-control-btn text-2xl">▶</button>
-        <div class="seek-bar-container">
-          <div id="seekBar" class="seek-bar">
-            <div id="seekBarFilled" class="seek-bar-filled"></div>
-          </div>
-        </div>
-        <span id="currentTime">00:00</span>/<span id="duration">00:00</span>
-        <div class="relative">
-          <button id="videoFitBtn" class="video-control-btn text-xl">🎞</button>
-          <div id="videoFitMenu" class="absolute bottom-full mb-2 right-0 w-32 bg-gray-800 rounded-lg shadow-lg hidden">
-            <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="contain">Fit</button>
-            <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="cover">Fill</button>
-            <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="fill">Stretch</button>
-            <button class="video-fit-option w-full text-left px-4 py-2 hover:bg-gray-700" data-fit="auto">Auto</button>
-          </div>
-        </div>
-        <button id="episodesBtn" class="video-control-btn text-xl">📜</button>
-        <button id="fullscreenBtn" class="video-control-btn text-xl">⛶</button>
-      </div>
+      <button id="episodesBtn" title="Episodes">📜</button>
+      <button id="fullscreenBtn" title="Fullscreen">⛶</button>
     </div>
   </div>
+</div>
 
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
-
-  const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
-  const searchInput=document.getElementById('search-input'),headerContainer=document.getElementById('header-container'),
-        statsContainer=document.getElementById('stats-container'),contentArea=document.getElementById('content-area'),
-        loadingMessage=document.getElementById('loading-message'),errorMessage=document.getElementById('error-message'),
-        mediaGrid=document.getElementById('media-grid'),moviesTab=document.getElementById('movies-tab'),
-        seriesTab=document.getElementById('series-tab');
+  const API_BASE_URL='https://future-ester-seeutech-645c6129.koyeb.app/api';
+  const searchInput=document.getElementById('search-input'),contentArea=document.getElementById('content-area'),headerContainer=document.getElementById('header-container'),
+        statsContainer=document.getElementById('stats-container'),loadingMessage=document.getElementById('loading-message'),errorMessage=document.getElementById('error-message'),
+        mediaGrid=document.getElementById('media-grid'),moviesTab=document.getElementById('movies-tab'),seriesTab=document.getElementById('series-tab');
   const videoModal=document.getElementById('videoModal'),videoPlayer=document.getElementById('videoPlayer'),videoPlayerWrapper=document.getElementById('videoPlayerWrapper'),
         playPauseBtn=document.getElementById('playPauseBtn'),seekBar=document.getElementById('seekBar'),seekBarFilled=document.getElementById('seekBarFilled'),
-        currentTimeSpan=document.getElementById('currentTime'),durationSpan=document.getElementById('duration'),fullscreenBtn=document.getElementById('fullscreenBtn'),
-        episodesBtn=document.getElementById('episodesBtn'),videoFitBtn=document.getElementById('videoFitBtn'),videoFitMenu=document.getElementById('videoFitMenu'),
-        closePlayerBtn=document.getElementById('closePlayerBtn');
-  const videoInfoOverlay=document.getElementById('videoInfoOverlay'),videoLoadingSpinner=document.getElementById('videoLoadingSpinner'),
-        episodeOverlay=document.getElementById('episodeOverlay'),episodeSelector=document.getElementById('episodeSelector'),
-        closeEpisodeOverlayBtn=document.getElementById('closeEpisodeOverlayBtn'),videoErrorDialog=document.getElementById('videoErrorDialog'),
-        closeErrorBtn=document.getElementById('closeErrorBtn');
+        currentTimeSpan=document.getElementById('currentTime'),durationSpan=document.getElementById('duration'),
+        fullscreenBtn=document.getElementById('fullscreenBtn'),episodesBtn=document.getElementById('episodesBtn'),videoFitBtn=document.getElementById('videoFitBtn'),videoFitMenu=document.getElementById('videoFitMenu'),
+        closePlayerBtn=document.getElementById('closePlayerBtn'),episodeOverlay=document.getElementById('episodeOverlay'),episodeSelector=document.getElementById('episodeSelector'),
+        closeEpisodeOverlayBtn=document.getElementById('closeEpisodeOverlayBtn'),videoErrorDialog=document.getElementById('videoErrorDialog'),closeErrorBtn=document.getElementById('closeErrorBtn');
 
   let allMovies=[],allSeries=[],currentSeries=null,activeTab='movies',currentMedia=null,controlsTimeout=null;
 
   const fetchAllData=async()=>{
     loadingMessage.classList.remove('hidden');
     try{
-      const [moviesResponse,seriesResponse,statsResponse]=await Promise.all([
+      const [moviesRes,seriesRes,statsRes]=await Promise.all([
         fetch(`${API_BASE_URL}/movies`),fetch(`${API_BASE_URL}/series`),fetch(`${API_BASE_URL}/stats`)
       ]);
-      if(!moviesResponse.ok||!seriesResponse.ok||!statsResponse.ok) throw new Error('Fetch failed');
-      allMovies=await moviesResponse.json();
-      allSeries=await seriesResponse.json();
-      updateStats(await statsResponse.json());
+      if(!moviesRes.ok||!seriesRes.ok||!statsRes.ok)throw new Error();
+      allMovies=await moviesRes.json(); allSeries=await seriesRes.json();
+      updateStats(await statsRes.json());
       loadingMessage.classList.add('hidden');
     }catch(e){errorMessage.classList.remove('hidden');loadingMessage.classList.add('hidden');}
   };
-
-  const updateStats=(stats)=>{ statsContainer.innerHTML=`
-    <div class="flex flex-col items-center"><span class="text-2xl font-bold text-teal-400">${stats.movies}</span><span class="text-sm text-gray-400">Movies</span></div>
-    <div class="flex flex-col items-center"><span class="text-2xl font-bold text-purple-400">${stats.series}</span><span class="text-sm text-gray-400">Series</span></div>
-    <div class="flex flex-col items-center"><span class="text-2xl font-bold text-orange-400">${stats.episodes}</span><span class="text-sm text-gray-400">Episodes</span></div>
-  `; };
-
+  const updateStats=(s)=>statsContainer.innerHTML=`<div class="flex flex-col items-center"><span class="text-2xl font-bold text-teal-400">${s.movies}</span><span class="text-sm">Movies</span></div>
+    <div class="flex flex-col items-center"><span class="text-2xl font-bold text-purple-400">${s.series}</span><span class="text-sm">Series</span></div>
+    <div class="flex flex-col items-center"><span class="text-2xl font-bold text-orange-400">${s.episodes}</span><span class="text-sm">Episodes</span></div>`;
   const createMediaCard=(item,type)=>{
-    const card=document.createElement('div');
-    card.className='media-card relative w-full overflow-hidden bg-gray-800 rounded-2xl shadow-xl cursor-pointer';
-    card.innerHTML=`<img src="${item.thumbnail||'https://placehold.co/400x600'}" class="w-full h-80 object-cover"><div class="p-4"><h3 class="text-lg font-semibold">${item.name}</h3>${type==='series'&&item.seasons?`<p class="text-sm text-gray-400">${item.seasons.length} season(s)</p>`:''}</div>`;
-    card.onclick=()=> type==='series'?loadSeriesDetails(item._id):playVideo(item);
-    return card;
+    const c=document.createElement('div');c.className='media-card bg-gray-800 rounded-2xl shadow-xl cursor-pointer';
+    c.innerHTML=`<img src="${item.thumbnail||'https://placehold.co/400x600'}" class="w-full h-80 object-cover"/><div class="p-4"><h3 class="text-lg font-semibold">${item.name}</h3>${type==='series'&&item.seasons?`<p class="text-sm text-gray-400">${item.seasons.length} season(s)</p>`:''}</div>`;
+    c.onclick=()=>type==='series'?loadSeriesDetails(item._id):playVideo(item,type);
+    return c;
   };
-
-  const renderContent=(movies,series)=>{
-    mediaGrid.innerHTML='';
-    const toRender=activeTab==='movies'?movies:series;
-    if(toRender.length===0){ mediaGrid.innerHTML='<div class="col-span-full text-center text-gray-500 text-lg py-12">No results</div>'; return;}
-    toRender.forEach(item=>mediaGrid.appendChild(createMediaCard(item,activeTab==='movies'?'movie':'series')));
+  const renderContent=(movies,series)=>{mediaGrid.innerHTML='';
+    const list=activeTab==='movies'?movies:series;
+    if(!list.length)return mediaGrid.innerHTML='<div class="col-span-full text-center py-12">No results</div>';
+    list.forEach(i=>mediaGrid.appendChild(createMediaCard(i,activeTab==='movies'?'movie':'series')));
   };
-
   const handleSearch=async()=>{
     const q=searchInput.value.toLowerCase().trim();
-    if(q.length<3){contentArea.classList.add('hidden');headerContainer.classList.add('hidden');mediaGrid.innerHTML='';return;}
+    if(q.length<3){contentArea.classList.add('hidden');headerContainer.classList.add('hidden');return;}
     contentArea.classList.remove('hidden');headerContainer.classList.remove('hidden');
-    if(allMovies.length===0&&allSeries.length===0) await fetchAllData();
-    const fm=allMovies.filter(m=>m.name.toLowerCase().includes(q)); const fs=allSeries.filter(s=>s.name.toLowerCase().includes(q));
+    if(!allMovies.length&&!allSeries.length)await fetchAllData();
+    const fm=allMovies.filter(m=>m.name.toLowerCase().includes(q)),fs=allSeries.filter(s=>s.name.toLowerCase().includes(q));
     updateStats({movies:fm.length,series:fs.length,episodes:fs.reduce((t,s)=>t+(s.seasons?.length||0),0)});
     renderContent(fm,fs);
   };
-
   const playVideo=(mediaItem,type='movie')=>{
     if(!mediaItem.streamingUrl){showVideoError();return;}
-    videoPlayer.src=mediaItem.streamingUrl; currentMedia=mediaItem; videoModal.classList.remove('hidden');
-    if(type==='series'&&currentSeries){episodesBtn.classList.remove('hidden');displayEpisodeSelector(mediaItem.streamingUrl);} else episodesBtn.classList.add('hidden');
+    videoPlayer.src=mediaItem.streamingUrl;currentMedia=mediaItem;videoModal.classList.remove('hidden');
+    if(type==='series'&&currentSeries){episodesBtn.style.display='inline-block';displayEpisodeSelector(mediaItem.streamingUrl);}else episodesBtn.style.display='none';
     videoPlayer.play().catch(()=>showVideoError());
   };
-
-  const loadSeriesDetails=async(id)=>{
-    try{ const res=await fetch(`${API_BASE_URL}/series/${id}`);
-      if(!res.ok) throw new Error(); currentSeries=await res.json();
-      if(currentSeries.seasons?.[0]?.episodes?.[0]){
-        const firstE={...currentSeries.seasons[0].episodes[0],thumbnail:currentSeries.thumbnail}; playVideo(firstE,'series');
-      }
-    }catch(e){showVideoError();}
-  };
-
-  const displayEpisodeSelector=(currentUrl)=>{
-    episodeSelector.innerHTML='';
-    currentSeries.seasons.forEach(season=>{
-      const h=document.createElement('h4');h.className='text-lg font-semibold mt-4 mb-2 text-teal-400';h.textContent=`Season ${season.seasonNumber}`;
-      episodeSelector.appendChild(h);
-      season.episodes.forEach(ep=>{
-        const btn=document.createElement('button');
-        btn.className=`episode-list-item w-full text-left p-3 rounded-lg ${ep.streamingUrl===currentUrl?'active bg-gray-700':''}`;
-        btn.innerHTML=`<div class="flex items-center"><span class="font-bold mr-2">E${ep.episodeNumber}:</span><span>${ep.title}</span></div>`;
-        btn.onclick=()=>switchEpisode({...ep,thumbnail:currentSeries.thumbnail});
-        episodeSelector.appendChild(btn);
-      });
-    });
-  };
-
+  const loadSeriesDetails=async(id)=>{try{const r=await fetch(`${API_BASE_URL}/series/${id}`);if(!r.ok)throw new Error();currentSeries=await r.json();
+    const first=currentSeries.seasons?.[0]?.episodes?.[0]; if(first) playVideo({...first,thumbnail:currentSeries.thumbnail},'series');}catch(e){showVideoError();}};
+  const displayEpisodeSelector=(url)=>{episodeSelector.innerHTML='';currentSeries.seasons.forEach(season=>{const h=document.createElement('h4');h.textContent=`Season ${season.seasonNumber}`;episodeSelector.appendChild(h);
+    season.episodes.forEach(ep=>{const b=document.createElement('button');b.className=`block w-full p-2 ${ep.streamingUrl===url?'bg-gray-700':''}`;b.textContent=`E${ep.episodeNumber}: ${ep.title}`;
+      b.onclick=()=>switchEpisode({...ep,thumbnail:currentSeries.thumbnail});episodeSelector.appendChild(b);});});};
   const toggleEpisodeOverlay=()=>episodeOverlay.classList.toggle('visible');
-  const switchEpisode=(m)=>{ playVideo(m,'series'); displayEpisodeSelector(m.streamingUrl); toggleEpisodeOverlay(); };
-
-  const closePlayer=()=>{videoPlayer.pause();videoPlayer.src='';videoModal.classList.add('hidden');currentSeries=null; currentMedia=null; if(document.fullscreenElement) document.exitFullscreen();};
-
+  const switchEpisode=(m)=>{playVideo(m,'series');displayEpisodeSelector(m.streamingUrl);toggleEpisodeOverlay();};
+  const closePlayer=()=>{videoPlayer.pause();videoPlayer.src='';videoModal.classList.add('hidden');currentSeries=null;currentMedia=null;if(document.fullscreenElement)document.exitFullscreen();};
   const showVideoError=()=>videoErrorDialog.classList.add('visible');
   const hideVideoError=()=>videoErrorDialog.classList.remove('visible');
-
-  const formatTime=(secs)=>`${String(Math.floor(secs/60)).padStart(2,'0')}:${String(Math.floor(secs%60)).padStart(2,'0')}`;
+  const formatTime=(s)=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
   const playPauseVideo=()=>videoPlayer.paused?videoPlayer.play().catch(()=>showVideoError()):videoPlayer.pause();
   const showControls=()=>{videoPlayerWrapper.classList.add('show-controls');clearTimeout(controlsTimeout);controlsTimeout=setTimeout(()=>videoPlayerWrapper.classList.remove('show-controls'),3000);};
-  const toggleFullscreen=()=>{
-    if(!document.fullscreenElement){
-      (videoPlayerWrapper.requestFullscreen||videoPlayerWrapper.webkitRequestFullscreen||videoPlayerWrapper.msRequestFullscreen).call(videoPlayerWrapper);
-    } else {
-      (document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen).call(document);
-    }
-  };
-  const changeVideoFit=(fit)=>{videoPlayer.classList.remove('video-fit-fill','video-fit-contain','video-fit-cover','video-fit-auto');videoPlayer.classList.add(`video-fit-${fit}`);};
+  const toggleFullscreen=()=>{!document.fullscreenElement?(videoPlayerWrapper.requestFullscreen?.()):(document.exitFullscreen?.());};
+  const changeVideoFit=(f)=>{videoPlayer.classList.remove('video-fit-fill','video-fit-contain','video-fit-cover','video-fit-auto');videoPlayer.classList.add(`video-fit-${f}`);};
 
-  // Event Listeners
-  searchInput.addEventListener('input',handleSearch);
+  // Listeners
+  searchInput.oninput=handleSearch;
   moviesTab.onclick=()=>{activeTab='movies';handleSearch();};
   seriesTab.onclick=()=>{activeTab='series';handleSearch();};
-  closePlayerBtn.onclick=closePlayer; closeEpisodeOverlayBtn.onclick=toggleEpisodeOverlay; closeErrorBtn.onclick=hideVideoError;
-  episodesBtn.onclick=toggleEpisodeOverlay;
-  playPauseBtn.onclick=playPauseVideo; fullscreenBtn.onclick=toggleFullscreen;
+  closePlayerBtn.onclick=closePlayer;closeEpisodeOverlayBtn.onclick=toggleEpisodeOverlay;closeErrorBtn.onclick=hideVideoError;
+  episodesBtn.onclick=toggleEpisodeOverlay;playPauseBtn.onclick=playPauseVideo;fullscreenBtn.onclick=toggleFullscreen;
   videoFitBtn.onclick=()=>videoFitMenu.classList.toggle('hidden');
   document.querySelectorAll('.video-fit-option').forEach(btn=>btn.onclick=()=>{changeVideoFit(btn.dataset.fit);videoFitMenu.classList.add('hidden');});
-  seekBar.onclick=(e)=>{const pct=e.offsetX/seekBar.offsetWidth; videoPlayer.currentTime=pct*videoPlayer.duration;};
-  videoPlayer.addEventListener('timeupdate',()=>{seekBarFilled.style.width=`${(videoPlayer.currentTime/videoPlayer.duration)*100}%`; currentTimeSpan.textContent=formatTime(videoPlayer.currentTime);});
+  seekBar.onclick=(e)=>{const pct=e.offsetX/seekBar.offsetWidth;videoPlayer.currentTime=pct*videoPlayer.duration;};
+  videoPlayer.addEventListener('timeupdate',()=>{if(videoPlayer.duration){seekBarFilled.style.width=(videoPlayer.currentTime/videoPlayer.duration)*100+'%';currentTimeSpan.textContent=formatTime(videoPlayer.currentTime);}});
   videoPlayer.addEventListener('loadedmetadata',()=>{durationSpan.textContent=formatTime(videoPlayer.duration);});
   videoPlayerWrapper.addEventListener('mousemove',showControls);
+
 });
 </script>
 </body>

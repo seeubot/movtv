@@ -3,53 +3,60 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>StreamVault - TV Friendly Media App</title>
+<title>StreamVault - Flexible Media App</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-body {font-family: 'Inter', sans-serif; background: linear-gradient(135deg,#0c0c0c 0%,#1a1a2e 50%,#16213e 100%); color: #fff; min-height: 100vh; display: flex; flex-direction: column; margin: 0;}
-.focus-visible {outline: 4px solid #4ecdc4 !important; outline-offset: 4px;}
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg,#0c0c0c 0%,#1a1a2e 50%,#16213e 100%);
+  color: #fff;
+  min-height: 100vh;
+  margin: 0;
+  display: flex; flex-direction: column;
+}
 .main-container {padding: 1rem; flex-grow:1; display: flex; flex-direction: column; align-items: center;}
 header {width: 100%; max-width: 1280px; padding-bottom: 1rem; border-bottom: 2px solid #2d3748; display: flex; justify-content: space-between; align-items: center;}
-#stats-container {display: flex; gap: 2rem;}
-.tab-button {padding: 0.5rem 1rem; font-size: 1.25rem; cursor: pointer; background: transparent; border-bottom: 3px solid transparent; transition: border-color 0.3s;}
+.tab-button {padding: 0.5rem 1rem; font-size: 1.1rem; cursor: pointer; background: transparent; border-bottom: 3px solid transparent; transition: border-color 0.3s;}
 .tab-button.active {border-bottom-color: #4ecdc4; color: #4ecdc4;}
-#media-grid {display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 1rem; width: 100%; max-width: 1280px; margin-top: 1rem;}
-.media-card {background: #1f2937; border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: transform 0.25s ease, box-shadow 0.25s ease;}
+#stats-container {display: flex; gap: 2rem;}
+#media-grid {display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 1rem; width: 100%; max-width: 1280px; margin-top: 1rem;}
+.media-card {background:#1f2937; border-radius: 12px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; transition: transform 0.25s, box-shadow 0.25s;}
 .media-card:hover, .media-card:focus-visible {transform: scale(1.05); box-shadow: 0 4px 20px rgba(78,205,196,0.75);}
 .media-thumb {width: 100%; height: 320px; object-fit: cover; background: #111;}
 .media-info {padding: 0.75rem 1rem;}
 .media-title {font-weight: 700; font-size: 1.125rem; margin-bottom: 0.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
 .media-subtitle {font-size: 0.875rem; color: #a0aec0;}
-#search-input {width: 100%; max-width: 640px; padding: 0.75rem 1rem; font-size: 1.25rem; border-radius: 40px; background: #2d3748; color: #cbd5e0;}
+#search-input {width: 100%; max-width: 640px; padding: 0.75rem 1rem; font-size: 1.15rem; border-radius: 40px; background: #2d3748; color: #cbd5e0;}
 #search-input:focus {outline: none; box-shadow: 0 0 10px #4ecdc4; background: #1a202c; color: #fff;}
 .hidden {display: none !important;}
-#videoModal {position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;}
-#videoModal.active {display: flex;}
-#videoPlayerWrapper {position: relative; width: 80vw; max-width: 1280px; height: 80vh; background: #000; border-radius: 12px; display: flex; flex-direction: column;}
-#videoPlayer {width: 100%; height: 100%; object-fit: contain; border-radius: 12px 12px 0 0; background: #000;}
-#videoControls {background: rgba(20,20,20,0.85); display:flex; align-items:center; padding:0.5rem 1rem; gap:1rem; color:#4ecdc4; font-size:1.25rem; border-radius:0 0 12px 12px;}
-#videoControls button {background: transparent; border: none; color: inherit; cursor: pointer; font-size: 1.25rem;}
-#seekBar {flex-grow: 1; height: 8px; background: #334155; border-radius: 4px; cursor: pointer; position: relative;}
-#seekBarFilled {height: 100%; background: #4ecdc4; border-radius: 4px; width: 0%;}
-#timeDisplay {font-family: monospace; min-width: 80px; text-align: center;}
-#videoFitMenu {position: absolute; bottom: 3rem; background:#1f2937; border-radius:8px; overflow:hidden;}
-#videoFitMenu button {display:block; width:100%; text-align:left; padding:0.5rem 0.75rem; background:none; border:none; color:#fff; cursor:pointer;}
-#videoFitMenu button:hover {background:#4ecdc4; color:#000;}
-#episodeOverlay {position: absolute; top:0; left:0; bottom:0; right:0; background: rgba(10,10,10,0.95); display:none; flex-direction:column; overflow-y:auto; padding:1rem;}
+#loading-message,#error-message {font-size:1.1rem; margin:2rem 0; text-align:center;}
+#videoModal {position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.95);display:none;flex-direction:column;justify-content:center;align-items:center;z-index:9999;}
+#videoModal.active {display:flex;}
+#videoPlayerWrapper {position:relative;width:80vw;max-width:1280px;height:80vh;background:#000; border-radius:12px;display:flex;flex-direction:column;}
+#videoPlayer {width:100%;height:100%;background:#000;border-radius:12px 12px 0 0;object-fit:contain;}
+#videoControls {position:absolute;left:0;right:0;bottom:0;background:rgba(20,20,20,0.85);display:flex;align-items:center;padding:0.5rem 1rem;gap:1rem;color:#4ecdc4;font-size:1.12rem;border-radius:0 0 12px 12px;z-index:3;}
+#videoControls button {background:transparent;border:none;color:inherit;cursor:pointer;font-size:1.08rem;}
+#seekBar {flex-grow:1;height:8px;background:#334155;border-radius:4px;cursor:pointer;position:relative;}
+#seekBarFilled {height:100%;background:#4ecdc4;border-radius:4px;width:0%;}
+#timeDisplay {font-family:monospace;min-width:80px;text-align:center;}
+#videoFitMenu {position:absolute;bottom:2.5rem;left:0;background:#222;border-radius:8px;box-shadow:0 2px 12px #000;z-index:4;}
+#videoFitMenu button {display:block;width:100%;text-align:left;padding:0.5rem 0.75rem;border:none;background:none;color:#fff;cursor:pointer;}
+#videoFitMenu button:hover {background:#4ecdc4;color:#000;}
+#episodeOverlay {position:absolute;top:0;left:0;bottom:0;right:0;background:rgba(10,10,10,0.95);display:none;flex-direction:column;overflow-y:auto;padding:1rem;border-radius:0 0 12px 12px;z-index:5;}
 #episodeOverlay.active {display:flex;}
-.episode-list {display:flex; flex-direction:column; gap:0.25rem;}
-.episode-item {padding:0.5rem 0.75rem; background:#334155; border-radius:6px; cursor:pointer;}
-.episode-item.current, .episode-item:focus-visible {background:#4ecdc4; color:#000;}
-#closePlayerBtn {position: absolute; top: 1rem; right: 1rem; background: #4ecdc4; border:none; border-radius:50%; width:36px; height:36px; font-size:1.25rem; color:#000; cursor:pointer; z-index:20;}
-.video-fit-contain{object-fit:contain;} .video-fit-cover{object-fit:cover;} .video-fit-fill{object-fit:fill;} .video-fit-auto{object-fit:auto;}
+.episode-list {display:flex;flex-direction:column;gap:0.25rem;}
+.episode-item {padding:0.5rem 0.75rem;background:#334155;border-radius:6px;cursor:pointer;}
+.episode-item.current,.episode-item:focus-visible {background:#4ecdc4;color:#000;}
+#closePlayerBtn {position:absolute;top:1rem;right:1rem;background:#4ecdc4;border:none;border-radius:50%;width:32px;height:32px;font-size:1.09rem;color:#000;cursor:pointer;z-index:6;}
+@media(max-width:768px){#videoPlayerWrapper{width:95vw;height:56vw;min-height:280px;}}
+.video-fit-contain{object-fit:contain;} .video-fit-cover{object-fit:cover;} .video-fit-fill{object-fit:fill;}
+.video-fit-auto{object-fit:auto;} .video-fit-stretch{object-fit:fill;}
 </style>
 </head>
 <body>
-<!-- Search -->
 <div id="search-container" class="main-container">
   <input type="search" id="search-input" placeholder="Search movies or series…" />
 </div>
-<!-- Content -->
 <div id="content-area" class="main-container" style="max-width:1280px; width:100%;">
   <header>
     <h1>StreamVault</h1>
@@ -63,27 +70,26 @@ header {width: 100%; max-width: 1280px; padding-bottom: 1rem; border-bottom: 2px
   <div id="error-message" class="hidden"></div>
   <main id="media-grid"></main>
 </div>
-<!-- Video Modal -->
 <div id="videoModal">
   <div id="videoPlayerWrapper">
-    <button id="closePlayerBtn">×</button>
+    <button id="closePlayerBtn" title="Close">×</button>
     <video id="videoPlayer" preload="metadata"></video>
     <div id="videoControls">
-      <button id="playPauseBtn">▶</button>
+      <button id="playPauseBtn" title="Play/Pause">▶</button>
       <div id="seekBar"><div id="seekBarFilled"></div></div>
       <div id="timeDisplay">00:00 / 00:00</div>
-      <div class="relative">
-        <button id="videoFitBtn">🎞</button>
+      <div style="position:relative;">
+        <button id="videoFitBtn" title="Screen Size">🎞</button>
         <div id="videoFitMenu" class="hidden">
-          <button data-fit="contain">Fit</button>
-          <button data-fit="cover">Crop</button>
-          <button data-fit="fill">Fill</button>
-          <button data-fit="auto">Auto</button>
-          <button data-fit="stretch">Stretch</button>
+          <button class="video-fit-option" data-fit="contain">Fit</button>
+          <button class="video-fit-option" data-fit="cover">Crop</button>
+          <button class="video-fit-option" data-fit="fill">Fill</button>
+          <button class="video-fit-option" data-fit="auto">Auto</button>
+          <button class="video-fit-option" data-fit="stretch">Stretch</button>
         </div>
       </div>
       <button id="episodesBtn" style="display:none;">📜</button>
-      <button id="fullscreenBtn">⛶</button>
+      <button id="fullscreenBtn" title="Fullscreen">⛶</button>
     </div>
     <div id="episodeOverlay">
       <button id="closeEpisodeOverlayBtn">Close</button>
@@ -101,29 +107,169 @@ const searchInput=sI('search-input'),moviesTab=sI('movies-tab'),seriesTab=sI('se
 const videoModal=sI('videoModal'),videoPlayer=sI('videoPlayer'),closePlayerBtn=sI('closePlayerBtn'),playPauseBtn=sI('playPauseBtn'),seekBar=sI('seekBar'),seekBarFilled=sI('seekBarFilled'),timeDisplay=sI('timeDisplay'),fullscreenBtn=sI('fullscreenBtn'),episodesBtn=sI('episodesBtn');
 const videoFitBtn=sI('videoFitBtn'),videoFitMenu=sI('videoFitMenu');
 const episodeOverlay=sI('episodeOverlay'),closeEpisodeOverlayBtn=sI('closeEpisodeOverlayBtn'),episodeSelector=sI('episodeSelector');
-function formatTime(s){const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;}
-async function fetchData(){loadingMessage.classList.remove('hidden');try{const[m,s,t]=await Promise.all([fetch(`${API_BASE_URL}/movies`),fetch(`${API_BASE_URL}/series`),fetch(`${API_BASE_URL}/stats`)]);if(!m.ok||!s.ok||!t.ok)throw new Error();allMovies=await m.json();allSeries=await s.json();updateStats(await t.json());}catch(e){errorMessage.textContent='Failed to load data';errorMessage.classList.remove('hidden');}finally{loadingMessage.classList.add('hidden');}}
+
+// --- API fetch, with error reporting for WebView ---
+async function fetchData(){
+  loadingMessage.classList.remove('hidden');
+  errorMessage.classList.add('hidden');
+  try{
+    const [m,s,t]=await Promise.all([
+      fetch(`${API_BASE_URL}/movies`,{mode:'cors'}),
+      fetch(`${API_BASE_URL}/series`,{mode:'cors'}),
+      fetch(`${API_BASE_URL}/stats`,{mode:'cors'})
+    ]);
+    if(!m.ok||!s.ok||!t.ok)throw new Error("API error");
+    allMovies=await m.json(); allSeries=await s.json();
+    updateStats(await t.json());
+  }catch(e){
+    errorMessage.classList.remove('hidden');
+    errorMessage.textContent = 'Failed to fetch data. Try desktop browser; if it works, your app may lack INTERNET permission or proper CORS settings.';
+  }finally{
+    loadingMessage.classList.add('hidden');
+    handleSearch(); // Try displaying any loaded initial results
+  }
+}
+
 function updateStats(st){statsContainer.innerHTML=`<div><strong>${st.movies}</strong><div>Movies</div></div><div><strong>${st.series}</strong><div>Series</div></div><div><strong>${st.episodes}</strong><div>Episodes</div></div>`;}
-function renderMedia(list,type){mediaGrid.innerHTML='';if(!list.length){mediaGrid.textContent='No results';return;}list.forEach(item=>{const c=document.createElement('div');c.className='media-card';c.tabIndex=0;c.innerHTML=`<img src="${item.thumbnail||'https://placehold.co/400x600?text=No+Image'}" class="media-thumb"/><div class="media-info"><div class="media-title">${item.name}</div>${type==='series'&&item.seasons?`<div class="media-subtitle">${item.seasons.length} Season(s)</div>`:''}</div>`;c.onclick=()=>type==='series'?loadSeriesFirst(item._id):playVideo(item);mediaGrid.appendChild(c);});}
-function handleSearch(){const q=searchInput.value.trim().toLowerCase();const fm=allMovies.filter(m=>m.name.toLowerCase().includes(q));const fs=allSeries.filter(s=>s.name.toLowerCase().includes(q));updateStats({movies:fm.length,series:fs.length,episodes:fs.reduce((a,s)=>a+(s.seasons?s.seasons.length:0),0)});renderMedia(activeTab==='movies'?fm:fs,activeTab);}
+function renderMedia(list,type){
+  mediaGrid.innerHTML='';
+  if(!list.length){mediaGrid.textContent='No results';return;}
+  list.forEach(item=>{
+    const c=document.createElement('div');c.className='media-card';c.tabIndex=0;
+    c.innerHTML=`<img src="${item.thumbnail||'https://placehold.co/400x600?text=No+Image'}" class="media-thumb"/><div class="media-info"><div class="media-title">${item.name}</div>${type==='series'&&item.seasons?`<div class="media-subtitle">${item.seasons.length} Season(s)</div>`:''}</div>`;
+    c.onclick=()=>type==='series'?loadSeriesFirst(item._id):playVideo(item);
+    mediaGrid.appendChild(c);
+  });
+}
+function handleSearch(){
+  const q=searchInput.value.trim().toLowerCase();
+  const fm=allMovies.filter(m=>m.name?.toLowerCase().includes(q)),fs=allSeries.filter(s=>s.name?.toLowerCase().includes(q));
+  updateStats({movies:fm.length,series:fs.length,episodes:fs.reduce((a,s)=>a+(s.seasons?s.seasons.length:0),0)});
+  renderMedia(activeTab==='movies'?fm:fs,activeTab);
+}
 function switchTab(tab){activeTab=tab;moviesTab.classList.toggle('active',tab==='movies');seriesTab.classList.toggle('active',tab==='series');handleSearch();}
-async function loadSeriesFirst(id){try{const r=await fetch(`${API_BASE_URL}/series/${id}`);if(!r.ok)throw new Error();currentSeries=await r.json();const first=currentSeries.seasons?.[0]?.episodes?.[0];if(first)playVideo(first,'series');}catch(e){alert('Error loading series');}}
-function playVideo(item,type='movie'){if(!item.streamingUrl){alert('No video URL');return;}currentEpisodeUrl=item.streamingUrl;videoPlayer.src=item.streamingUrl;videoModal.classList.add('active');videoPlayer.play().catch(console.error);if(type==='series'&&currentSeries){episodesBtn.style.display='inline-block';renderEpisodes(item.streamingUrl);}else episodesBtn.style.display='none';}
-function renderEpisodes(currentUrl){episodeSelector.innerHTML='';currentSeries.seasons.forEach(season=>{const h=document.createElement('h3');h.textContent=`Season ${season.seasonNumber}`;episodeSelector.appendChild(h);season.episodes.forEach(ep=>{const b=document.createElement('button');b.className='episode-item'+(ep.streamingUrl===currentUrl?' current':'');b.textContent=`E${ep.episodeNumber}: ${ep.title}`;b.onclick=()=>{playVideo(ep,'series');toggleEpisodeOverlay(false);};episodeSelector.appendChild(b);});});}
-function toggleEpisodeOverlay(show){episodeOverlay.classList.toggle('active',show);}
+async function loadSeriesFirst(id){
+  try{
+    const r=await fetch(`${API_BASE_URL}/series/${id}`,{mode:'cors'});
+    if(!r.ok)throw new Error();
+    currentSeries=await r.json();
+    const first=currentSeries.seasons?.[0]?.episodes?.[0];
+    if(first) playVideo(first,'series');
+  }catch(e){alert('Series fetch error — CORS or network problem.');}
+}
+function playVideo(item,type='movie'){
+  if(!item.streamingUrl){alert('No video URL');return;}
+  currentEpisodeUrl=item.streamingUrl;videoPlayer.src=item.streamingUrl;videoModal.classList.add('active');
+  videoPlayer.className='video-fit-contain';
+  videoPlayer.play().catch(()=>{alert('Video cannot play, try desktop browser or check API.');});
+  if(type==='series'&&currentSeries){episodesBtn.style.display='inline-block';renderEpisodes(item.streamingUrl);}else episodesBtn.style.display='none';
+  // Show controls even in fullscreen
+  showControls();
+}
+function renderEpisodes(currentUrl){
+  episodeSelector.innerHTML='';
+  (currentSeries.seasons||[]).forEach(season=>{
+    const h=document.createElement('h3');h.textContent=`Season ${season.seasonNumber}`;episodeSelector.appendChild(h);
+    season.episodes.forEach(ep=>{
+      const btn=document.createElement('button');
+      btn.className='episode-item'+(ep.streamingUrl===currentUrl?' current':'');
+      btn.textContent=`E${ep.episodeNumber}: ${ep.title}`;
+      btn.onclick=()=>{playVideo(ep,'series');toggleEpisodeOverlay(false);};
+      btn.tabIndex=0;
+      episodeSelector.appendChild(btn);
+    });
+  });
+}
+function toggleEpisodeOverlay(show){
+  episodeOverlay.classList.toggle('active',show);
+  if(show){
+    // Keyboard control: focus first
+    const first = episodeSelector.querySelector('.episode-item');
+    if(first) first.focus();
+  }
+}
 function togglePlayPause(){videoPlayer.paused?videoPlayer.play():videoPlayer.pause();}
-function toggleFullscreen(){!document.fullscreenElement?videoPlayer.requestFullscreen?.():document.exitFullscreen?.();}
-function updateSeek(){if(!videoPlayer.duration)return;seekBarFilled.style.width=(videoPlayer.currentTime/videoPlayer.duration)*100+'%';timeDisplay.textContent=`${formatTime(videoPlayer.currentTime)} / ${formatTime(videoPlayer.duration)}`;}
-function seek(e){const pct=e.offsetX/seekBar.offsetWidth;videoPlayer.currentTime=pct*videoPlayer.duration;}
+function toggleFullscreen(){
+  let root=document.getElementById('videoPlayerWrapper');
+  if(!document.fullscreenElement){
+    if(root.requestFullscreen)root.requestFullscreen();
+    else if(root.webkitRequestFullscreen)root.webkitRequestFullscreen();
+  }else{
+    if(document.exitFullscreen)document.exitFullscreen();
+    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  }
+}
+function formatTime(s){const m=Math.floor(s/60),sec=Math.floor(s%60);return`${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;}
+function updateSeek(){
+  if(!videoPlayer.duration)return;
+  seekBarFilled.style.width=(videoPlayer.currentTime/videoPlayer.duration)*100+'%';
+  timeDisplay.textContent=`${formatTime(videoPlayer.currentTime)} / ${formatTime(videoPlayer.duration)}`;
+}
+function seek(e){
+  const pct=e.offsetX/seekBar.offsetWidth;
+  videoPlayer.currentTime=pct*videoPlayer.duration;
+  updateSeek();
+}
 function closePlayer(){videoPlayer.pause();videoPlayer.src='';videoModal.classList.remove('active');}
-function changeFit(fit){videoPlayer.className='';videoPlayer.classList.add(`video-fit-${fit}`);}
-searchInput.oninput=handleSearch;moviesTab.onclick=()=>switchTab('movies');seriesTab.onclick=()=>switchTab('series');
-closePlayerBtn.onclick=closePlayer;playPauseBtn.onclick=togglePlayPause;fullscreenBtn.onclick=toggleFullscreen;episodesBtn.onclick=()=>toggleEpisodeOverlay(true);closeEpisodeOverlayBtn.onclick=()=>toggleEpisodeOverlay(false);
-videoPlayer.addEventListener('timeupdate',updateSeek);videoPlayer.addEventListener('loadedmetadata',updateSeek);
+function changeFit(fit){
+  // Toggle video object-fit (include stretch option)
+  videoPlayer.className='';
+  if(fit==='stretch') videoPlayer.style.objectFit='fill';
+  else videoPlayer.className = `video-fit-${fit}`;
+}
+function showControls(){
+  document.getElementById('videoControls').style.display = 'flex';
+}
+// Keyboard remote navigation for grid and controls
+document.addEventListener('keydown',function(e){
+  if(videoModal.classList.contains('active')){
+    // Controls bar always visible in fullscreen
+    showControls();
+    if(e.key==='Escape'){closePlayer();}
+    if(episodeOverlay.classList.contains('active')){
+      const epBtns = Array.from(episodeSelector.querySelectorAll('.episode-item'));
+      const curIdx = epBtns.indexOf(document.activeElement);
+      if(epBtns.length) {
+        if(e.key==='ArrowDown'){e.preventDefault();epBtns[(curIdx+1)%epBtns.length].focus();}
+        else if(e.key==='ArrowUp'){e.preventDefault();epBtns[(curIdx-1+epBtns.length)%epBtns.length].focus();}
+        else if(e.key==='Enter'&&document.activeElement.classList.contains('episode-item')){document.activeElement.click();}
+      }
+    }
+  } else if(mediaGrid.contains(document.activeElement)){
+    // Basic grid navigation
+    const cards = Array.from(mediaGrid.querySelectorAll('.media-card'));
+    const idx = cards.indexOf(document.activeElement);
+    if(idx>=0){
+      let next=idx;
+      if(e.key==='ArrowRight'){next=(idx+1)%cards.length;}
+      else if(e.key==='ArrowLeft'){next=(idx-1+cards.length)%cards.length;}
+      else if(e.key==='ArrowDown'){next=(idx+4)%cards.length;}
+      else if(e.key==='ArrowUp'){next=(idx-4+cards.length)%cards.length;}
+      else if(e.key==='Enter'){cards[idx].click();}
+      if(next!==idx){cards[next].focus();}
+    }
+  }
+});
+// --- UI event bindings ---
+searchInput.oninput=handleSearch;
+moviesTab.onclick=()=>switchTab('movies');
+seriesTab.onclick=()=>switchTab('series');
+closePlayerBtn.onclick=closePlayer;
+playPauseBtn.onclick=togglePlayPause;
+fullscreenBtn.onclick=toggleFullscreen;
+episodesBtn.onclick=()=>toggleEpisodeOverlay(true);
+closeEpisodeOverlayBtn.onclick=()=>toggleEpisodeOverlay(false);
+videoPlayer.addEventListener('timeupdate',updateSeek);
+videoPlayer.addEventListener('loadedmetadata',updateSeek);
 seekBar.onclick=seek;
+// Video fit menu
 videoFitBtn.onclick=()=>videoFitMenu.classList.toggle('hidden');
-videoFitMenu.querySelectorAll('button').forEach(b=>b.onclick=()=>{changeFit(b.dataset.fit);videoFitMenu.classList.add('hidden');});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&videoModal.classList.contains('active'))closePlayer();});
+videoFitMenu.querySelectorAll('button').forEach(btn=>{
+  btn.onclick=()=>{changeFit(btn.dataset.fit);videoFitMenu.classList.add('hidden');};
+});
+// Make controls sticky in fullscreen
+document.addEventListener('fullscreenchange',showControls);
+// Initial data load
 fetchData();
 })();
 </script>

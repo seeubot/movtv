@@ -210,11 +210,8 @@
         </div>
     </div>
 
-    <!-- This is a placeholder for your native video player UI.
-         The HTML will interact with this via JavaScript bridge calls.
-         We are only showing the controls, not the video itself. -->
+    <!-- Placeholder for native video player UI -->
     <div class="player-overlay" id="player-overlay">
-        <!-- The user's native ExoPlayer would be visible here, behind this overlay -->
         <div class="player-controls" id="player-controls">
             <div class="controls-top">
                 <button id="player-back-button" class="back-button">&larr;</button>
@@ -240,20 +237,16 @@
     </div>
 
     <script>
-        const API_BASE_URL = window.location.origin.includes('koyeb')
-            ? `${window.location.origin}/api`
-            : 'https://future-ester-seeutech-645c6129.koyeb.app/api';
+        // The API endpoint you provided
+        const API_BASE_URL = 'https://future-ester-seeutech-645c6129.koyeb.app/api';
         
         // This is a placeholder for your native Android JavaScript interface.
-        // In Sketchware, you will set this up by using the `addJavascriptInterface` block.
-        // For example, in Sketchware, you would create a Java class named 'Android'
-        // with methods like `playVideo(String url)` and `setScreenRatio(String ratio)`.
         const Android = {
             playVideo: (url, title) => console.log(`[Native Call] Play video: ${url}, Title: ${title}`),
             togglePlayPause: () => console.log(`[Native Call] Toggle play/pause`),
             seekTo: (time) => console.log(`[Native Call] Seek to: ${time}s`),
             setScreenRatio: (ratio) => console.log(`[Native Call] Set screen ratio: ${ratio}`),
-            showEpisodeList: () => console.log(`[Native Call] Show native episode list`),
+            showEpisodeList: (seriesId, seriesName) => console.log(`[Native Call] Show native episode list for Series ID: ${seriesId}, Name: ${seriesName}`),
             closePlayer: () => console.log(`[Native Call] Close native player`)
         };
 
@@ -285,6 +278,9 @@
         const ratioCropBtn = document.getElementById('ratio-crop-btn');
         const ratioFillBtn = document.getElementById('ratio-fill-btn');
         
+        let currentSeriesId = null;
+        let currentSeriesName = null;
+
         // --- Core Application Logic ---
         document.addEventListener('DOMContentLoaded', () => {
             searchInput.focus();
@@ -307,14 +303,15 @@
             playerBackButton.addEventListener('click', () => {
                 playerOverlay.style.display = 'none';
                 Android.closePlayer();
+                showMainContent();
             });
 
             episodesButton.addEventListener('click', () => {
-                // Here, we can either display the episodes list in the WebView
-                // or tell the native app to show a native episode list.
-                // Let's assume we'll show the episodes list in the WebView.
-                playerOverlay.style.display = 'none';
-                showEpisodeList();
+                // If this is a series, show the episodes list
+                if (currentSeriesId) {
+                    playerOverlay.style.display = 'none';
+                    loadEpisodes(currentSeriesId, currentSeriesName);
+                }
             });
             
             // Screen ratio controls
@@ -334,6 +331,8 @@
                 if (e.key === 'Escape' || e.key === 'Backspace') {
                     if (episodesSection.style.display === 'block') {
                         episodesBackButton.click();
+                    } else if (playerOverlay.style.display === 'flex') {
+                        playerBackButton.click();
                     }
                 }
             });
@@ -384,10 +383,12 @@
             mainContent.style.display = 'block';
             episodesSection.style.display = 'none';
             playerOverlay.style.display = 'none';
-            // Android.closePlayer(); // Optional: Close player if open
         }
 
         async function loadEpisodes(seriesId, seriesName) {
+            currentSeriesId = seriesId;
+            currentSeriesName = seriesName;
+
             try {
                 mainContent.style.display = 'none';
                 episodesSection.style.display = 'block';
@@ -418,6 +419,8 @@
                     <h3 class="media-title">${item.name}</h3>
                 </div>
             `;
+
+            // This is the fixed logic:
             if (type === 'movie') {
                 card.addEventListener('click', () => playMedia(item));
             } else {
@@ -439,22 +442,19 @@
         }
 
         function playMedia(media) {
-            // This is the key part that interfaces with your native Android app.
-            // When a user clicks to play, we tell the native app to start the ExoPlayer.
             const mediaUrl = media.streamingUrl;
             
-            // First, show the web player controls overlay
             playerOverlay.style.display = 'flex';
             playerTitle.textContent = media.title || media.name;
 
-            // Then, call the native function to start the video.
-            // You will need to implement `playVideo` in your Sketchware blocks.
-            // This function takes the video URL as a parameter.
+            // This sets the series context for the player, in case it's a series episode
+            currentSeriesId = media.seriesId || null; 
+            currentSeriesName = media.seriesName || null;
+            
             if (typeof Android != 'undefined' && Android.playVideo) {
                 Android.playVideo(mediaUrl, media.title || media.name);
             } else {
                 console.error("Android JavaScript interface not found.");
-                alert("Native video player not available. Please check your Sketchware setup.");
             }
         }
     </script>

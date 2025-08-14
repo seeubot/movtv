@@ -12,6 +12,7 @@
             --light: #f8f9fa;
             --success: #4cc9f0;
             --danger: #f72585;
+            --player-bg: rgba(0, 0, 0, 0.9);
         }
 
         * {
@@ -38,7 +39,7 @@
             background-color: var(--dark);
             color: white;
             padding: 1rem 2rem;
-            display: none; /* Hidden by default */
+            display: none;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -48,18 +49,11 @@
             width: 100%;
             z-index: 100;
         }
-        .logo {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
+        .logo { font-size: 1.5rem; font-weight: bold; }
         .logo span { color: var(--primary); }
         nav ul { display: flex; list-style: none; }
         nav ul li { margin-left: 1.5rem; }
-        nav ul li a {
-            color: white;
-            text-decoration: none;
-            font-weight: 500;
-        }
+        nav ul li a { color: white; text-decoration: none; font-weight: 500; }
         nav ul li a:hover, nav ul li a:focus { color: var(--primary); outline: none; }
 
         /* --- Hero Section (Search) --- */
@@ -71,13 +65,15 @@
             align-items: center;
             height: 100vh;
             flex-direction: column;
+            width: 100%;
         }
         .hero h1, .hero p { display: none; }
         .search-bar {
             display: flex;
             max-width: 600px;
             width: 90%;
-            margin: 0 auto;
+            margin-left: auto;
+            margin-right: 25%;
         }
         .search-bar input {
             flex: 1;
@@ -94,175 +90,93 @@
             border-radius: 0 4px 4px 0;
             cursor: pointer;
         }
-        .search-bar button:hover, .search-bar button:focus {
-            background-color: var(--secondary);
-            outline: none;
-        }
+        .search-bar button:hover, .search-bar button:focus { background-color: var(--secondary); outline: none; }
 
         /* --- Main Content & Grid --- */
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-            width: 100%;
-            display: none; /* Hidden by default */
-        }
-        .section-title {
-            font-size: 1.5rem;
-            margin: 2rem 0 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--primary);
-        }
-        .media-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; width: 100%; display: none; }
+        .section-title { font-size: 1.5rem; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary); }
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
         .media-card {
-            background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
+            background-color: white; border-radius: 8px; overflow: hidden;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-            border: 2px solid transparent;
+            cursor: pointer; border: 2px solid transparent;
         }
-        .media-card:hover, .media-card:focus {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-            outline: none;
-            border: 2px solid var(--primary);
-        }
-        .media-thumbnail {
-            width: 100%;
-            height: 280px;
-            object-fit: cover;
-        }
+        .media-card:hover, .media-card:focus { transform: translateY(-5px); box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1); outline: none; border: 2px solid var(--primary); }
+        .media-thumbnail { width: 100%; height: 280px; object-fit: cover; }
         .media-info { padding: 1rem; }
-        .media-title {
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .media-title { font-weight: 600; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .media-type { display: inline-block; padding: 0.25rem 0.5rem; background-color: var(--primary); color: white; border-radius: 4px; font-size: 0.8rem; margin-bottom: 0.5rem; }
+        .loading { text-align: center; padding: 2rem; font-size: 1.2rem; color: #666; grid-column: 1 / -1; }
+
+        /* --- Episode Section --- */
+        #episodes-section { display: none; }
+        .back-button {
+            background: none; border: none; font-size: 2rem; color: var(--dark); cursor: pointer;
+            padding: 1rem 0; margin-bottom: 1rem; display: flex; align-items: center;
         }
-        .media-type {
-            display: inline-block;
-            padding: 0.25rem 0.5rem;
-            background-color: var(--primary);
-            color: white;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            margin-bottom: 0.5rem;
+        .back-button:hover, .back-button:focus { color: var(--primary); outline: none; }
+        .episode-card {
+            background-color: white; border-radius: 8px; overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); cursor: pointer;
+            padding: 1rem; border: 2px solid transparent;
         }
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            font-size: 1.2rem;
-            color: #666;
-            grid-column: 1 / -1; /* Center across the grid */
-        }
+        .episode-card:hover, .episode-card:focus { transform: scale(1.02); box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15); border: 2px solid var(--primary); outline: none; }
 
         /* --- Video Player Overlay & Controls --- */
         .player-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.9);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--player-bg); display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000;
         }
-        .player-wrapper {
-            width: 90%;
-            max-width: 1200px;
+        .player-wrapper { width: 95%; max-width: 1200px; position: relative; }
+        #video-player { width: 100%; border-radius: 8px; background-color: black; }
+        .video-controls {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 1rem; background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
+            color: white; display: flex; flex-direction: column; opacity: 1;
+            transition: opacity 0.3s;
+        }
+        .video-controls.hidden { opacity: 0; pointer-events: none; }
+        .controls-top { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 0.5rem 0; }
+        .controls-top .back-button { color: white; margin: 0; padding: 0; font-size: 2rem; }
+        .controls-top .back-button:hover, .controls-top .back-button:focus { color: var(--primary); }
+        .controls-top .title { font-size: 1.2rem; }
+        .controls-top .quality-selector {
             position: relative;
-        }
-        #video-player {
-            width: 100%;
-            border-radius: 8px;
-        }
-        .custom-controls {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0));
-            color: white;
-        }
-        .custom-controls button {
-            background-color: rgba(0,0,0,0.5);
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 50%;
             cursor: pointer;
-            width: 3rem;
-            height: 3rem;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
-        .custom-controls button:hover, .custom-controls button:focus {
-            background-color: rgba(0,0,0,0.8);
-            outline: 2px solid var(--primary);
+        .quality-selector button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white; border: none; padding: 0.5rem; border-radius: 4px;
         }
-        .progress-bar-container {
-            flex-grow: 1;
+        .quality-options {
+            position: absolute; right: 0; bottom: 100%;
+            background: rgba(0, 0, 0, 0.8); border-radius: 8px; padding: 0.5rem;
+            display: none; flex-direction: column; gap: 0.25rem;
         }
+        .quality-options.active { display: flex; }
+        .quality-options button { width: 100%; text-align: left; background: none; }
+        .quality-options button:focus { outline: 2px solid var(--primary); }
+
+        .controls-middle { display: flex; align-items: center; justify-content: center; gap: 1.5rem; padding: 1rem 0; }
+        .controls-middle button {
+            background: none; border: none; color: white; font-size: 2rem; cursor: pointer;
+        }
+        .controls-middle button:hover, .controls-middle button:focus { color: var(--primary); outline: none; }
+        
+        .controls-bottom { display: flex; align-items: center; width: 100%; gap: 1rem; }
         .progress-bar {
-            width: 100%;
-            height: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            -webkit-appearance: none;
-            background: var(--light);
-            overflow: hidden;
+            flex-grow: 1; height: 8px; border-radius: 4px; cursor: pointer;
+            -webkit-appearance: none; background: #555; overflow: hidden;
         }
         .progress-bar::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 15px;
-            height: 15px;
-            background: var(--primary);
-            border-radius: 50%;
+            -webkit-appearance: none; width: 15px; height: 15px;
+            background: var(--primary); border-radius: 50%;
             box-shadow: -100vw 0 0 100vw var(--primary);
         }
-        .time-display {
-            font-size: 0.9rem;
-        }
-        .close-player {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: rgba(0,0,0,0.5);
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            cursor: pointer;
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .close-player:hover, .close-player:focus {
-            background-color: rgba(0,0,0,0.8);
-            outline: 2px solid var(--primary);
-        }
+        .time-display { font-size: 0.9rem; color: var(--light); }
 
-        /* --- Media Queries --- */
         @media (max-width: 768px) {
             .media-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
             .player-wrapper { width: 95%; }
@@ -271,6 +185,9 @@
             nav ul li { margin: 0 1rem; }
             body { padding-top: 5rem; }
             .hero { height: 100%; }
+            .search-bar { margin-right: auto; }
+            .video-controls { padding: 0.5rem; }
+            .controls-middle button { font-size: 1.5rem; }
         }
     </style>
 </head>
@@ -281,7 +198,6 @@
             <ul>
                 <li><a href="#" class="nav-link" data-section="movies">Movies</a></li>
                 <li><a href="#" class="nav-link" data-section="series">TV Series</a></li>
-                <li><a href="#" class="nav-link" data-section="stats">Statistics</a></li>
             </ul>
         </nav>
     </header>
@@ -302,38 +218,53 @@
                 <div class="loading">Search for content to get started.</div>
             </div>
         </section>
-
         <section id="series-section" style="display: none;">
             <h2 class="section-title">TV Series</h2>
             <div class="media-grid" id="series-grid">
                 <!-- Content will be loaded here -->
             </div>
         </section>
+    </div>
 
-        <section id="stats-section" style="display: none;">
-            <h2 class="section-title">Library Statistics</h2>
-            <div class="stats-container" id="stats-container">
-                <!-- Content will be loaded here -->
-            </div>
-        </section>
+    <!-- Episode View (hidden initially) -->
+    <div class="container" id="episodes-section">
+        <button id="episodes-back-button" class="back-button">&larr; Back to Series</button>
+        <h2 class="section-title" id="series-episodes-title"></h2>
+        <div class="media-grid" id="episodes-grid">
+            <!-- Episode cards will be loaded here -->
+        </div>
     </div>
 
     <!-- Video Player Overlay -->
     <div class="player-container" id="player-container">
         <div class="player-wrapper">
             <video id="video-player" playsinline></video>
-            <div class="custom-controls">
-                <button id="play-pause-btn" aria-label="Play/Pause">&#9658;</button>
-                <div class="progress-bar-container">
+            <div class="video-controls" id="video-controls">
+                <div class="controls-top">
+                    <button id="player-back-button" class="back-button">&larr;</button>
+                    <div class="title" id="player-title"></div>
+                    <div class="quality-selector">
+                        <button id="quality-btn">1080p</button>
+                        <div class="quality-options" id="quality-options">
+                            <button data-quality="1080p">1080p</button>
+                            <button data-quality="720p">720p</button>
+                            <button data-quality="480p">480p</button>
+                            <button data-quality="360p">360p</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="controls-middle">
+                    <button id="rewind-btn">&#x23EA;</button>
+                    <button id="play-pause-btn">&#9658;</button>
+                    <button id="forward-btn">&#x23E9;</button>
+                </div>
+                <div class="controls-bottom">
+                    <span class="time-display" id="current-time">0:00</span>
                     <input type="range" class="progress-bar" id="progress-bar" min="0" max="100" value="0">
+                    <span class="time-display" id="duration">0:00</span>
                 </div>
-                <div class="time-display">
-                    <span id="current-time">0:00</span> / <span id="duration">0:00</span>
-                </div>
-                <button id="fullscreen-btn" aria-label="Fullscreen">&#x26F6;</button>
             </div>
         </div>
-        <button class="close-player" id="close-player" aria-label="Close Player">&times;</button>
     </div>
 
     <!-- Script tag for HLS.js for video streaming -->
@@ -350,26 +281,33 @@
         const mainContent = document.getElementById('main-content');
         const moviesGrid = document.getElementById('movies-grid');
         const seriesGrid = document.getElementById('series-grid');
-        const statsContainer = document.getElementById('stats-container');
+        const episodesSection = document.getElementById('episodes-section');
+        const episodesGrid = document.getElementById('episodes-grid');
+        const seriesEpisodesTitle = document.getElementById('series-episodes-title');
+        const episodesBackButton = document.getElementById('episodes-back-button');
+
         const playerContainer = document.getElementById('player-container');
         const videoPlayer = document.getElementById('video-player');
+        const videoControls = document.getElementById('video-controls');
         const playerTitle = document.getElementById('player-title');
-        const closePlayer = document.getElementById('close-player');
+        const closePlayer = document.getElementById('player-back-button'); // Now the back button closes the player
         const searchInput = document.getElementById('search-input');
         const searchButton = document.getElementById('search-button');
         const navLinks = document.querySelectorAll('.nav-link');
 
         // Custom Player Controls
         const playPauseBtn = document.getElementById('play-pause-btn');
+        const rewindBtn = document.getElementById('rewind-btn');
+        const forwardBtn = document.getElementById('forward-btn');
         const progressBar = document.getElementById('progress-bar');
         const currentTimeEl = document.getElementById('current-time');
         const durationEl = document.getElementById('duration');
-        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const qualityBtn = document.getElementById('quality-btn');
+        const qualityOptions = document.getElementById('quality-options');
 
         const sections = {
             movies: document.getElementById('movies-section'),
-            series: document.getElementById('series-section'),
-            stats: document.getElementById('stats-section')
+            series: document.getElementById('series-section')
         };
         let currentSection = 'movies';
 
@@ -388,49 +326,61 @@
             // Search functionality
             searchInput.addEventListener('keyup', () => performSearch());
             searchButton.addEventListener('click', () => performSearch(true));
-            
-            // --- Video Player Events ---
-            closePlayer.addEventListener('click', () => {
-                playerContainer.style.display = 'none';
-                videoPlayer.pause();
-                videoPlayer.src = '';
-            });
+            episodesBackButton.addEventListener('click', () => showMainContent());
 
+            // --- Video Player Events ---
             videoPlayer.addEventListener('timeupdate', updateProgressBar);
             videoPlayer.addEventListener('loadedmetadata', setDuration);
-            videoPlayer.addEventListener('play', () => playPauseBtn.innerHTML = '&#10074;&#10074;'); // Pause icon
-            videoPlayer.addEventListener('pause', () => playPauseBtn.innerHTML = '&#9658;'); // Play icon
-            
-            playPauseBtn.addEventListener('click', () => {
-                videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause();
+            videoPlayer.addEventListener('play', () => playPauseBtn.innerHTML = '&#10074;&#10074;');
+            videoPlayer.addEventListener('pause', () => playPauseBtn.innerHTML = '&#9658;');
+            videoPlayer.addEventListener('ended', () => {
+                playPauseBtn.innerHTML = '&#9658;';
+                videoPlayer.currentTime = 0;
             });
 
+            playPauseBtn.addEventListener('click', () => videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause());
+            rewindBtn.addEventListener('click', () => videoPlayer.currentTime -= 10);
+            forwardBtn.addEventListener('click', () => videoPlayer.currentTime += 10);
+            
             progressBar.addEventListener('input', () => {
                 const seekTime = videoPlayer.duration * (progressBar.value / 100);
                 videoPlayer.currentTime = seekTime;
             });
 
-            fullscreenBtn.addEventListener('click', () => {
-                if (videoPlayer.requestFullscreen) {
-                    videoPlayer.requestFullscreen();
-                } else if (videoPlayer.webkitRequestFullscreen) { /* Safari */
-                    videoPlayer.webkitRequestFullscreen();
-                } else if (videoPlayer.msRequestFullscreen) { /* IE11 */
-                    videoPlayer.msRequestFullscreen();
-                }
+            closePlayer.addEventListener('click', () => {
+                playerContainer.style.display = 'none';
+                videoPlayer.pause();
+                videoPlayer.src = '';
+                episodesSection.style.display = 'block';
+            });
+            
+            // Placeholder quality selector functionality
+            qualityBtn.addEventListener('click', () => qualityOptions.classList.toggle('active'));
+            qualityOptions.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    qualityBtn.textContent = btn.textContent;
+                    qualityOptions.classList.remove('active');
+                    // In a real app, this would change the video source
+                });
             });
 
             // --- TV Remote Control Navigation ---
             document.addEventListener('keydown', e => {
                 const focusedElement = document.activeElement;
+                // Handle Enter key for selection
                 if (e.key === 'Enter') {
-                    if (focusedElement && focusedElement.classList.contains('media-card')) {
+                    if (focusedElement && (focusedElement.classList.contains('media-card') || focusedElement.classList.contains('episode-card'))) {
                         focusedElement.click();
                         e.preventDefault();
                     }
                 }
-                if (e.key === 'Escape' && playerContainer.style.display === 'flex') {
-                    closePlayer.click();
+                // Handle Escape key for "back" action
+                if (e.key === 'Escape') {
+                    if (playerContainer.style.display === 'flex') {
+                        closePlayer.click();
+                    } else if (episodesSection.style.display === 'block') {
+                        episodesBackButton.click();
+                    }
                 }
             });
         });
@@ -438,37 +388,17 @@
         // --- Search Function ---
         function performSearch(isManualSearch = false) {
             const term = searchInput.value.trim();
-
             if (term.length >= 3) {
-                // If 3+ letters are typed, show content and header
                 heroSection.style.display = 'none';
                 appHeader.style.display = 'flex';
                 mainContent.style.display = 'block';
                 currentSection === 'movies' ? loadMovies(term) : loadSeries(term);
-                loadStats();
             } else if (term.length === 0 && !isManualSearch) {
-                // If search is cleared, hide content and show hero screen
                 heroSection.style.display = 'flex';
                 appHeader.style.display = 'none';
                 mainContent.style.display = 'none';
+                episodesSection.style.display = 'none';
             }
-        }
-
-        // --- Video Player Helper Functions ---
-        function updateProgressBar() {
-            const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
-            progressBar.value = progress;
-            currentTimeEl.textContent = formatTime(videoPlayer.currentTime);
-        }
-
-        function setDuration() {
-            durationEl.textContent = formatTime(videoPlayer.duration);
-        }
-
-        function formatTime(time) {
-            const minutes = Math.floor(time / 60);
-            const seconds = Math.floor(time % 60);
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
 
         // --- UI & Data Loading Functions ---
@@ -476,13 +406,14 @@
             Object.values(sections).forEach(sec => sec.style.display = 'none');
             sections[section].style.display = 'block';
             currentSection = section;
-            navLinks.forEach(link => link.style.color =
-                link.dataset.section === section ? '#4361ee' : 'white');
-            if (section !== 'stats') {
-                performSearch(true); // Re-run search for the new section
-            } else {
-                loadStats();
-            }
+            navLinks.forEach(link => link.style.color = link.dataset.section === section ? '#4361ee' : 'white');
+            performSearch(true);
+        }
+
+        function showMainContent() {
+            mainContent.style.display = 'block';
+            episodesSection.style.display = 'none';
+            performSearch(true); // Refresh content
         }
 
         async function loadMovies(searchTerm) {
@@ -517,18 +448,22 @@
             }
         }
 
-        async function loadStats() {
+        async function loadEpisodes(seriesId, seriesName) {
             try {
-                statsContainer.innerHTML = '<div class="loading">Loading statistics...</div>';
-                const res = await fetch(`${API_BASE_URL}/stats`);
-                const stats = await res.json();
-                statsContainer.innerHTML = `
-                    <div class="stat-card">Movies: ${stats.movies}</div>
-                    <div class="stat-card">TV Series: ${stats.series}</div>
-                    <div class="stat-card">Episodes: ${stats.episodes}</div>
-                `;
+                mainContent.style.display = 'none';
+                episodesSection.style.display = 'block';
+                seriesEpisodesTitle.textContent = seriesName;
+                episodesGrid.innerHTML = '<div class="loading">Loading episodes...</div>';
+                const res = await fetch(`${API_BASE_URL}/series/${seriesId}/episodes`);
+                const data = await res.json();
+                if (data.length === 0) {
+                    episodesGrid.innerHTML = '<div class="loading">No episodes found</div>';
+                } else {
+                    episodesGrid.innerHTML = '';
+                    data.forEach(episode => addEpisodeCard(episodesGrid, episode));
+                }
             } catch {
-                statsContainer.innerHTML = '<div class="loading">Error loading stats</div>';
+                episodesGrid.innerHTML = '<div class="loading">Error loading episodes</div>';
             }
         }
 
@@ -543,16 +478,31 @@
                     <h3 class="media-title">${item.name}</h3>
                 </div>
             `;
-            card.addEventListener('click', () => playMedia(item));
+            if (type === 'movie') {
+                card.addEventListener('click', () => playMedia(item));
+            } else {
+                card.addEventListener('click', () => loadEpisodes(item.id, item.name));
+            }
             container.appendChild(card);
         }
 
-        async function playMedia(media) {
-            // Placeholder for real video title
-            playerTitle.textContent = media.name; 
+        function addEpisodeCard(container, episode) {
+            const card = document.createElement('div');
+            card.className = 'episode-card';
+            card.setAttribute('tabindex', '0');
+            card.innerHTML = `
+                <div class="episode-number">Episode ${episode.episodeNumber}:</div>
+                <div class="episode-title">${episode.title}</div>
+            `;
+            card.addEventListener('click', () => playMedia(episode));
+            container.appendChild(card);
+        }
 
-            // Load HLS.js for streaming if needed
+        // --- Video Player Helper Functions ---
+        async function playMedia(media) {
+            playerTitle.textContent = media.title || media.name;
             const extension = media.streamingUrl.split('.').pop().toLowerCase();
+            
             if (extension === 'm3u8' || extension === 'ts') {
                 if (Hls.isSupported()) {
                     const hls = new Hls();
@@ -571,7 +521,22 @@
             playerContainer.style.display = 'flex';
             videoPlayer.play().catch(e => console.error('Playback error:', e));
         }
+
+        function updateProgressBar() {
+            const progress = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+            progressBar.value = progress;
+            currentTimeEl.textContent = formatTime(videoPlayer.currentTime);
+        }
+
+        function setDuration() {
+            durationEl.textContent = formatTime(videoPlayer.duration);
+        }
+
+        function formatTime(time) {
+            const minutes = Math.floor(time / 60);
+            const seconds = Math.floor(time % 60);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
     </script>
 </body>
 </html>
-

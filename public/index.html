@@ -1,216 +1,740 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Media Manager</title>
-  <link href="https://vjs.zencdn.net/7.17.0/video-js.css" rel="stylesheet" />
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #121212;
-      color: #ffffff;
-    }
-
-    header {
-      background-color: #1e1e1e;
-      padding: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    header input[type="search"] {
-      padding: 8px;
-      width: 60%;
-      border: 1px solid #333;
-      border-radius: 4px;
-      outline: none;
-      font-size: 16px;
-    }
-
-    header input[type="search"]:focus {
-      border-color: #fff;
-    }
-
-    main {
-      padding: 20px;
-    }
-
-    h2 {
-      margin-top: 20px;
-    }
-
-    .movie-list, .series-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-    }
-
-    .movie-item, .series-item {
-      background-color: #2e2e2e;
-      border: 1px solid #333;
-      border-radius: 8px;
-      overflow: hidden;
-      width: 200px;
-      text-align: center;
-      padding: 10px;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-
-    .movie-item:focus, .series-item:focus {
-      transform: scale(1.05);
-      outline: none;
-    }
-
-    .movie-item img, .series-item img {
-      width: 100%;
-      height: auto;
-    }
-
-    .movie-item h3, .series-item h3 {
-      margin: 10px 0 5px;
-      font-size: 18px;
-    }
-
-    .movie-item p, .series-item p {
-      margin: 0;
-      font-size: 14px;
-      color: #aaa;
-    }
-
-    .video-js {
-      width: 100%;
-      height: auto;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Manager</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --dark: #1b263b;
+            --light: #f8f9fa;
+            --success: #4cc9f0;
+            --danger: #f72585;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        header {
+            background-color: var(--dark);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .logo span {
+            color: var(--primary);
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+        
+        nav ul li {
+            margin-left: 1.5rem;
+        }
+        
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        nav ul li a:hover {
+            color: var(--primary);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, var(--dark), var(--secondary));
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .hero h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .hero p {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto 1.5rem;
+        }
+        
+        .search-bar {
+            display: flex;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .search-bar input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 4px 0 0 4px;
+            font-size: 1rem;
+        }
+        
+        .search-bar button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0 1.5rem;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .search-bar button:hover {
+            background-color: var(--secondary);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .media-card {
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .media-thumbnail {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+        }
+        
+        .media-info {
+            padding: 1rem;
+        }
+        
+        .media-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .media-type {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            background-color: var(--primary);
+            color: white;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .media-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .player-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .player-wrapper {
+            width: 80%;
+            max-width: 1000px;
+        }
+        
+        #video-player {
+            width: 100%;
+            border-radius: 8px;
+        }
+        
+        .player-info {
+            color: white;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .close-player {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 1rem;
+            gap: 1rem;
+        }
+        
+        .player-controls button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .season-selector {
+            margin-bottom: 1rem;
+        }
+        
+        .season-selector select {
+            padding: 0.5rem;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        
+        .episodes-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .episode-card {
+            background-color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .episode-card:hover {
+            transform: scale(1.05);
+        }
+        
+        .episode-number {
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: #666;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background-color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .player-wrapper {
+                width: 95%;
+            }
+            
+            header {
+                flex-direction: column;
+                padding: 1rem;
+            }
+            
+            nav ul {
+                margin-top: 1rem;
+            }
+            
+            nav ul li {
+                margin-left: 1rem;
+                margin-right: 1rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <header>
-    <h1>Media Manager</h1>
-    <input type="search" id="search" placeholder="Search for movies and series..." aria-label="Search">
-  </header>
-  <main>
-    <section id="movies">
-      <h2>Movies</h2>
-      <div class="movie-list" id="movie-list">
-        <!-- Movies will be dynamically inserted here -->
-      </div>
-    </section>
-    <section id="series">
-      <h2>Series</h2>
-      <div class="series-list" id="series-list">
-        <!-- Series will be dynamically inserted here -->
-      </div>
-    </section>
-  </main>
-  <div id="video-player" class="video-js vjs-default-skin" controls>
-    <video class="video-js__player" controls preload="auto" width="640" height="264">
-      <source src="" type="video/mp4">
-    </video>
-  </div>
-  <script src="https://vjs.zencdn.net/7.17.0/video.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const searchInput = document.getElementById('search');
-      const movieList = document.getElementById('movie-list');
-      const seriesList = document.getElementById('series-list');
-      const videoPlayer = document.getElementById('video-player');
-      const videoJsPlayer = videojs(videoPlayer);
-
-      searchInput.addEventListener('input', debounce(searchContent, 300));
-
-      function debounce(func, delay) {
-        let debounceTimer;
-        return function() {
-          const context = this;
-          const args = arguments;
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => func.apply(context, args), delay);
+    <header>
+        <div class="logo">Media<span>Manager</span></div>
+        <nav>
+            <ul>
+                <li><a href="#" class="nav-link" data-section="movies">Movies</a></li>
+                <li><a href="#" class="nav-link" data-section="series">TV Series</a></li>
+                <li><a href="#" class="nav-link" data-section="stats">Statistics</a></li>
+            </ul>
+        </nav>
+    </header>
+    
+    <div class="container">
+        <section class="hero">
+            <h1>Your Personal Media Library</h1>
+            <p>Stream your favorite movies and TV shows anytime, anywhere. All your media in one place.</p>
+            <div class="search-bar">
+                <input type="text" id="search-input" placeholder="Search movies or series...">
+                <button id="search-button">Search</button>
+            </div>
+        </section>
+        
+        <section id="movies-section">
+            <h2 class="section-title">Movies</h2>
+            <div class="media-grid" id="movies-grid">
+                <!-- Movies will be loaded here -->
+                <div class="loading">Loading movies...</div>
+            </div>
+        </section>
+        
+        <section id="series-section">
+            <h2 class="section-title">TV Series</h2>
+            <div class="media-grid" id="series-grid">
+                <!-- Series will be loaded here -->
+                <div class="loading">Loading TV series...</div>
+            </div>
+        </section>
+        
+        <section id="stats-section" style="display: none;">
+            <h2 class="section-title">Library Statistics</h2>
+            <div class="stats-container" id="stats-container">
+                <!-- Stats will be loaded here -->
+                <div class="loading">Loading statistics...</div>
+            </div>
+        </section>
+    </div>
+    
+    <div class="player-container" id="player-container">
+        <button class="close-player" id="close-player">&times;</button>
+        <div class="player-wrapper">
+            <video id="video-player" controls></video>
+            <div class="player-info">
+                <h3 id="player-title"></h3>
+                <div class="player-controls" id="player-controls">
+                    <!-- Additional controls can be added here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // API configuration
+        const API_BASE_URL = window.location.origin.includes('koyeb') ? 
+            `${window.location.origin}/api` : 
+            'http://localhost:1024/api';
+        
+        // DOM elements
+        const moviesGrid = document.getElementById('movies-grid');
+        const seriesGrid = document.getElementById('series-grid');
+        const statsContainer = document.getElementById('stats-container');
+        const playerContainer = document.getElementById('player-container');
+        const videoPlayer = document.getElementById('video-player');
+        const playerTitle = document.getElementById('player-title');
+        const closePlayer = document.getElementById('close-player');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = {
+            movies: document.getElementById('movies-section'),
+            series: document.getElementById('series-section'),
+            stats: document.getElementById('stats-section')
         };
-      }
-
-      async function searchContent() {
-        const query = searchInput.value.trim();
-        if (query) {
-          const movies = await fetchMovies(query);
-          const series = await fetchSeries(query);
-          displayMovies(movies);
-          displaySeries(series);
-        } else {
-          displayMovies(await fetchMovies());
-          displaySeries(await fetchSeries());
+        
+        // Current state
+        let currentMedia = null;
+        let currentSection = 'movies';
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMovies();
+            loadSeries();
+            loadStats();
+            
+            // Navigation
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const section = link.dataset.section;
+                    showSection(section);
+                });
+            });
+            
+            // Player controls
+            closePlayer.addEventListener('click', () => {
+                playerContainer.style.display = 'none';
+                videoPlayer.pause();
+                videoPlayer.src = '';
+            });
+            
+            // Search functionality
+            searchButton.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performSearch();
+            });
+        });
+        
+        // Show a specific section
+        function showSection(section) {
+            // Hide all sections
+            Object.values(sections).forEach(sec => {
+                sec.style.display = 'none';
+            });
+            
+            // Show the selected section
+            sections[section].style.display = 'block';
+            currentSection = section;
+            
+            // Update active nav link
+            navLinks.forEach(link => {
+                if (link.dataset.section === section) {
+                    link.style.color = '#4361ee';
+                } else {
+                    link.style.color = 'white';
+                }
+            });
         }
-      }
-
-      async function fetchMovies(query = '') {
-        const response = await fetch(`/api/movies?search=${query}`);
-        return await response.json();
-      }
-
-      async function fetchSeries(query = '') {
-        const response = await fetch(`/api/series?search=${query}`);
-        return await response.json();
-      }
-
-      function displayMovies(movies) {
-        movieList.innerHTML = '';
-        movies.forEach(movie => {
-          const movieItem = document.createElement('div');
-          movieItem.className = 'movie-item';
-          movieItem.tabIndex = 0;
-          movieItem.innerHTML = `
-            <img src="${movie.thumbnail}" alt="${movie.name}">
-            <h3>${movie.name}</h3>
-            <p>Added by: ${movie.addedBy}</p>
-          `;
-          movieItem.addEventListener('click', () => playMovie(movie.streamingUrl));
-          movieItem.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-              playMovie(movie.streamingUrl);
+        
+        // Load movies from API
+        async function loadMovies(searchTerm = '') {
+            try {
+                moviesGrid.innerHTML = '<div class="loading">Loading movies...</div>';
+                
+                const response = await fetch(`${API_BASE_URL}/movies?search=${encodeURIComponent(searchTerm)}`);
+                const movies = await response.json();
+                
+                if (movies.length === 0) {
+                    moviesGrid.innerHTML = '<div class="loading">No movies found</div>';
+                    return;
+                }
+                
+                moviesGrid.innerHTML = '';
+                movies.forEach(movie => {
+                    const movieCard = document.createElement('div');
+                    movieCard.className = 'media-card';
+                    movieCard.innerHTML = `
+                        <img src="${movie.thumbnail}" alt="${movie.name}" class="media-thumbnail">
+                        <div class="media-info">
+                            <span class="media-type">Movie</span>
+                            <h3 class="media-title">${movie.name}</h3>
+                        </div>
+                    `;
+                    
+                    movieCard.addEventListener('click', () => playMedia(movie, 'movie'));
+                    moviesGrid.appendChild(movieCard);
+                });
+            } catch (error) {
+                console.error('Error loading movies:', error);
+                moviesGrid.innerHTML = '<div class="loading">Error loading movies. Please try again.</div>';
             }
-          });
-          movieList.appendChild(movieItem);
-        });
-      }
-
-      function displaySeries(series) {
-        seriesList.innerHTML = '';
-        series.forEach(seriesItem => {
-          const seriesDiv = document.createElement('div');
-          seriesDiv.className = 'series-item';
-          seriesDiv.tabIndex = 0;
-          seriesDiv.innerHTML = `
-            <img src="${seriesItem.thumbnail}" alt="${seriesItem.name}">
-            <h3>${seriesItem.name}</h3>
-            <p>Added by: ${seriesItem.addedBy}</p>
-          `;
-          seriesDiv.addEventListener('click', () => playSeries(seriesItem._id));
-          seriesDiv.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-              playSeries(seriesItem._id);
+        }
+        
+        // Load series from API
+        async function loadSeries(searchTerm = '') {
+            try {
+                seriesGrid.innerHTML = '<div class="loading">Loading TV series...</div>';
+                
+                const response = await fetch(`${API_BASE_URL}/series?search=${encodeURIComponent(searchTerm)}`);
+                const series = await response.json();
+                
+                if (series.length === 0) {
+                    seriesGrid.innerHTML = '<div class="loading">No TV series found</div>';
+                    return;
+                }
+                
+                seriesGrid.innerHTML = '';
+                series.forEach(seriesItem => {
+                    const seriesCard = document.createElement('div');
+                    seriesCard.className = 'media-card';
+                    seriesCard.innerHTML = `
+                        <img src="${seriesItem.thumbnail}" alt="${seriesItem.name}" class="media-thumbnail">
+                        <div class="media-info">
+                            <span class="media-type">TV Series</span>
+                            <h3 class="media-title">${seriesItem.name}</h3>
+                            <div class="media-details">
+                                ${seriesItem.seasons.length} season${seriesItem.seasons.length !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    seriesCard.addEventListener('click', () => showSeriesDetails(seriesItem));
+                    seriesGrid.appendChild(seriesCard);
+                });
+            } catch (error) {
+                console.error('Error loading series:', error);
+                seriesGrid.innerHTML = '<div class="loading">Error loading TV series. Please try again.</div>';
             }
-          });
-          seriesList.appendChild(seriesDiv);
+        }
+        
+        // Show detailed view for a series
+        async function showSeriesDetails(series) {
+            try {
+                // Fetch full series details (in case we need more than what's in the list)
+                const response = await fetch(`${API_BASE_URL}/series/${series._id}`);
+                const seriesDetails = await response.json();
+                
+                // Create a modal for series details
+                const modal = document.createElement('div');
+                modal.style.position = 'fixed';
+                modal.style.top = '0';
+                modal.style.left = '0';
+                modal.style.width = '100%';
+                modal.style.height = '100%';
+                modal.style.backgroundColor = 'rgba(0,0,0,0.9)';
+                modal.style.zIndex = '1000';
+                modal.style.overflowY = 'auto';
+                modal.style.padding = '2rem';
+                
+                // Close button
+                const closeButton = document.createElement('button');
+                closeButton.innerHTML = '&times;';
+                closeButton.style.position = 'absolute';
+                closeButton.style.top = '2rem';
+                closeButton.style.right = '2rem';
+                closeButton.style.background = 'none';
+                closeButton.style.border = 'none';
+                closeButton.style.color = 'white';
+                closeButton.style.fontSize = '2rem';
+                closeButton.style.cursor = 'pointer';
+                closeButton.addEventListener('click', () => document.body.removeChild(modal));
+                
+                // Series info
+                const content = document.createElement('div');
+                content.style.maxWidth = '1000px';
+                content.style.margin = '0 auto';
+                content.style.color = 'white';
+                
+                const title = document.createElement('h2');
+                title.textContent = seriesDetails.name;
+                title.style.fontSize = '2rem';
+                title.style.marginBottom = '1rem';
+                
+                const thumbnail = document.createElement('img');
+                thumbnail.src = seriesDetails.thumbnail;
+                thumbnail.style.width = '100%';
+                thumbnail.style.maxHeight = '400px';
+                thumbnail.style.objectFit = 'cover';
+                thumbnail.style.borderRadius = '8px';
+                thumbnail.style.marginBottom = '1rem';
+                
+                content.appendChild(title);
+                content.appendChild(thumbnail);
+                
+                // Seasons and episodes
+                seriesDetails.seasons.forEach(season => {
+                    const seasonSection = document.createElement('div');
+                    seasonSection.style.marginBottom = '2rem';
+                    
+                    const seasonTitle = document.createElement('h3');
+                    seasonTitle.textContent = `Season ${season.seasonNumber}`;
+                    seasonTitle.style.fontSize = '1.5rem';
+                    seasonTitle.style.marginBottom = '1rem';
+                    seasonTitle.style.paddingBottom = '0.5rem';
+                    seasonTitle.style.borderBottom = '1px solid #4361ee';
+                    
+                    seasonSection.appendChild(seasonTitle);
+                    
+                    const episodesList = document.createElement('div');
+                    episodesList.className = 'episodes-list';
+                    
+                    season.episodes.forEach(episode => {
+                        const episodeCard = document.createElement('div');
+                        episodeCard.className = 'episode-card';
+                        episodeCard.innerHTML = `
+                            <div class="episode-number">Episode ${episode.episodeNumber}</div>
+                            <div class="episode-title">${episode.title}</div>
+                        `;
+                        
+                        episodeCard.addEventListener('click', () => {
+                            playMedia({
+                                name: `${seriesDetails.name} - S${season.seasonNumber}E${episode.episodeNumber}: ${episode.title}`,
+                                streamingUrl: episode.streamingUrl
+                            }, 'episode');
+                            document.body.removeChild(modal);
+                        });
+                        
+                        episodesList.appendChild(episodeCard);
+                    });
+                    
+                    seasonSection.appendChild(episodesList);
+                    content.appendChild(seasonSection);
+                });
+                
+                modal.appendChild(closeButton);
+                modal.appendChild(content);
+                document.body.appendChild(modal);
+            } catch (error) {
+                console.error('Error showing series details:', error);
+                alert('Error loading series details. Please try again.');
+            }
+        }
+        
+        // Load statistics
+        async function loadStats() {
+            try {
+                statsContainer.innerHTML = '<div class="loading">Loading statistics...</div>';
+                
+                const response = await fetch(`${API_BASE_URL}/stats`);
+                const stats = await response.json();
+                
+                statsContainer.innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-label">Movies</div>
+                        <div class="stat-value">${stats.movies}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">TV Series</div>
+                        <div class="stat-value">${stats.series}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Episodes</div>
+                        <div class="stat-value">${stats.episodes}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Items</div>
+                        <div class="stat-value">${stats.total}</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                statsContainer.innerHTML = '<div class="loading">Error loading statistics. Please try again.</div>';
+            }
+        }
+        
+        // Play media in the video player
+        function playMedia(media, type) {
+            currentMedia = media;
+            playerTitle.textContent = media.name;
+            
+            // Set video source
+            videoPlayer.src = media.streamingUrl;
+            
+            // Set appropriate MIME type based on file extension
+            const extension = media.streamingUrl.split('.').pop().toLowerCase();
+            if (extension === 'm3u8' || extension === 'ts') {
+                if (Hls.isSupported()) {
+                    const hls = new Hls();
+                    hls.loadSource(media.streamingUrl);
+                    hls.attachMedia(videoPlayer);
+                } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                    // For Safari
+                    videoPlayer.src = media.streamingUrl;
+                } else {
+                    alert('HLS is not supported in your browser');
+                    return;
+                }
+            } else {
+                videoPlayer.src = media.streamingUrl;
+            }
+            
+            // Show player
+            playerContainer.style.display = 'flex';
+            videoPlayer.play().catch(e => console.error('Playback error:', e));
+        }
+        
+        // Perform search
+        function performSearch() {
+            const searchTerm = searchInput.value.trim();
+            if (currentSection === 'movies') {
+                loadMovies(searchTerm);
+            } else if (currentSection === 'series') {
+                loadSeries(searchTerm);
+            }
+        }
+        
+        // Load HLS.js if needed
+        function loadHlsJs() {
+            return new Promise((resolve, reject) => {
+                if (typeof Hls !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        // Initialize HLS support
+        loadHlsJs().catch(err => {
+            console.warn('Failed to load HLS.js:', err);
         });
-      }
-
-      function playMovie(url) {
-        videoJsPlayer.src({ src: url, type: 'video/mp4' });
-        videoJsPlayer.play();
-      }
-
-      function playSeries(id) {
-        // Implement series player logic here
-        console.log('Playing series:', id);
-      }
-
-      // Initial load
-      searchContent();
-    });
-  </script>
+    </script>
 </body>
 </html>

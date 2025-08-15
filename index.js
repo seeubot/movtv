@@ -97,7 +97,7 @@ const Series = mongoose.model('Series', seriesSchema);
 
 const app = express();
 
-// FIX: Update CORS to explicitly allow the Koyeb frontend URL.
+// FIX: Update CORS to explicitly allow the GitHub Pages frontend URL.
 // The wildcard '*' can sometimes be problematic with credentials,
 // so it's best to be explicit about the origins.
 const allowedOrigins = [
@@ -107,7 +107,8 @@ const allowedOrigins = [
   'http://127.0.0.1:3001',
   'http://localhost:8080',
   'http://127.0.0.1:8080',
-  KOYEB_URL // Add the Koyeb frontend URL
+  KOYEB_URL, // Add the Koyeb frontend URL
+  'https://seeubot.github.io' // ✨ UPDATED: Added your GitHub Pages URL ✨
 ];
 
 app.use(cors({
@@ -242,10 +243,10 @@ bot.on('message', async (msg) => {
         });
       }
     } else if (text === '🌐 Frontend URL') {
-      const frontendUrl = KOYEB_URL || 'http://localhost:3000';
+      const frontendUrl = 'https://seeubot.github.io/NS';
       await bot.sendMessage(chatId,
         `🌐 *Web Frontend:*\n${frontendUrl}\n\n` +
-        `📱 *API Server:* ${frontendUrl}/api\n\n` +
+        `📱 *API Server:* ${KOYEB_URL}/api\n\n` +
         '🎬 Open the frontend URL to watch your movies and series!\n\n' +
         '✨ Your media library awaits!',
         { parse_mode: 'Markdown', ...getMainMenuKeyboard() }
@@ -466,8 +467,100 @@ bot.on('callback_query', async (callbackQuery) => {
             currentSeason: selectedSeason
         });
 
+        // ✨ MODIFIED: Offer options to add a new episode or edit an existing one
+        const episodeCount = selectedSeason.episodes.length;
+        let keyboard = [[{ text: '➕ Add New Episode', callback_data: `start_add_episode` }]];
+        if (episodeCount > 0) {
+            keyboard.push([{ text: `✍️ Edit ${episodeCount} Existing Episode${episodeCount > 1 ? 's' : ''}`, callback_data: `start_edit_episodes_${seriesId}_${seasonNumber}` }]);
+        }
+
+        await bot.sendMessage(chatId, `📺 *Season ${seasonNumber} - ${series.name}*\n\nWhat would you like to do?`, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: keyboard
+          }
+        });
+    } else if (data === 'start_add_episode') {
+        const userData = tempData.get(chatId);
+        if (!userData || !userData.currentSeason) {
+            await bot.sendMessage(chatId, '❌ No series or season in progress. Please start over.', getMainMenuKeyboard());
+            userStates.delete(chatId);
+            tempData.delete(chatId);
+            return;
+        }
         userStates.set(chatId, 'adding_episode_number');
-        await bot.sendMessage(chatId, `📺 Adding to Series "${series.name}", Season ${seasonNumber}.\n\n🔢 Enter episode number:`, { reply_markup: { remove_keyboard: true } });
+        await bot.sendMessage(chatId, `📺 Season ${userData.currentSeason.seasonNumber} - Enter episode number:`);
+    } else if (data.startsWith('start_edit_episodes_')) {
+        const parts = data.split('_');
+        const seriesId = parts[3];
+        const seasonNumber = parseInt(parts[4]);
+        const series = await Series.findById(seriesId);
+        if (!series) {
+            await bot.sendMessage(chatId, '❌ Series not found. Please try again.', getMainMenuKeyboard());
+            return;
+        }
+        const season = series.seasons.find(s => s.seasonNumber === seasonNumber);
+        if (!season || !season.episodes || season.episodes.length === 0) {
+            await bot.sendMessage(chatId, '❌ No episodes to edit in this season.', getMainMenuKeyboard());
+            return;
+        }
+
+        // ✨ NEW: Display a keyboard of episodes to edit
+        const episodeKeyboard = season.episodes.sort((a,b) => a.episodeNumber - b.episodeNumber).map(ep => [{
+            text: `E${ep.episodeNumber}: ${ep.title}`,
+            callback_data: `edit_episode_field_${seriesId}_${seasonNumber}_${ep.episodeNumber}`
+        }]);
+
+        await bot.sendMessage(chatId, `✍️ *Select an episode to edit in Season ${seasonNumber}:*`, {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: episodeKeyboard }
+        });
+    } else if (data.startsWith('edit_episode_field_')) {
+        const parts = data.split('_');
+        const seriesId = parts[3];
+        const seasonNumber = parseInt(parts[4]);
+        const episodeNumber = parseInt(parts[5]);
+
+        const series = await Series.findById(seriesId);
+        if (!series) {
+            await bot.sendMessage(chatId, '❌ Series not found.', getMainMenuKeyboard());
+            return;
+        }
+        const season = series.seasons.find(s => s.seasonNumber === seasonNumber);
+        const episode = season?.episodes.find(ep => ep.episodeNumber === episodeNumber);
+        if (!episode) {
+            await bot.sendMessage(chatId, '❌ Episode not found.', getMainMenuKeyboard());
+            return;
+        }
+
+        tempData.set(chatId, {
+            type: 'series_episode_edit',
+            seriesId: seriesId,
+            seasonNumber: seasonNumber,
+            episodeNumber: episodeNumber,
+            currentEpisode: episode
+        });
+
+        await bot.sendMessage(chatId,
+            `✍️ *Editing Episode S${seasonNumber}E${episodeNumber}: ${episode.title}*\n\n` +
+            `What would you like to edit?`,
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '✍️ Edit Title', callback_data: 'edit_field_episode_title' }],
+                        [{ text: '🔗 Edit Streaming URL', callback_data: 'edit_field_episode_streaming_url' }],
+                        [{ text: '❌ Cancel', callback_data: 'cancel' }]
+                    ]
+                }
+            }
+        );
+    } else if (data === 'edit_field_episode_title') {
+        userStates.set(chatId, 'editing_episode_title');
+        await bot.sendMessage(chatId, `✍️ Enter the new episode title:`);
+    } else if (data === 'edit_field_episode_streaming_url') {
+        userStates.set(chatId, 'editing_episode_streaming_url');
+        await bot.sendMessage(chatId, `🔗 Enter the new streaming URL:`);
     } else if (data === 'add_another_episode') {
       const userData = tempData.get(chatId);
       if (userData && userData.currentSeason) {
@@ -578,7 +671,7 @@ async function handleConversationFlow(chatId, text, userId) {
         }
         data.currentSeason = { seasonNumber, episodes: [] };
         userStates.set(chatId, 'adding_episode_number');
-        await bot.sendMessage(chatId, `📺 Season ${seasonNumber} - Enter episode number:`);
+        await bot.sendMessage(chatId, `📺 Adding to Series "${data.name}", Season ${seasonNumber}.\n\n🔢 Enter episode number:`);
         break;
       case 'adding_episode_number':
         const episodeNumber = parseInt(text.trim());
@@ -676,6 +769,63 @@ async function handleConversationFlow(chatId, text, userId) {
         } catch (error) {
           console.error('Error updating series thumbnail:', error);
           await bot.sendMessage(chatId, '❌ Error updating series thumbnail. Please try again.', getMainMenuKeyboard());
+        }
+        userStates.delete(chatId);
+        tempData.delete(chatId);
+        break;
+      // ✨ NEW: Handle episode field edits
+      case 'editing_episode_title':
+        try {
+            await Series.findOneAndUpdate(
+                {
+                    '_id': data.seriesId,
+                    'seasons.seasonNumber': data.seasonNumber,
+                    'seasons.episodes.episodeNumber': data.episodeNumber
+                },
+                {
+                    '$set': {
+                        'seasons.$[season].episodes.$[episode].title': text.trim()
+                    }
+                },
+                {
+                    arrayFilters: [
+                        { 'season.seasonNumber': data.seasonNumber },
+                        { 'episode.episodeNumber': data.episodeNumber }
+                    ]
+                }
+            );
+            await bot.sendMessage(chatId, `✅ Episode title updated successfully!`, getMainMenuKeyboard());
+        } catch (error) {
+            console.error('Error updating episode title:', error);
+            await bot.sendMessage(chatId, '❌ Error updating episode title. Please try again.', getMainMenuKeyboard());
+        }
+        userStates.delete(chatId);
+        tempData.delete(chatId);
+        break;
+      case 'editing_episode_streaming_url':
+        try {
+            await Series.findOneAndUpdate(
+                {
+                    '_id': data.seriesId,
+                    'seasons.seasonNumber': data.seasonNumber,
+                    'seasons.episodes.episodeNumber': data.episodeNumber
+                },
+                {
+                    '$set': {
+                        'seasons.$[season].episodes.$[episode].streamingUrl': text.trim()
+                    }
+                },
+                {
+                    arrayFilters: [
+                        { 'season.seasonNumber': data.seasonNumber },
+                        { 'episode.episodeNumber': data.episodeNumber }
+                    ]
+                }
+            );
+            await bot.sendMessage(chatId, `✅ Episode streaming URL updated successfully!`, getMainMenuKeyboard());
+        } catch (error) {
+            console.error('Error updating episode streaming URL:', error);
+            await bot.sendMessage(chatId, '❌ Error updating episode streaming URL. Please try again.', getMainMenuKeyboard());
         }
         userStates.delete(chatId);
         tempData.delete(chatId);
@@ -868,3 +1018,4 @@ process.on('SIGINT', async () => {
   }
   process.exit(0);
 });
+

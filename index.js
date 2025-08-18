@@ -71,7 +71,7 @@ const mediaSchema = new mongoose.Schema({
   addedAt: { type: Date, default: Date.now }
 });
 
-mediaSchema.index({ name: 'text' });
+mediaSchema.index({ name: 1 });
 
 const Media = mongoose.model('Media', mediaSchema);
 
@@ -414,8 +414,9 @@ app.get('/api/media', async (req, res) => {
     const { page = 1, limit = 50, search, type } = req.query;
     const offset = (parseInt(page) - 1) * parseInt(limit);
     let query = {};
-    if (search) {
-      query.name = { $regex: search, $options: 'i' };
+    if (search && search.length >= 3) {
+      // 🐛 FIX: Case-sensitive and partial match search
+      query.name = { $regex: `^${search}` };
     }
     if (type) {
       query.type = type;
@@ -425,6 +426,22 @@ app.get('/api/media', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching media:', error);
     res.status(500).json({ error: 'Failed to fetch media', details: error.message });
+  }
+});
+
+// ✨ NEW: Endpoint to fetch episodes for a specific series
+app.get('/api/media/:name/episodes', async (req, res) => {
+  try {
+    const { name } = req.params;
+    if (!name) {
+      return res.status(400).json({ error: 'Media name is required.' });
+    }
+    // Search for all entries that have a similar name, assuming episodes have a common series name
+    const episodes = await Media.find({ name: { $regex: `^${name}` } }).sort({ name: 1 });
+    res.json(episodes);
+  } catch (error) {
+    console.error('❌ Error fetching episodes:', error);
+    res.status(500).json({ error: 'Failed to fetch episodes', details: error.message });
   }
 });
 
@@ -463,6 +480,7 @@ app.get('/api', (req, res) => {
     status: 'running',
     endpoints: {
       media: '/api/media?search=...&type=...',
+      episodes: '/api/media/:name/episodes',
       stats: '/api/stats',
       health: '/health'
     },
@@ -493,6 +511,7 @@ app.listen(PORT, '0.0.0.0', async () => {
 
   console.log('📋 Available endpoints:');
   console.log('   • GET  /api/media      - Get all media');
+  console.log('   • GET  /api/media/:name/episodes - Get episodes for a series');
   console.log('   • GET  /api/stats      - Get library statistics');
   console.log('   • GET  /health         - Health check');
   console.log('✅ Server ready! Connect your frontend to this API.');
@@ -521,5 +540,3 @@ process.on('SIGINT', async () => {
   }
   process.exit(0);
 });
-
-

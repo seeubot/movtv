@@ -29,7 +29,7 @@ if (!MONGODB_URI) {
   console.error('❌ MONGODB_URI not found in environment variables. Please set it.');
   process.exit(1);
 }
-if (USE_WEBHOOK && !KOYeb_URL) {
+if (USE_WEBHOOK && !KOYEB_URL) {
   console.error('❌ KOYEB_URL is required for webhook mode. Please set it.');
   process.exit(1);
 }

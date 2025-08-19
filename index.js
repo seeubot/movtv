@@ -178,7 +178,7 @@ bot.on('message', async (msg) => {
     } else if (text === '🎬 Add Media') {
       userStates.set(chatId, 'adding_media_name');
       tempData.set(chatId, { addedBy: userId });
-      await bot.sendMessage(chatId, '🎬 Enter the media name:', { reply_markup: { remove_keyboard: true } });
+      await bot.sendMessage(chatId, '🎬 Enter the media name (e.g., "The Office S1E1"):', { reply_markup: { remove_keyboard: true } });
     } else if (text === '✍️ Edit/Delete Media') {
       const mediaList = await Media.find().sort({ addedAt: -1 }).limit(10);
       if (mediaList.length === 0) {
@@ -540,3 +540,4 @@ process.on('SIGINT', async () => {
   }
   process.exit(0);
 });
+

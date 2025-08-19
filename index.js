@@ -416,7 +416,7 @@ app.get('/api/media', async (req, res) => {
     let query = {};
     if (search && search.length >= 3) {
       // 🐛 FIX: Case-sensitive and partial match search
-      query.name = { $regex: `^${search}` };
+      query.name = { $regex: search, $options: 'i' };
     }
     if (type) {
       query.type = type;
@@ -426,6 +426,21 @@ app.get('/api/media', async (req, res) => {
   } catch (error) {
     console.error('❌ Error fetching media:', error);
     res.status(500).json({ error: 'Failed to fetch media', details: error.message });
+  }
+});
+
+// ✨ NEW: Endpoint to fetch a single media item by its unique ID
+app.get('/api/media/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const media = await Media.findById(id);
+    if (!media) {
+      return res.status(404).json({ error: 'Media not found' });
+    }
+    res.json(media);
+  } catch (error) {
+    console.error('❌ Error fetching single media item:', error);
+    res.status(500).json({ error: 'Failed to fetch media item', details: error.message });
   }
 });
 
@@ -481,6 +496,7 @@ app.get('/api', (req, res) => {
     endpoints: {
       media: '/api/media?search=...&type=...',
       episodes: '/api/media/:name/episodes',
+      mediaById: '/api/media/:id',
       stats: '/api/stats',
       health: '/health'
     },
@@ -512,6 +528,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log('📋 Available endpoints:');
   console.log('   • GET  /api/media      - Get all media');
   console.log('   • GET  /api/media/:name/episodes - Get episodes for a series');
+  console.log('   • GET  /api/media/:id  - Get a single media item by ID');
   console.log('   • GET  /api/stats      - Get library statistics');
   console.log('   • GET  /health         - Health check');
   console.log('✅ Server ready! Connect your frontend to this API.');

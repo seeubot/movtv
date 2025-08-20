@@ -27,6 +27,24 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    /* Focus state for TV remote navigation */
+    .media-card:focus {
+      outline: none;
+      box-shadow: 0 0 0 4px #58a6ff;
+      transform: scale(1.05);
+    }
+    /* Modal overlay */
+    .modal-overlay {
+      background-color: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+    }
+    .modal {
+      animation: fadeIn 0.3s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
   </style>
 </head>
 <body class="p-4 sm:p-8">
@@ -68,16 +86,46 @@
 
   </div>
 
+  <!-- Modal for displaying media details -->
+  <div id="media-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay">
+    <div class="bg-gray-800 rounded-xl shadow-2xl overflow-hidden max-w-2xl w-full p-8 relative modal">
+      <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <div class="flex flex-col md:flex-row gap-6 items-start">
+        <img id="modal-thumbnail" src="" alt="Thumbnail" class="w-full md:w-1/3 aspect-video md:aspect-auto object-cover rounded-lg shadow-xl">
+        <div class="flex-1">
+          <h2 id="modal-title" class="text-2xl sm:text-3xl font-bold text-white mb-2"></h2>
+          <p id="modal-description" class="text-gray-300 text-base sm:text-lg mb-4"></p>
+          <p id="modal-type" class="text-sm text-gray-400"></p>
+          <p id="modal-se-info" class="text-sm text-gray-400"></p>
+          <!-- Play button that does nothing but confirm. -->
+          <a href="#" id="modal-play-btn" class="inline-block mt-6 px-6 py-3 text-lg font-semibold text-white bg-blue-600 rounded-full hover:bg-blue-700 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50">
+            Show Streaming URL
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Placeholder URL. This will be replaced by the Node.js backend when it serves the file.
     const API_BASE_URL = 'https://comparable-cornela-seeutech-95c15254.koyeb.app/api'; 
 
-    // Get the DOM elements
     const mediaContainer = document.getElementById('media-container');
     const searchInput = document.getElementById('search-input');
     const emptyState = document.getElementById('empty-state');
+    const mediaModal = document.getElementById('media-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const modalTitle = document.getElementById('modal-title');
+    const modalThumbnail = document.getElementById('modal-thumbnail');
+    const modalDescription = document.getElementById('modal-description');
+    const modalType = document.getElementById('modal-type');
+    const modalSEInfo = document.getElementById('modal-se-info');
+    const modalPlayBtn = document.getElementById('modal-play-btn');
 
-    // Debounce function to limit API calls during typing
     function debounce(func, delay) {
       let timeout;
       return function(...args) {
@@ -86,38 +134,24 @@
       };
     }
 
-    // Function to fetch media from the API
     const fetchMedia = async (query = '') => {
-      // Show loading spinner and hide empty state
       mediaContainer.innerHTML = '<div class="col-span-full flex justify-center items-center h-48"><div class="spinner"></div></div>';
       emptyState.classList.add('hidden');
       
       try {
         const url = query ? `${API_BASE_URL}/media?search=${encodeURIComponent(query)}` : `${API_BASE_URL}/media`;
         const response = await fetch(url);
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         const mediaList = await response.json();
         renderMedia(mediaList);
       } catch (error) {
         console.error('Error fetching media:', error);
-        mediaContainer.innerHTML = `
-          <div class="col-span-full text-center p-8 bg-red-900 bg-opacity-30 border border-red-700 rounded-lg shadow-lg">
-            <p class="text-red-400">Failed to load media. Please check if the backend server is running and accessible.</p>
-            <p class="text-red-500 mt-2 text-sm">Error details: ${error.message}</p>
-          </div>
-        `;
+        mediaContainer.innerHTML = `<div class="col-span-full text-center p-8 bg-red-900 bg-opacity-30 border border-red-700 rounded-lg shadow-lg"><p class="text-red-400">Failed to load media.</p><p class="text-red-500 mt-2 text-sm">Error details: ${error.message}</p></div>`;
       }
     };
 
-    // Function to render media items on the page
     const renderMedia = (mediaList) => {
-      // Clear previous content
       mediaContainer.innerHTML = '';
-
       if (mediaList.length === 0) {
         emptyState.classList.remove('hidden');
         return;
@@ -125,36 +159,25 @@
       emptyState.classList.add('hidden');
 
       mediaList.forEach(media => {
-        // Create the card element
         const card = document.createElement('div');
-        card.className = 'relative group cursor-pointer overflow-hidden rounded-xl shadow-lg transform transition-transform duration-300 hover:scale-105';
+        card.className = 'media-card relative group cursor-pointer overflow-hidden rounded-xl shadow-lg transform transition-transform duration-300 hover:scale-105 focus:scale-105 focus:z-10 focus:outline-none';
+        card.tabIndex = 0; // Make the card focusable
+        card.setAttribute('data-media-id', media._id);
 
-        // Event listener for the card to open the streaming URL
-        card.addEventListener('click', () => {
-          window.open(media.streamingUrl, '_blank');
+        card.addEventListener('click', () => showMediaDetails(media));
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            showMediaDetails(media);
+          }
         });
 
-        // HTML structure for a single media card
         card.innerHTML = `
-          <!-- Thumbnail image with hover overlay -->
-          <img 
-            src="${media.thumbnail}" 
-            alt="${media.name}" 
-            onerror="this.onerror=null; this.src='https://placehold.co/400x600/1e293b/a1a1aa?text=Image+Not+Found'" 
-            class="w-full h-64 object-cover rounded-xl transition-all duration-300 group-hover:opacity-75"
-          >
-          
-          <!-- Play icon and name on hover -->
+          <img src="${media.thumbnail}" alt="${media.name}" onerror="this.onerror=null; this.src='https://placehold.co/400x600/1e293b/a1a1aa?text=Image+Not+Found'" class="w-full h-64 object-cover rounded-xl transition-all duration-300 group-hover:opacity-75">
           <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <!-- Play icon (inline SVG) -->
-            <svg class="w-16 h-16 text-white transform transition-transform duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
-            </svg>
             <h3 class="text-xl font-semibold text-white mt-4 text-center">${media.name}</h3>
             <p class="text-sm text-gray-300 text-center">${media.description}</p>
           </div>
-          
-          <!-- Title always visible at the bottom -->
           <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 to-transparent p-4">
             <h3 class="text-lg font-semibold text-white truncate">${media.name}</h3>
           </div>
@@ -163,15 +186,96 @@
       });
     };
 
-    // Initialize the application once the DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', () => {
-      // Initial fetch of media when the page loads
-      fetchMedia();
+    const showMediaDetails = (media) => {
+      modalTitle.textContent = media.name;
+      modalDescription.textContent = media.description;
+      modalThumbnail.src = media.thumbnail;
+      modalType.textContent = `Type: ${media.type}`;
+      modalSEInfo.textContent = media.season && media.episode ? `Season ${media.season}, Episode ${media.episode}` : '';
+      modalPlayBtn.onclick = () => {
+        alert(`Streaming URL: ${media.streamingUrl}`);
+      };
       
-      // Add a debounced event listener for the search input
-      searchInput.addEventListener('input', debounce(() => {
-        fetchMedia(searchInput.value);
-      }, 500)); // 500ms delay
+      mediaModal.classList.remove('hidden');
+      closeModalBtn.focus();
+    };
+    
+    const hideMediaDetails = () => {
+      mediaModal.classList.add('hidden');
+      const lastFocusedCard = document.querySelector('.media-card:focus');
+      if (lastFocusedCard) lastFocusedCard.focus();
+    };
+
+    closeModalBtn.addEventListener('click', hideMediaDetails);
+
+    // TV Remote Navigation Logic
+    document.addEventListener('keydown', (e) => {
+      if (mediaModal.classList.contains('hidden')) {
+        const focusedElement = document.activeElement;
+        const isSearchFocused = focusedElement === searchInput;
+        const cards = Array.from(document.querySelectorAll('.media-card'));
+        const focusedIndex = cards.indexOf(focusedElement);
+        let nextIndex = focusedIndex;
+        
+        const numColumns = getComputedStyle(mediaContainer).getPropertyValue('grid-template-columns').split(' ').length;
+
+        switch (e.key) {
+          case 'ArrowRight':
+            e.preventDefault();
+            if (isSearchFocused) {
+              cards[0]?.focus();
+            } else if (focusedIndex < cards.length - 1) {
+              nextIndex++;
+            }
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            if (focusedIndex > 0) {
+              nextIndex--;
+            } else if (focusedIndex === 0) {
+              searchInput.focus();
+            }
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            if (isSearchFocused) {
+              cards[0]?.focus();
+            } else {
+              nextIndex = focusedIndex + numColumns;
+              if (nextIndex >= cards.length) {
+                // Wrap to the last row, or to the beginning if at the end
+                nextIndex = focusedIndex + numColumns >= cards.length + numColumns ? cards.length - 1 : cards.length - 1;
+              }
+            }
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            if (focusedIndex >= numColumns) {
+              nextIndex = focusedIndex - numColumns;
+            } else if (focusedIndex < numColumns) {
+              searchInput.focus();
+              return;
+            }
+            break;
+          case 'Enter':
+            // Handled by card's event listener.
+            break;
+        }
+
+        if (nextIndex !== focusedIndex && nextIndex >= 0 && nextIndex < cards.length) {
+          cards[nextIndex].focus();
+        }
+      } else { // Modal is open
+        if (e.key === 'Escape') {
+          hideMediaDetails();
+        }
+      }
+    });
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchMedia();
+      searchInput.addEventListener('input', debounce(() => fetchMedia(searchInput.value), 500));
     });
   </script>
 

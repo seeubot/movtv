@@ -1,5 +1,3 @@
-// This file contains the main logic for the Telegram bot and Express API.
-
 require('dotenv').config();
 
 const TelegramBot = require('node-telegram-bot-api');
@@ -67,6 +65,8 @@ const mediaSchema = new mongoose.Schema({
   streamingUrl: { type: String, required: true },
   description: { type: String, default: 'No description provided.' },
   type: { type: String, required: true, default: 'movie' },
+  season: { type: Number, default: null }, 
+  episode: { type: Number, default: null },
   addedBy: { type: Number, required: true },
   addedAt: { type: Date, default: Date.now }
 });
@@ -313,13 +313,44 @@ async function handleConversationFlow(chatId, text, userId) {
         break;
       case 'adding_media_type':
         data.type = text.trim();
+        if (data.type.toLowerCase() === 'show' || data.type.toLowerCase() === 'anime') {
+            userStates.set(chatId, 'adding_media_season');
+            await bot.sendMessage(chatId, '🔢 Enter the season number (e.g., "1"):');
+        } else {
+            try {
+                const media = new Media({ ...data, addedBy: userId });
+                await media.save();
+                await bot.sendMessage(chatId, `✅ Media "${data.name}" added successfully!`, getMainMenuKeyboard());
+            } catch (error) {
+                console.error('Error saving media:', error);
+                await bot.sendMessage(chatId, '❌ Error adding media. Please try again.', getMainMenuKeyboard());
+            }
+            userStates.delete(chatId);
+            tempData.delete(chatId);
+        }
+        break;
+      case 'adding_media_season':
+        data.season = parseInt(text.trim(), 10);
+        if (isNaN(data.season)) {
+            await bot.sendMessage(chatId, '❌ Invalid season number. Please enter a number.');
+            break; 
+        }
+        userStates.set(chatId, 'adding_media_episode');
+        await bot.sendMessage(chatId, '🔢 Enter the episode number (e.g., "2"):');
+        break;
+      case 'adding_media_episode':
+        data.episode = parseInt(text.trim(), 10);
+        if (isNaN(data.episode)) {
+            await bot.sendMessage(chatId, '❌ Invalid episode number. Please enter a number.');
+            break; 
+        }
         try {
-          const media = new Media({ ...data, addedBy: userId });
-          await media.save();
-          await bot.sendMessage(chatId, `✅ Media "${data.name}" added successfully!`, getMainMenuKeyboard());
+            const media = new Media({ ...data, addedBy: userId });
+            await media.save();
+            await bot.sendMessage(chatId, `✅ Media "${data.name} S${data.season}E${data.episode}" added successfully!`, getMainMenuKeyboard());
         } catch (error) {
-          console.error('Error saving media:', error);
-          await bot.sendMessage(chatId, '❌ Error adding media. Please try again.', getMainMenuKeyboard());
+            console.error('Error saving media:', error);
+            await bot.sendMessage(chatId, '❌ Error adding media. Please try again.', getMainMenuKeyboard());
         }
         userStates.delete(chatId);
         tempData.delete(chatId);
@@ -451,8 +482,8 @@ app.get('/api/media/:name/episodes', async (req, res) => {
     if (!name) {
       return res.status(400).json({ error: 'Media name is required.' });
     }
-    // Search for all entries that have a similar name, assuming episodes have a common series name
-    const episodes = await Media.find({ name: { $regex: `^${name}` } }).sort({ name: 1 });
+    // Search for all entries that have a similar name and sort by season and episode
+    const episodes = await Media.find({ name: { $regex: `^${name}` } }).sort({ season: 1, episode: 1 });
     res.json(episodes);
   } catch (error) {
     console.error('❌ Error fetching episodes:', error);
@@ -557,4 +588,3 @@ process.on('SIGINT', async () => {
   }
   process.exit(0);
 });
-

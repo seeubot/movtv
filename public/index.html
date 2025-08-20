@@ -1,151 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Library</title>
-    <style>
-        body { font-family: sans-serif; margin: 0; background-color: #f0f2f5; color: #333; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1, h2 { color: #1a237e; }
-        #search-container { margin-bottom: 20px; display: flex; gap: 10px; }
-        #search-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-        #search-button { padding: 10px 20px; border: none; background-color: #3f51b5; color: white; border-radius: 4px; cursor: pointer; }
-        #search-button:hover { background-color: #303f9f; }
-        #media-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
-        .media-card { background: #fafafa; border: 1px solid #eee; border-radius: 8px; overflow: hidden; text-align: center; transition: transform 0.2s; cursor: pointer; }
-        .media-card:hover { transform: translateY(-5px); box-shadow: 0 6px 10px rgba(0,0,0,0.15); }
-        .media-card img { width: 100%; height: 300px; object-fit: cover; }
-        .media-card h3 { font-size: 1.1em; margin: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .media-type { font-size: 0.8em; color: #777; margin-bottom: 5px; }
-        #modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fff; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 600px; border-radius: 8px; position: relative; }
-        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
-        .close-button:hover { color: black; }
-        .episode-list { list-style: none; padding: 0; }
-        .episode-list li { background: #eee; padding: 10px; margin-bottom: 5px; border-radius: 4px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Library</title>
+  <!-- Load Tailwind CSS from CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Use Inter font for a clean, modern look -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0d1117;
+      color: #c9d1d9;
+    }
+    /* Simple spinner for loading state */
+    .spinner {
+      border: 4px solid rgba(255, 255, 255, 0.3);
+      border-top: 4px solid #58a6ff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
 </head>
-<body>
+<body class="p-4 sm:p-8">
 
-    <div class="container">
-        <h1>🎬 My Media Library 📺</h1>
-        <div id="search-container">
-            <input type="text" id="search-input" placeholder="Search for movies or series...">
-            <button id="search-button">Search</button>
-        </div>
-        <div id="media-list"></div>
+  <!-- Main container for the application -->
+  <div class="max-w-7xl mx-auto">
+    
+    <!-- Header section -->
+    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+      <h1 class="text-3xl sm:text-4xl font-bold text-center sm:text-left text-white">Media Library</h1>
+      
+      <!-- Search input field -->
+      <div class="relative w-full sm:w-80">
+        <input 
+          id="search-input" 
+          type="text" 
+          placeholder="Search for media..."
+          class="w-full pl-10 pr-4 py-2 bg-gray-800 text-white placeholder-gray-400 border border-gray-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+        />
+        <!-- Search icon (magnifying glass) -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+    </header>
+
+    <!-- Main content area for media cards -->
+    <main id="media-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <!-- Loading spinner will be shown here initially -->
+      <div class="col-span-full flex justify-center items-center h-48">
+        <div class="spinner"></div>
+      </div>
+    </main>
+    
+    <!-- Empty state message -->
+    <div id="empty-state" class="hidden text-center mt-12 text-gray-400 text-lg">
+      No media found. Try a different search or add some!
     </div>
 
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <div id="modal-details"></div>
-        </div>
-    </div>
+  </div>
 
-    <script>
-        const API_BASE_URL = 'https://comparable-cornela-seeutech-95c15254.koyeb.app/api'; // Replace with your actual Koyeb URL
+  <script>
+    // Placeholder URL. This will be replaced by the Node.js backend when it serves the file.
+    const API_BASE_URL = 'http://localhost:1024/api'; 
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const searchInput = document.getElementById('search-input');
-            const searchButton = document.getElementById('search-button');
-            const mediaList = document.getElementById('media-list');
-            const modal = document.getElementById('modal');
-            const modalDetails = document.getElementById('modal-details');
-            const closeButton = document.querySelector('.close-button');
+    // Get the DOM elements
+    const mediaContainer = document.getElementById('media-container');
+    const searchInput = document.getElementById('search-input');
+    const emptyState = document.getElementById('empty-state');
 
-            // Event listener for search button
-            searchButton.addEventListener('click', () => {
-                fetchMedia(searchInput.value);
-            });
+    // Debounce function to limit API calls during typing
+    function debounce(func, delay) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), delay);
+      };
+    }
 
-            // Event listener for Enter key in search box
-            searchInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    fetchMedia(searchInput.value);
-                }
-            });
+    // Function to fetch media from the API
+    const fetchMedia = async (query = '') => {
+      // Show loading spinner and hide empty state
+      mediaContainer.innerHTML = '<div class="col-span-full flex justify-center items-center h-48"><div class="spinner"></div></div>';
+      emptyState.classList.add('hidden');
+      
+      try {
+        const url = query ? `${API_BASE_URL}/media?search=${encodeURIComponent(query)}` : `${API_BASE_URL}/media`;
+        const response = await fetch(url);
 
-            // Fetch and display media
-            async function fetchMedia(searchTerm = '') {
-                mediaList.innerHTML = '<p>Loading...</p>';
-                const url = `${API_BASE_URL}/media?search=${encodeURIComponent(searchTerm)}`;
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    const media = await response.json();
-                    displayMedia(media);
-                } catch (error) {
-                    mediaList.innerHTML = '<p>Error loading media. Please try again later.</p>';
-                    console.error('Error fetching media:', error);
-                }
-            }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-            // Display media in cards
-            function displayMedia(media) {
-                mediaList.innerHTML = '';
-                if (media.length === 0) {
-                    mediaList.innerHTML = '<p>No media found.</p>';
-                    return;
-                }
-                media.forEach(item => {
-                    const card = document.createElement('div');
-                    card.className = 'media-card';
-                    card.innerHTML = `
-                        <img src="${item.thumbnail}" alt="${item.name}">
-                        <h3>${item.name}</h3>
-                        <p class="media-type">${item.type === 'movie' ? 'Movie' : 'Series'}</p>
-                    `;
-                    card.addEventListener('click', () => showDetails(item));
-                    mediaList.appendChild(card);
-                });
-            }
+        const mediaList = await response.json();
+        renderMedia(mediaList);
+      } catch (error) {
+        console.error('Error fetching media:', error);
+        mediaContainer.innerHTML = `
+          <div class="col-span-full text-center p-8 bg-red-900 bg-opacity-30 border border-red-700 rounded-lg shadow-lg">
+            <p class="text-red-400">Failed to load media. Please check if the backend server is running and accessible.</p>
+            <p class="text-red-500 mt-2 text-sm">Error details: ${error.message}</p>
+          </div>
+        `;
+      }
+    };
 
-            // Show details in modal
-            function showDetails(item) {
-                modalDetails.innerHTML = `
-                    <h2>${item.name}</h2>
-                    <img src="${item.thumbnail}" alt="${item.name}" style="width:100%; height:auto; border-radius:4px; margin-bottom: 15px;">
-                `;
+    // Function to render media items on the page
+    const renderMedia = (mediaList) => {
+      // Clear previous content
+      mediaContainer.innerHTML = '';
 
-                if (item.type === 'movie') {
-                    modalDetails.innerHTML += `
-                        <p><strong>Type:</strong> Movie</p>
-                        <a href="${item.streamingUrl}" target="_blank">🔗 Watch Now</a>
-                    `;
-                } else if (item.type === 'series') {
-                    // This assumes the series object already has episodes embedded from the new API endpoint
-                    const episodesHtml = item.episodes.map(ep => `
-                        <li>
-                            <strong>S${ep.seasonNumber}E${ep.episodeNumber}:</strong> ${ep.title}
-                            <a href="${ep.streamingUrl}" target="_blank">▶️ Watch</a>
-                        </li>
-                    `).join('');
-                    modalDetails.innerHTML += `
-                        <p><strong>Type:</strong> Series</p>
-                        <h3>Episodes:</h3>
-                        <ul class="episode-list">${episodesHtml}</ul>
-                    `;
-                }
+      if (mediaList.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
 
-                modal.style.display = 'block';
-            }
+      mediaList.forEach(media => {
+        // Create the card element
+        const card = document.createElement('div');
+        card.className = 'relative group cursor-pointer overflow-hidden rounded-xl shadow-lg transform transition-transform duration-300 hover:scale-105';
 
-            // Close modal
-            closeButton.addEventListener('click', () => {
-                modal.style.display = 'none';
-            });
-
-            window.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-
-            // Initial fetch
-            fetchMedia();
+        // Event listener for the card to open the streaming URL
+        card.addEventListener('click', () => {
+          window.open(media.streamingUrl, '_blank');
         });
-    </script>
+
+        // HTML structure for a single media card
+        card.innerHTML = `
+          <!-- Thumbnail image with hover overlay -->
+          <img 
+            src="${media.thumbnail}" 
+            alt="${media.name}" 
+            onerror="this.onerror=null; this.src='https://placehold.co/400x600/1e293b/a1a1aa?text=Image+Not+Found'" 
+            class="w-full h-64 object-cover rounded-xl transition-all duration-300 group-hover:opacity-75"
+          >
+          
+          <!-- Play icon and name on hover -->
+          <div class="absolute inset-0 bg-black bg-opacity-50 flex flex-col justify-center items-center p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <!-- Play icon (inline SVG) -->
+            <svg class="w-16 h-16 text-white transform transition-transform duration-300 group-hover:scale-110" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+            </svg>
+            <h3 class="text-xl font-semibold text-white mt-4 text-center">${media.name}</h3>
+            <p class="text-sm text-gray-300 text-center">${media.description}</p>
+          </div>
+          
+          <!-- Title always visible at the bottom -->
+          <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 to-transparent p-4">
+            <h3 class="text-lg font-semibold text-white truncate">${media.name}</h3>
+          </div>
+        `;
+        mediaContainer.appendChild(card);
+      });
+    };
+
+    // Initialize the application once the DOM is fully loaded
+    document.addEventListener('DOMContentLoaded', () => {
+      // Initial fetch of media when the page loads
+      fetchMedia();
+      
+      // Add a debounced event listener for the search input
+      searchInput.addEventListener('input', debounce(() => {
+        fetchMedia(searchInput.value);
+      }, 500)); // 500ms delay
+    });
+  </script>
+
 </body>
 </html>
+
